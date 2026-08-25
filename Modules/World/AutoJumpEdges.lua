@@ -7,4 +7,4 @@ local registerModule = UI.registerModule
 
 local saveConfig = VH.Config.saveConfig
 
-registerModule("World", "Anti Fling", 580, 50, true, S.AntiFling, function(v) S.AntiFling = v; saveConfig() end)
+registerModule("World", "Auto-Jump Edges", 580, 50, true, S.AutoJump, function(v) S.AutoJump = v; saveConfig() end)
