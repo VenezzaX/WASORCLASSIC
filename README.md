@@ -5,7 +5,7 @@ If you are developing or debugging individual modules, you can use the dynamic l
 ```lua
 if identifyexecutor then
 game:GetService("GuiService"):SetGameplayPausedNotificationEnabled(false)
-loadstring(game:HttpGet(('https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua'),true))()
+loadstring(game:HttpGet(('https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/refs/heads/main/github_loader.lua'),true))()
 end
 ```
 
