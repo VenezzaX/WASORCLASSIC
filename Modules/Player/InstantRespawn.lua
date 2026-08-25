@@ -7,4 +7,4 @@ local registerModule = UI.registerModule
 
 local saveConfig = VH.Config.saveConfig
 
-registerModule("Player", "Anti-AFK", 160, 50, true, S.AntiAFK, function(v) S.AntiAFK = v; saveConfig() end)
+registerModule("Player", "Instant Respawn", 160, 50, true, S.InstantRespawn, function(v) S.InstantRespawn = v; saveConfig() end)
