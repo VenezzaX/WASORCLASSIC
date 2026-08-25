@@ -10,7 +10,6 @@ local addButtonOption = UI.addButtonOption
 local runExternalScript = Utils.runExternalScript
 
 registerModule("Misc", "ScriptHub", 720, 50, false, false, nil, function(drawer)
-    addButtonOption(drawer, "Load Rotector", function() runExternalScript("Rotector", "https://raw.githubusercontent.com/VenezzaX/RobloxRotector/refs/heads/main/Rotector.lua") end)
     addButtonOption(drawer, "Load FE Emotes", function() runExternalScript("FE Emotes", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/FeEmotes.lua") end)
     addButtonOption(drawer, "Load Gamepass Bypass", function() runExternalScript("Gamepass Bypass", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/gamepassbypass.lua") end)
     addButtonOption(drawer, "Load Coordinate UI", function() runExternalScript("Coordinate UI", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/CoordinateUI.lua") end)
