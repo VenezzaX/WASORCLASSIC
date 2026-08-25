@@ -1678,7 +1678,7 @@ UI.InitializeUI = function()
             end)
             VH.Cleanup.cleanupAll()
             task.wait(0.1)
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/refs/heads/main/github_loader.lua"))()
         end)
     end)
     
