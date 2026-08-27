@@ -36,7 +36,6 @@ local StudioTheme = {
 UI.themeColors = {
     ["Studio Classic"] = StudioTheme.blue
 }
-UI.themeHeaders = {}
 
 local activeTab = "Modules"
 local menuBlur = nil
