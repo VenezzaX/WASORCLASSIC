@@ -11,6 +11,7 @@ local runExternalScript = Utils.runExternalScript
 
 registerModule("Misc", "ScriptHub", 720, 50, false, false, nil, function(drawer)
     addButtonOption(drawer, "Load FE Emotes", function() runExternalScript("FE Emotes", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/FeEmotes.lua") end)
+    addButtonOption(drawer, "Load AnimPicker", function() runExternalScript("AnimPicker", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/AnimationPicker.lua") end)
     addButtonOption(drawer, "Load Gamepass Bypass", function() runExternalScript("Gamepass Bypass", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/gamepassbypass.lua") end)
     addButtonOption(drawer, "Load Coordinate UI", function() runExternalScript("Coordinate UI", "https://raw.githubusercontent.com/VenezzaX/Usefulthings/refs/heads/main/CoordinateUI.lua") end)
     addButtonOption(drawer, "Load Vex Explorer", function() runExternalScript("Vex", "https://raw.githubusercontent.com/Vezise/2026/main/Vez/VexExplorer/VEXExplorer.lua") end)
