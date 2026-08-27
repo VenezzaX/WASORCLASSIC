@@ -26,8 +26,6 @@ local MarketplaceService = Services.MarketplaceService
 local VirtualUser = Services.VirtualUser
 local RunService = Services.RunService
 
-local themeToggles = UI.themeToggles
-
 local hudCoords = UI.hudCoords
 local hudServerAge = UI.hudServerAge
 
@@ -1565,18 +1563,6 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
     end
     VH.runNetworkTagsSync = runNetworkTagsSync
 
-    table.insert(themeToggles, function()
-        for username, bill in pairs(networkTagsPool) do
-            pcall(function()
-                local frame = bill:FindFirstChildOfClass("Frame")
-                local stroke = frame and frame:FindFirstChildOfClass("UIStroke")
-                if stroke and stroke.Color ~= Color3.fromRGB(255, 235, 59) then
-                    stroke.Color = State.currentThemeColor
-                end
-            end)
-        end
-    end)
-
     local cg = game:GetService("CoreGui")
     local pg = LP:WaitForChild("PlayerGui", 5)
 
@@ -1607,12 +1593,3 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
 
     pcall(setupAutoReinject)
     pcall(function() Utils.setupAutoRejoin() end)
-
-
-
-
-
-    pcall(setupAutoReinject)
-    pcall(function() Utils.setupAutoRejoin() end)
-
-
