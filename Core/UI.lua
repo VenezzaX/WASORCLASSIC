@@ -1729,13 +1729,13 @@ UI.InitializeUI = function()
             task.wait(0.2)
             pcall(function()
                 if delfile then
-                    delfile("WASOR_cache/commit_sha.txt")
-                    delfile("WASOR_cache/Core/UI.lua")
+                    delfile("WASOR_Classic_Cache/commit_sha.txt")
+                    delfile("WASOR_Classic_Cache/Core/UI.lua")
                 end
             end)
             VH.Cleanup.cleanupAll()
             task.wait(0.1)
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/refs/heads/main/github_loader.lua"))()
         end)
     end)
     
