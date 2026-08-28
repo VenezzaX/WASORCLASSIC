@@ -498,6 +498,20 @@ local function adjustWindowSizeToContent(winFrame, contentFrame)
     winFrame:SetAttribute("BaseHeight", finalHeight)
 end
 
+local function findAncestorFloatingWindow(obj)
+    local cur = obj
+    while cur do
+        if cur:IsA("ScrollingFrame") and cur.Name == "content" and cur.Parent and cur.Parent:FindFirstChild("header") then
+            return cur.Parent, cur
+        end
+        if cur:IsA("Frame") and cur:FindFirstChild("header") and cur:FindFirstChild("content") then
+            return cur, cur:FindFirstChild("content")
+        end
+        cur = cur.Parent
+    end
+    return nil, nil
+end
+
 UI.addToggleOption = function(parent, name, defaultVal, callback)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 26)
@@ -655,10 +669,12 @@ end
 
 UI.addDropdownOption = function(parent, name, optionsList, defaultValIndex, callback)
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 40)
+    row.Name = "DropdownRow_" .. name
+    row.Size = UDim2.new(1, 0, 0, 42)
     row.BackgroundColor3 = StudioTheme.panelBg
     row.BorderSizePixel = 1
     row.BorderColor3 = StudioTheme.border
+    row.ClipsDescendants = false
     row.Parent = parent
     
     local label = Instance.new("TextLabel")
@@ -672,54 +688,96 @@ UI.addDropdownOption = function(parent, name, optionsList, defaultValIndex, call
     label.Text = name
     label.Parent = row
     
-    local dropBtn = makeStudioButton(row, "  " .. (optionsList[defaultValIndex] or "(none)") .. "  v", UDim2.new(1, -12, 0, 18), 18, StudioTheme.btnBg, StudioTheme.text, Enum.Font.SourceSansSemibold, 11)
+    local currentOpt = optionsList[defaultValIndex] or optionsList[1] or "(none)"
+    
+    local dropBtn = makeStudioButton(row, "  " .. currentOpt .. "  v", UDim2.new(1, -12, 0, 20), 20, StudioTheme.btnBg, StudioTheme.text, Enum.Font.SourceSansSemibold, 11)
     dropBtn.Position = UDim2.new(0, 6, 0, 18)
     dropBtn.TextXAlignment = Enum.TextXAlignment.Left
+    dropBtn.ClipsDescendants = false
     
     local open = false
     local listContainer = nil
     
     local function toggleDropdown()
         open = not open
+        dropBtn.Text = "  " .. currentOpt .. (open and "  ^" or "  v")
+        
         if open then
             listContainer = Instance.new("Frame")
-            listContainer.Size = UDim2.new(1, 0, 0, #optionsList * 20)
-            listContainer.Position = UDim2.new(0, 0, 1, 1)
-            listContainer.BackgroundColor3 = StudioTheme.windowBg
+            listContainer.Name = "DropdownList"
+            listContainer.Size = UDim2.new(1, -12, 0, #optionsList * 20)
+            listContainer.Position = UDim2.new(0, 6, 0, 40)
+            listContainer.BackgroundColor3 = StudioTheme.insetBg
             listContainer.BorderSizePixel = 1
-            listContainer.BorderColor3 = StudioTheme.border
-            listContainer.ZIndex = 30
-            listContainer.Parent = dropBtn
+            listContainer.BorderColor3 = StudioTheme.borderSubtle
+            listContainer.ZIndex = 25
+            listContainer.ClipsDescendants = false
+            listContainer.Parent = row
             
             local layout = Instance.new("UIListLayout")
+            layout.Padding = UDim.new(0, 0)
+            layout.SortOrder = Enum.SortOrder.LayoutOrder
             layout.Parent = listContainer
             
             for i, opt in ipairs(optionsList) do
-                local itemBtn = makeStudioButton(listContainer, "  " .. opt, UDim2.new(1, 0, 0, 20), 20, StudioTheme.windowBg, StudioTheme.text, Enum.Font.SourceSans, 11)
+                local isSelected = (opt == currentOpt)
+                local itemBg = isSelected and StudioTheme.categoryBg or StudioTheme.insetBg
+                local itemFg = isSelected and StudioTheme.blue or StudioTheme.text
+                local itemBtn = makeStudioButton(listContainer, "  " .. opt, UDim2.new(1, 0, 0, 20), 20, itemBg, itemFg, Enum.Font.SourceSans, 11)
                 itemBtn.TextXAlignment = Enum.TextXAlignment.Left
-                itemBtn.ZIndex = 31
+                itemBtn.ZIndex = 26
+                itemBtn.LayoutOrder = i
+                itemBtn.ClipsDescendants = false
+                
+                itemBtn.MouseEnter:Connect(function()
+                    if opt ~= currentOpt then
+                        itemBtn.BackgroundColor3 = StudioTheme.btnHover
+                    end
+                end)
+                itemBtn.MouseLeave:Connect(function()
+                    if opt ~= currentOpt then
+                        itemBtn.BackgroundColor3 = StudioTheme.insetBg
+                    else
+                        itemBtn.BackgroundColor3 = StudioTheme.categoryBg
+                    end
+                end)
+                
                 itemBtn.Activated:Connect(function()
+                    currentOpt = opt
                     dropBtn.Text = "  " .. opt .. "  v"
                     if callback then callback(i, opt) end
                     toggleDropdown()
                 end)
             end
-            row.Size = UDim2.new(1, 0, 0, 40 + #optionsList * 20)
+            
+            row.Size = UDim2.new(1, 0, 0, 42 + #optionsList * 20 + 2)
         else
             if listContainer then
                 listContainer:Destroy()
                 listContainer = nil
             end
-            row.Size = UDim2.new(1, 0, 0, 40)
+            row.Size = UDim2.new(1, 0, 0, 42)
+        end
+        
+        local winFrame, contentFrame = findAncestorFloatingWindow(parent)
+        if winFrame and contentFrame then
+            adjustWindowSizeToContent(winFrame, contentFrame)
         end
     end
+    
     dropBtn.Activated:Connect(toggleDropdown)
     
     return {
-        Set = function(valText) dropBtn.Text = "  " .. valText .. "  v" end,
+        Set = function(valText)
+            currentOpt = valText
+            dropBtn.Text = "  " .. valText .. (open and "  ^" or "  v")
+        end,
         SetOptions = function(newList)
             optionsList = newList
-            if open then toggleDropdown(); toggleDropdown() end
+            if open then
+                toggleDropdown()
+                toggleDropdown()
+            end
         end
     }
 end
@@ -1677,7 +1735,7 @@ UI.InitializeUI = function()
             end)
             VH.Cleanup.cleanupAll()
             task.wait(0.1)
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/refs/heads/main/github_loader.lua"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/refs/heads/main/github_loader.lua"))()
         end)
     end)
     
