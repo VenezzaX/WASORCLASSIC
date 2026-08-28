@@ -362,11 +362,11 @@ Utils.setupAutoReinject = function()
     local code = [[ 
         repeat task.wait() until game:IsLoaded() 
         local success, err = pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/refs/heads/main/github_loader.lua"))() 
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/main/github_loader.lua"))() 
         end)
         if not success then
             pcall(function()
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/refs/heads/main/github_loader.lua"))() 
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/main/WASOR_bundled.lua"))() 
             end)
         end
     ]]
