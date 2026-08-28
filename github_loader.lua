@@ -166,11 +166,11 @@ local latestSHA = nil
 local useCache = false
 
 if hasFileSystem then
-    if not isfolder("WASOR_cache") then
-        pcall(makefolder, "WASOR_cache")
+    if not isfolder("WASOR_Classic_Cache") then
+        pcall(makefolder, "WASOR_Classic_Cache")
     end
-    if isfile("WASOR_cache/commit_sha.txt") then
-        local success, val = pcall(readfile, "WASOR_cache/commit_sha.txt")
+    if isfile("WASOR_Classic_Cache/commit_sha.txt") then
+        local success, val = pcall(readfile, "WASOR_Classic_Cache/commit_sha.txt")
         if success then cachedSHA = val end
     end
     latestSHA = getLatestCommitSHA()
@@ -183,7 +183,7 @@ local downloadFailed = false
 
 local function runFile(path)
     local content = nil
-    local cachePath = "WASOR_cache/" .. path .. ".lua"
+    local cachePath = "WASOR_Classic_Cache/" .. path .. ".lua"
     
     if useCache and hasFileSystem and isfile(cachePath) then
         local success, cachedCode = pcall(readfile, cachePath)
@@ -239,5 +239,5 @@ end
 runFile("Core/Runtime")
 
 if not useCache and hasFileSystem and latestSHA and not downloadFailed then
-    pcall(writefile, "WASOR_cache/commit_sha.txt", latestSHA)
+    pcall(writefile, "WASOR_Classic_Cache/commit_sha.txt", latestSHA)
 end
