@@ -62,7 +62,8 @@ Config.loadConfig = function()
     S.Float = false; S.WaterWalk = false; S.TallAnim = false; S.Spin = false; S.GravityEnabled = false
     S.GodMode = false; S.KillAura = false; S.AutoClicker = false; S.FlingActive = false; S.FlingAllActive = false; S.WalkFling = false
     S.FollowActive = false; S.AntiAnchor = false; S.No3DRender = false; S.ClickTeleport = false; S.SprintEnabled = false
-    S.GraphicsReducer = false; S.ForceWalkSpeed = false; S.ForceJumpPower = false; S.Climb = false; S.AimlockActive = false
+    S.GraphicsReducer = false; S.ForceWalkSpeed = false; S.ForceJumpPower = false; S.Climb = false
+    S.AimbotActive = false; S.AimlockActive = false; S.SilentAim = false; S.TriggerbotActive = false; S.AutoplayBot = false; S.TouchAura = false
     S.WallRun = false; S.FlyBypass = false; S.PathfindingWalk = false
     S.MinimapActive = false; S.OutOfViewIndicators = false
     pcall(function()
