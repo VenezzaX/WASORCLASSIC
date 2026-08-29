@@ -26,25 +26,58 @@ local function getGuiContainers()
     return containers
 end
 
-Cleanup.destroyESP = function(p)
+Cleanup.hideESP = function(p)
     local S = State.S
-    local pool = S.ESPPool[p]
+    local pool = S.ESPPool and S.ESPPool[p]
     if pool then
-        pcall(function() pool.boxOutline.Visible = false; pool.boxOutline:Remove() end)
-        pcall(function() pool.boxFill.Visible = false; pool.boxFill:Remove() end)
-        pcall(function() pool.tracer.Visible = false; pool.tracer:Remove() end)
-        pcall(function() pool.nameTag.Visible = false; pool.nameTag:Remove() end)
-        pcall(function() pool.healthText.Visible = false; pool.healthText:Remove() end)
-        pcall(function() pool.distText.Visible = false; pool.distText:Remove() end)
-        pcall(function() pool.healthBarOutline.Visible = false; pool.healthBarOutline:Remove() end)
-        pcall(function() pool.healthBarFill.Visible = false; pool.healthBarFill:Remove() end)
-        pcall(function() if pool.losLine then pool.losLine.Visible = false; pool.losLine:Remove() end end)
-        pcall(function() if pool.indicator then pool.indicator.Visible = false; pool.indicator:Remove() end end)
+        if pool.boxOutline then pcall(function() pool.boxOutline.Visible = false end) end
+        if pool.boxFill then pcall(function() pool.boxFill.Visible = false end) end
+        if pool.tracer then pcall(function() pool.tracer.Visible = false end) end
+        if pool.nameTag then pcall(function() pool.nameTag.Visible = false end) end
+        if pool.healthText then pcall(function() pool.healthText.Visible = false end) end
+        if pool.distText then pcall(function() pool.distText.Visible = false end) end
+        if pool.healthBarOutline then pcall(function() pool.healthBarOutline.Visible = false end) end
+        if pool.healthBarFill then pcall(function() pool.healthBarFill.Visible = false end) end
+        if pool.losLine then pcall(function() pool.losLine.Visible = false end) end
+        if pool.indicator then pcall(function() pool.indicator.Visible = false end) end
         if pool.skeleton then
-            for _, line in ipairs(pool.skeleton) do pcall(function() line.Visible = false; line:Remove() end) end
+            for _, line in ipairs(pool.skeleton) do pcall(function() line.Visible = false end) end
         end
         if pool.corners then
-            for _, line in ipairs(pool.corners) do pcall(function() line.Visible = false; line:Remove() end) end
+            for _, line in ipairs(pool.corners) do pcall(function() line.Visible = false end) end
+        end
+    end
+end
+
+Cleanup.hideAllESP = function()
+    local S = State.S
+    if S.ESPPool then
+        for p, _ in pairs(S.ESPPool) do
+            Cleanup.hideESP(p)
+        end
+    end
+end
+
+Cleanup.destroyESP = function(p)
+    local S = State.S
+    local pool = S.ESPPool and S.ESPPool[p]
+    if pool then
+        Cleanup.hideESP(p)
+        pcall(function() if pool.boxOutline then pool.boxOutline:Remove() end end)
+        pcall(function() if pool.boxFill then pool.boxFill:Remove() end end)
+        pcall(function() if pool.tracer then pool.tracer:Remove() end end)
+        pcall(function() if pool.nameTag then pool.nameTag:Remove() end end)
+        pcall(function() if pool.healthText then pool.healthText:Remove() end end)
+        pcall(function() if pool.distText then pool.distText:Remove() end end)
+        pcall(function() if pool.healthBarOutline then pool.healthBarOutline:Remove() end end)
+        pcall(function() if pool.healthBarFill then pool.healthBarFill:Remove() end end)
+        pcall(function() if pool.losLine then pool.losLine:Remove() end end)
+        pcall(function() if pool.indicator then pool.indicator:Remove() end end)
+        if pool.skeleton then
+            for _, line in ipairs(pool.skeleton) do pcall(function() line:Remove() end) end
+        end
+        if pool.corners then
+            for _, line in ipairs(pool.corners) do pcall(function() line:Remove() end) end
         end
         S.ESPPool[p] = nil
     end
