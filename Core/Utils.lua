@@ -675,20 +675,37 @@ visRaycastParams.FilterType = Enum.RaycastFilterType.Exclude
 visRaycastParams.IgnoreWater = true
 
 Utils.isPartVisible = function(part, char)
-    if not part then return false end
-    local origin = Services.Camera.CFrame.Position; local destination = part.Position; local direction = destination - origin
+    if not part or not part.Parent then return false end
+    local cam = Services.Camera or (Services.Workspace and Services.Workspace.CurrentCamera)
+    if not cam then return false end
+    local origin = cam.CFrame.Position
+    local destination = part.Position
+    local direction = destination - origin
     if direction.Magnitude == 0 then return true end
-    visRaycastParams.FilterDescendantsInstances = {Services.LP.Character, char}
-    local result = Services.Workspace:Raycast(origin, direction, visRaycastParams); return result == nil
+    
+    local filterList = {}
+    if Services.LP and Services.LP.Character then
+        table.insert(filterList, Services.LP.Character)
+    end
+    if char then
+        table.insert(filterList, char)
+    end
+    visRaycastParams.FilterDescendantsInstances = filterList
+    local result = Services.Workspace:Raycast(origin, direction, visRaycastParams)
+    return result == nil
 end
 
 Utils.getAimbotTargetPart = function(char)
+    if not char then return nil end
     local S = State.S
     if S.AimbotPart == "Head" then return char:FindFirstChild("Head")
     elseif S.AimbotPart == "Torso" then return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
     elseif S.AimbotPart == "Random" then
-        local parts = {}; local head = char:FindFirstChild("Head"); local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
-        if head then table.insert(parts, head) end; if torso then table.insert(parts, torso) end
+        local parts = {}
+        local head = char:FindFirstChild("Head")
+        local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+        if head then table.insert(parts, head) end
+        if torso then table.insert(parts, torso) end
         if #parts > 0 then return parts[math.random(1, #parts)] end
     end
     return char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
@@ -696,29 +713,45 @@ end
 
 Utils.getAimbotTarget = function()
     local S = State.S
-    local bestTarget = nil; local closestDist = S.AimbotFOV; local center = Vector2.new(Services.Camera.ViewportSize.X / 2, Services.Camera.ViewportSize.Y / 2)
+    local cam = Services.Camera or (Services.Workspace and Services.Workspace.CurrentCamera)
+    if not cam then return nil end
+    local bestTarget = nil
+    local closestDist = S.AimbotFOV
+    local center = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+    
     for _, p in ipairs(Services.Players:GetPlayers()) do
         if p == Services.LP then continue end
         if S.AimbotTeamCheck and p.Team == Services.LP.Team then continue end
         if S.AimbotIgnoreFriends and Utils.checkFriendship(p.UserId) then continue end
-        local char = p.Character; local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local char = p.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
         if not char or not hum or hum.Health <= 0 then continue end
-        local part = Utils.getAimbotTargetPart(char); if not part then continue end
+        local part = Utils.getAimbotTargetPart(char)
+        if not part or not part.Parent then continue end
         if S.AimbotVisibility and not Utils.isPartVisible(part, char) then continue end
-        local sp, onScreen = Services.Camera:WorldToViewportPoint(part.Position); if not onScreen then continue end
+        local sp, onScreen = cam:WorldToViewportPoint(part.Position)
+        if not onScreen or sp.Z <= 0 then continue end
         local dist = (Vector2.new(sp.X, sp.Y) - center).Magnitude
-        if dist < closestDist then closestDist = dist; bestTarget = part end
+        if dist < closestDist then
+            closestDist = dist
+            bestTarget = part
+        end
     end
     return bestTarget
 end
 
 Utils.getBoundingBox = function(char)
-    local hrp = char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"); if not hrp then return nil end
+    if not char then return nil end
+    local hrp = char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+    if not hrp then return nil end
+    local cam = Services.Camera or (Services.Workspace and Services.Workspace.CurrentCamera)
+    if not cam then return nil end
     local hrPos = hrp.Position
-    local topSp, topOnScreen = Services.Camera:WorldToViewportPoint(hrPos + Vector3.new(0, 3, 0))
+    local topSp, topOnScreen = cam:WorldToViewportPoint(hrPos + Vector3.new(0, 3, 0))
     if topSp.Z <= 0 then return nil end
-    local botSp = Services.Camera:WorldToViewportPoint(hrPos - Vector3.new(0, 3.5, 0))
-    local height = math.abs(topSp.Y - botSp.Y); local width = height * 0.6
+    local botSp, botOnScreen = cam:WorldToViewportPoint(hrPos - Vector3.new(0, 3.5, 0))
+    local height = math.abs(topSp.Y - botSp.Y)
+    local width = height * 0.6
     return { Vector2.new(topSp.X - width/2, topSp.Y), Vector2.new(topSp.X + width/2, botSp.Y) }
 end
 
