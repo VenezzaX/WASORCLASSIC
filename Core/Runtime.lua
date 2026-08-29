@@ -178,6 +178,14 @@ local function destroyESP(p)
     return VH.Cleanup.destroyESP(p)
 end
 
+local function hideESP(p)
+    return VH.Cleanup.hideESP(p)
+end
+
+local function hideAllESP()
+    return VH.Cleanup.hideAllESP()
+end
+
 local function updateFlyVelocity()
     return Utils.updateFlyVelocity()
 end
@@ -353,212 +361,224 @@ local function updateESPAndAimbot()
     if espEnabled then
         for _, p in ipairs(Players:GetPlayers()) do
             if p == LP then continue end
-            local char = p.Character; local hrp = char and (char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            local valid = char and hrp and hum and hum.Health > 0
-            if valid then
-                local isTeammate = p.Team == LP.Team
-                local isFriend = checkFriendship(p.UserId)
+            local success, err = pcall(function()
+                local char = p.Character
+                local hrp = char and (char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                local valid = char and hrp and hum and hum.Health > 0
+                if valid then
+                    local isTeammate = p.Team == LP.Team
+                    local isFriend = checkFriendship(p.UserId)
 
-                local espAllowed = true
-                if S.ESPTeamCheck and isTeammate then espAllowed = false end
-                if S.ESPIgnoreFriends and isFriend then espAllowed = false end
+                    local espAllowed = true
+                    if S.ESPTeamCheck and isTeammate then espAllowed = false end
+                    if S.ESPIgnoreFriends and isFriend then espAllowed = false end
 
-                local dist = math.round((hrp.Position - Camera.CFrame.Position).Magnitude)
+                    local dist = math.round((hrp.Position - Camera.CFrame.Position).Magnitude)
 
-                local oodAllowed = S.OutOfViewIndicators
-                if S.OutOfViewTeamCheck and isTeammate then oodAllowed = false end
-                if S.ESPIgnoreFriends and isFriend then oodAllowed = false end
-                if oodAllowed and dist > (S.OutOfViewMaxDistance or 300) then oodAllowed = false end
+                    local oodAllowed = S.OutOfViewIndicators
+                    if S.OutOfViewTeamCheck and isTeammate then oodAllowed = false end
+                    if S.ESPIgnoreFriends and isFriend then oodAllowed = false end
+                    if oodAllowed and dist > (S.OutOfViewMaxDistance or 300) then oodAllowed = false end
 
-                local losAllowed = S.LineOfSight
-                if losAllowed then
-                    if S.LineOfSightTeamCheck and isTeammate then losAllowed = false end
-                    if S.LineOfSightFriendCheck and isFriend then losAllowed = false end
-                end
-
-                if not espAllowed and not losAllowed and not oodAllowed then
-                    destroyESP(p)
-                    continue
-                end
-
-                local teamCol = p.Team and p.Team.TeamColor.Color or Color3.fromRGB(218, 38, 38)
-                local espDrawCol = espColorMapping[S.ESPColor] or teamCol
-                if S.ESPDistanceColor then local pct = math.clamp(dist / 500, 0, 1); espDrawCol = Color3.fromRGB(255 * pct, 255 * (1 - pct), 0) end
-
-                if not S.ESPPool[p] then
-                    S.ESPPool[p] = {
-                        boxOutline = Drawing.new("Square"), boxFill = Drawing.new("Square"), tracer = Drawing.new("Line"),
-                        nameTag = Drawing.new("Text"), healthText = Drawing.new("Text"), distText = Drawing.new("Text"),
-                        healthBarOutline = Drawing.new("Square"), healthBarFill = Drawing.new("Square"), skeleton = {},
-                        corners = {}, losLine = Drawing.new("Line"), indicator = Drawing.new("Triangle")
-                    }
-                    for i=1, 20 do table.insert(S.ESPPool[p].skeleton, Drawing.new("Line")) end
-                    for i=1, 8 do table.insert(S.ESPPool[p].corners, Drawing.new("Line")) end
-                end
-                local pool = S.ESPPool[p]
-                if pool and #pool.skeleton < 20 then
-                    for i = #pool.skeleton + 1, 20 do
-                        table.insert(pool.skeleton, Drawing.new("Line"))
+                    local losAllowed = S.LineOfSight
+                    if losAllowed then
+                        if S.LineOfSightTeamCheck and isTeammate then losAllowed = false end
+                        if S.LineOfSightFriendCheck and isFriend then losAllowed = false end
                     end
-                end
-                if not pool.losLine then
-                    pool.losLine = Drawing.new("Line")
-                end
 
-                local box = getBoundingBox(char); local sp, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                local showIndicator = oodAllowed and (not onScreen or sp.Z <= 0)
-
-                if showIndicator then
-                    pool.boxOutline.Visible = false; pool.boxFill.Visible = false; pool.tracer.Visible = false; pool.nameTag.Visible = false
-                    pool.healthText.Visible = false; pool.distText.Visible = false; pool.healthBarOutline.Visible = false; pool.healthBarFill.Visible = false
-                    for _, line in ipairs(pool.skeleton) do line.Visible = false end
-                    for _, line in ipairs(pool.corners) do line.Visible = false end
-                    if pool.losLine then pool.losLine.Visible = false end
-
-                    local dir = (hrp.Position - Camera.CFrame.Position).Unit
-                    local camSpaceDir = Camera.CFrame:VectorToObjectSpace(dir)
-                    local angle = math.atan2(camSpaceDir.Y, camSpaceDir.X)
-
-                    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                    local radius = S.OutOfViewIndicatorRadius or 200
-                    local size = S.OutOfViewSize or 10
-
-                    local pointA = center + Vector2.new(math.cos(angle), -math.sin(angle)) * (radius + size)
-                    local pointB = center + Vector2.new(math.cos(angle + 0.15), -math.sin(angle + 0.15)) * radius
-                    local pointC = center + Vector2.new(math.cos(angle - 0.15), -math.sin(angle - 0.15)) * radius
-
-                    if pool.indicator then
-                        pool.indicator.PointA = pointA
-                        pool.indicator.PointB = pointB
-                        pool.indicator.PointC = pointC
-                        pool.indicator.Color = espDrawCol
-                        pool.indicator.Filled = true
-                        pool.indicator.Transparency = 1
-                        pool.indicator.Visible = true
+                    if not espAllowed and not losAllowed and not oodAllowed then
+                        hideESP(p)
+                        return
                     end
-                else
-                    if pool.indicator then pool.indicator.Visible = false end
 
-                    if box and sp.Z > 0 then
-                    local topLeft, bottomRight = box[1], box[2]; local width, height = bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y
+                    local teamCol = p.Team and p.Team.TeamColor.Color or Color3.fromRGB(218, 38, 38)
+                    local espDrawCol = espColorMapping[S.ESPColor] or teamCol
+                    if S.ESPDistanceColor then local pct = math.clamp(dist / 500, 0, 1); espDrawCol = Color3.fromRGB(255 * pct, 255 * (1 - pct), 0) end
 
-                    local showFull = espAllowed and S.ESPBoxes and S.ESPBoxStyle == "Full"
-                    local showCorners = espAllowed and S.ESPBoxes and S.ESPBoxStyle == "Corners"
+                    if not S.ESPPool[p] then
+                        S.ESPPool[p] = {
+                            boxOutline = Drawing.new("Square"), boxFill = Drawing.new("Square"), tracer = Drawing.new("Line"),
+                            nameTag = Drawing.new("Text"), healthText = Drawing.new("Text"), distText = Drawing.new("Text"),
+                            healthBarOutline = Drawing.new("Square"), healthBarFill = Drawing.new("Square"), skeleton = {},
+                            corners = {}, losLine = Drawing.new("Line"), indicator = Drawing.new("Triangle")
+                        }
+                        for i=1, 20 do table.insert(S.ESPPool[p].skeleton, Drawing.new("Line")) end
+                        for i=1, 8 do table.insert(S.ESPPool[p].corners, Drawing.new("Line")) end
+                    end
+                    local pool = S.ESPPool[p]
+                    if pool and #pool.skeleton < 20 then
+                        for i = #pool.skeleton + 1, 20 do
+                            table.insert(pool.skeleton, Drawing.new("Line"))
+                        end
+                    end
+                    if not pool.losLine then
+                        pool.losLine = Drawing.new("Line")
+                    end
 
-                    local outline = pool.boxOutline; outline.Visible = showFull; outline.Position = topLeft; outline.Size = Vector2.new(width, height)
-                    outline.Color = espDrawCol; outline.Thickness = 1.5; outline.Transparency = 1; outline.Filled = false
+                    local box = getBoundingBox(char)
+                    local sp, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                    local showIndicator = oodAllowed and (not onScreen or sp.Z <= 0)
 
-                    local fill = pool.boxFill; fill.Visible = espAllowed and S.ESPBoxes; fill.Position = topLeft; fill.Size = Vector2.new(width, height)
-                    fill.Color = espDrawCol; fill.Transparency = 1 - S.ESPTransparency; fill.Filled = true
+                    if showIndicator then
+                        pool.boxOutline.Visible = false; pool.boxFill.Visible = false; pool.tracer.Visible = false; pool.nameTag.Visible = false
+                        pool.healthText.Visible = false; pool.distText.Visible = false; pool.healthBarOutline.Visible = false; pool.healthBarFill.Visible = false
+                        for _, line in ipairs(pool.skeleton) do line.Visible = false end
+                        for _, line in ipairs(pool.corners) do line.Visible = false end
+                        if pool.losLine then pool.losLine.Visible = false end
 
-                    if showCorners then
-                        local len = math.clamp(math.min(width, height) * 0.25, 4, 15)
-                        local c = pool.corners
-                        c[1].From = topLeft; c[1].To = topLeft + Vector2.new(len, 0)
-                        c[2].From = topLeft; c[2].To = topLeft + Vector2.new(0, len)
+                        local dir = (hrp.Position - Camera.CFrame.Position).Unit
+                        local camSpaceDir = Camera.CFrame:VectorToObjectSpace(dir)
+                        local angle = math.atan2(camSpaceDir.Y, camSpaceDir.X)
 
-                        local tr = Vector2.new(bottomRight.X, topLeft.Y)
-                        c[3].From = tr; c[3].To = tr + Vector2.new(-len, 0)
-                        c[4].From = tr; c[4].To = tr + Vector2.new(0, len)
+                        local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                        local radius = S.OutOfViewIndicatorRadius or 200
+                        local size = S.OutOfViewSize or 10
 
-                        local bl = Vector2.new(topLeft.X, bottomRight.Y)
-                        c[5].From = bl; c[5].To = bl + Vector2.new(len, 0)
-                        c[6].From = bl; c[6].To = bl + Vector2.new(0, -len)
+                        local pointA = center + Vector2.new(math.cos(angle), -math.sin(angle)) * (radius + size)
+                        local pointB = center + Vector2.new(math.cos(angle + 0.15), -math.sin(angle + 0.15)) * radius
+                        local pointC = center + Vector2.new(math.cos(angle - 0.15), -math.sin(angle - 0.15)) * radius
 
-                        c[7].From = bottomRight; c[7].To = bottomRight + Vector2.new(-len, 0)
-                        c[8].From = bottomRight; c[8].To = bottomRight + Vector2.new(0, -len)
-
-                        for _, line in ipairs(c) do
-                            line.Color = espDrawCol
-                            line.Thickness = 1.5
-                            line.Transparency = 1
-                            line.Visible = true
+                        if pool.indicator then
+                            pool.indicator.PointA = pointA
+                            pool.indicator.PointB = pointB
+                            pool.indicator.PointC = pointC
+                            pool.indicator.Color = espDrawCol
+                            pool.indicator.Filled = true
+                            pool.indicator.Transparency = 1
+                            pool.indicator.Visible = true
                         end
                     else
-                        for _, line in ipairs(pool.corners) do
-                            line.Visible = false
-                        end
-                    end
-                    local tracer = pool.tracer; tracer.Visible = espAllowed and S.ESPTracers
-                    local vp = Camera.ViewportSize; local originY = vp.Y
-                    if S.TracerOrigin == "Center" then originY = vp.Y / 2 elseif S.TracerOrigin == "Top" then originY = 0 end
-                    tracer.From = Vector2.new(vp.X / 2, originY); tracer.To = Vector2.new(sp.X, sp.Y); tracer.Color = espDrawCol; tracer.Thickness = 1.5; tracer.Transparency = 0.8
-                    local hpPct = hum.Health / math.max(hum.MaxHealth, 1)
-                    local healthBarOutline = pool.healthBarOutline; healthBarOutline.Visible = espAllowed and S.ESPHealth; healthBarOutline.Position = Vector2.new(topLeft.X - 5, topLeft.Y)
-                    healthBarOutline.Size = Vector2.new(2, height); healthBarOutline.Color = Color3.new(0, 0, 0); healthBarOutline.Thickness = 1; healthBarOutline.Filled = true
-                    local healthBarFill = pool.healthBarFill; healthBarFill.Visible = espAllowed and S.ESPHealth; healthBarFill.Position = Vector2.new(topLeft.X - 4, topLeft.Y + 1)
-                    healthBarFill.Size = Vector2.new(1, (height - 2) * hpPct); healthBarFill.Color = Color3.fromRGB(255 * (1 - hpPct), 255 * hpPct, 0); healthBarFill.Filled = true
-                    local nameTag = pool.nameTag; nameTag.Visible = espAllowed and S.ESPNames; nameTag.Text = p.DisplayName; nameTag.Size = 13; nameTag.Font = 2
-                    nameTag.Center = true; nameTag.Outline = true; nameTag.Color = Color3.new(1, 1, 1); nameTag.Position = Vector2.new(topLeft.X + width / 2, topLeft.Y - 16)
-                    local healthText = pool.healthText; healthText.Visible = espAllowed and S.ESPHealth; healthText.Text = string.format("%d HP", math.floor(hum.Health))
-                    healthText.Size = 11; healthText.Font = 3; healthText.Center = true; healthText.Outline = true
-                    healthText.Color = Color3.fromRGB(255 * (1 - hpPct), 255 * hpPct, 0); healthText.Position = Vector2.new(topLeft.X + width / 2, bottomRight.Y + 2)
-                    local distText = pool.distText; distText.Visible = espAllowed and S.ESPDistances; distText.Text = string.format("%d studs", dist); distText.Size = 10; distText.Font = 3
-                    distText.Center = true; distText.Outline = true; distText.Color = Color3.fromRGB(200, 200, 200); distText.Position = Vector2.new(topLeft.X + width / 2, bottomRight.Y + (S.ESPHealth and 15 or 2))
-                    if S.SkeletonESP and espAllowed then
-                        local useBones = char:FindFirstChild("UpperTorso") and bonesR15 or bonesR6
-                        for i, bone in ipairs(useBones) do
-                            local line = pool.skeleton[i]
-                            if line then
-                                local pos1 = getNodePosition(char, bone[1])
-                                local pos2 = getNodePosition(char, bone[2])
-                                if pos1 and pos2 then
-                                    local sp1, on1 = Camera:WorldToViewportPoint(pos1)
-                                    local sp2, on2 = Camera:WorldToViewportPoint(pos2)
-                                    if sp1.Z > 0 and sp2.Z > 0 then
-                                        line.Visible = true
-                                        line.From = Vector2.new(sp1.X, sp1.Y)
-                                        line.To = Vector2.new(sp2.X, sp2.Y)
-                                        line.Color = espDrawCol
-                                        line.Thickness = 1
-                                    else
-                                        line.Visible = false
-                                    end
-                                else
+                        if pool.indicator then pool.indicator.Visible = false end
+
+                        if box and sp.Z > 0 then
+                            local topLeft, bottomRight = box[1], box[2]
+                            local width, height = bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y
+
+                            local showFull = espAllowed and S.ESPBoxes and S.ESPBoxStyle == "Full"
+                            local showCorners = espAllowed and S.ESPBoxes and S.ESPBoxStyle == "Corners"
+
+                            local outline = pool.boxOutline; outline.Visible = showFull; outline.Position = topLeft; outline.Size = Vector2.new(width, height)
+                            outline.Color = espDrawCol; outline.Thickness = 1.5; outline.Transparency = 1; outline.Filled = false
+
+                            local fill = pool.boxFill; fill.Visible = espAllowed and S.ESPBoxes; fill.Position = topLeft; fill.Size = Vector2.new(width, height)
+                            fill.Color = espDrawCol; fill.Transparency = 1 - S.ESPTransparency; fill.Filled = true
+
+                            if showCorners then
+                                local len = math.clamp(math.min(width, height) * 0.25, 4, 15)
+                                local c = pool.corners
+                                c[1].From = topLeft; c[1].To = topLeft + Vector2.new(len, 0)
+                                c[2].From = topLeft; c[2].To = topLeft + Vector2.new(0, len)
+
+                                local tr = Vector2.new(bottomRight.X, topLeft.Y)
+                                c[3].From = tr; c[3].To = tr + Vector2.new(-len, 0)
+                                c[4].From = tr; c[4].To = tr + Vector2.new(0, len)
+
+                                local bl = Vector2.new(topLeft.X, bottomRight.Y)
+                                c[5].From = bl; c[5].To = bl + Vector2.new(len, 0)
+                                c[6].From = bl; c[6].To = bl + Vector2.new(0, -len)
+
+                                c[7].From = bottomRight; c[7].To = bottomRight + Vector2.new(-len, 0)
+                                c[8].From = bottomRight; c[8].To = bottomRight + Vector2.new(0, -len)
+
+                                for _, line in ipairs(c) do
+                                    line.Color = espDrawCol
+                                    line.Thickness = 1.5
+                                    line.Transparency = 1
+                                    line.Visible = true
+                                end
+                            else
+                                for _, line in ipairs(pool.corners) do
                                     line.Visible = false
                                 end
                             end
-                        end
-                        for i = #useBones + 1, #pool.skeleton do
-                            pool.skeleton[i].Visible = false
-                        end
-                    else for _, line in ipairs(pool.skeleton) do line.Visible = false end end
+                            local tracer = pool.tracer; tracer.Visible = espAllowed and S.ESPTracers
+                            local vp = Camera.ViewportSize; local originY = vp.Y
+                            if S.TracerOrigin == "Center" then originY = vp.Y / 2 elseif S.TracerOrigin == "Top" then originY = 0 end
+                            tracer.From = Vector2.new(vp.X / 2, originY); tracer.To = Vector2.new(sp.X, sp.Y); tracer.Color = espDrawCol; tracer.Thickness = 1.5; tracer.Transparency = 0.8
+                            local hpPct = hum.Health / math.max(hum.MaxHealth, 1)
+                            local healthBarOutline = pool.healthBarOutline; healthBarOutline.Visible = espAllowed and S.ESPHealth; healthBarOutline.Position = Vector2.new(topLeft.X - 5, topLeft.Y)
+                            healthBarOutline.Size = Vector2.new(2, height); healthBarOutline.Color = Color3.new(0, 0, 0); healthBarOutline.Thickness = 1; healthBarOutline.Filled = true
+                            local healthBarFill = pool.healthBarFill; healthBarFill.Visible = espAllowed and S.ESPHealth; healthBarFill.Position = Vector2.new(topLeft.X - 4, topLeft.Y + 1)
+                            healthBarFill.Size = Vector2.new(1, (height - 2) * hpPct); healthBarFill.Color = Color3.fromRGB(255 * (1 - hpPct), 255 * hpPct, 0); healthBarFill.Filled = true
+                            local nameTag = pool.nameTag; nameTag.Visible = espAllowed and S.ESPNames; nameTag.Text = p.DisplayName; nameTag.Size = 13; nameTag.Font = 2
+                            nameTag.Center = true; nameTag.Outline = true; nameTag.Color = Color3.new(1, 1, 1); nameTag.Position = Vector2.new(topLeft.X + width / 2, topLeft.Y - 16)
+                            local healthText = pool.healthText; healthText.Visible = espAllowed and S.ESPHealth; healthText.Text = string.format("%d HP", math.floor(hum.Health))
+                            healthText.Size = 11; healthText.Font = 3; healthText.Center = true; healthText.Outline = true
+                            healthText.Color = Color3.fromRGB(255 * (1 - hpPct), 255 * hpPct, 0); healthText.Position = Vector2.new(topLeft.X + width / 2, bottomRight.Y + 2)
+                            local distText = pool.distText; distText.Visible = espAllowed and S.ESPDistances; distText.Text = string.format("%d studs", dist); distText.Size = 10; distText.Font = 3
+                            distText.Center = true; distText.Outline = true; distText.Color = Color3.fromRGB(200, 200, 200); distText.Position = Vector2.new(topLeft.X + width / 2, bottomRight.Y + (S.ESPHealth and 15 or 2))
+                            if S.SkeletonESP and espAllowed then
+                                local useBones = char:FindFirstChild("UpperTorso") and bonesR15 or bonesR6
+                                for i, bone in ipairs(useBones) do
+                                    local line = pool.skeleton[i]
+                                    if line then
+                                        local pos1 = getNodePosition(char, bone[1])
+                                        local pos2 = getNodePosition(char, bone[2])
+                                        if pos1 and pos2 then
+                                            local sp1, on1 = Camera:WorldToViewportPoint(pos1)
+                                            local sp2, on2 = Camera:WorldToViewportPoint(pos2)
+                                            if sp1.Z > 0 and sp2.Z > 0 then
+                                                line.Visible = true
+                                                line.From = Vector2.new(sp1.X, sp1.Y)
+                                                line.To = Vector2.new(sp2.X, sp2.Y)
+                                                line.Color = espDrawCol
+                                                line.Thickness = 1
+                                            else
+                                                line.Visible = false
+                                            end
+                                        else
+                                            line.Visible = false
+                                        end
+                                    end
+                                end
+                                for i = #useBones + 1, #pool.skeleton do
+                                    pool.skeleton[i].Visible = false
+                                end
+                            else for _, line in ipairs(pool.skeleton) do line.Visible = false end end
 
-                    local losLine = pool.losLine
-                    if losAllowed then
-                        local head = char:FindFirstChild("Head") or hrp
-                        local startPos = head.Position
-                        local endPos = startPos + (head.CFrame.LookVector * (S.LineOfSightLength or 30))
+                            local losLine = pool.losLine
+                            if losAllowed then
+                                local head = char:FindFirstChild("Head") or hrp
+                                local startPos = head.Position
+                                local endPos = startPos + (head.CFrame.LookVector * (S.LineOfSightLength or 30))
 
-                        local startScreen, startOnScreen = Camera:WorldToViewportPoint(startPos)
-                        local endScreen, endOnScreen = Camera:WorldToViewportPoint(endPos)
+                                local startScreen, startOnScreen = Camera:WorldToViewportPoint(startPos)
+                                local endScreen, endOnScreen = Camera:WorldToViewportPoint(endPos)
 
-                        if startOnScreen and endOnScreen and startScreen.Z > 0 and endScreen.Z > 0 then
-                            losLine.From = Vector2.new(startScreen.X, startScreen.Y)
-                            losLine.To = Vector2.new(endScreen.X, endScreen.Y)
-                            losLine.Color = espDrawCol
-                            losLine.Thickness = 1.5
-                            losLine.Transparency = 0.8
-                            losLine.Visible = true
+                                if startOnScreen and endOnScreen and startScreen.Z > 0 and endScreen.Z > 0 then
+                                    losLine.From = Vector2.new(startScreen.X, startScreen.Y)
+                                    losLine.To = Vector2.new(endScreen.X, endScreen.Y)
+                                    losLine.Color = espDrawCol
+                                    losLine.Thickness = 1.5
+                                    losLine.Transparency = 0.8
+                                    losLine.Visible = true
+                                else
+                                    losLine.Visible = false
+                                end
+                            else
+                                losLine.Visible = false
+                            end
                         else
-                            losLine.Visible = false
+                            pool.boxOutline.Visible = false; pool.boxFill.Visible = false; pool.tracer.Visible = false; pool.nameTag.Visible = false
+                            pool.healthText.Visible = false; pool.distText.Visible = false; pool.healthBarOutline.Visible = false; pool.healthBarFill.Visible = false
+                            for _, line in ipairs(pool.skeleton) do line.Visible = false end
+                            for _, line in ipairs(pool.corners) do line.Visible = false end
+                            if pool.losLine then pool.losLine.Visible = false end
                         end
-                    else
-                        losLine.Visible = false
                     end
                 else
-                    pool.boxOutline.Visible = false; pool.boxFill.Visible = false; pool.tracer.Visible = false; pool.nameTag.Visible = false
-                    pool.healthText.Visible = false; pool.distText.Visible = false; pool.healthBarOutline.Visible = false; pool.healthBarFill.Visible = false
-                    for _, line in ipairs(pool.skeleton) do line.Visible = false end
-                    for _, line in ipairs(pool.corners) do line.Visible = false end
-                    if pool.losLine then pool.losLine.Visible = false end
+                    hideESP(p)
                 end
+            end)
+            if not success then
+                hideESP(p)
             end
-            else destroyESP(p) end
         end
     else
-        if next(S.ESPPool) ~= nil then for p, _ in pairs(S.ESPPool) do destroyESP(p) end end
+        if next(S.ESPPool) ~= nil then
+            hideAllESP()
+        end
     end
 end
 RunService:BindToRenderStep("VoidESPUpdate", Enum.RenderPriority.Camera.Value + 1, updateESPAndAimbot)
