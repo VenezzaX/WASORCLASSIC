@@ -3,6 +3,14 @@ if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.Void
 end
 
 pcall(function()
+    local RunService = game:GetService("RunService")
+    RunService:UnbindFromRenderStep("VoidESPUpdate")
+    RunService:UnbindFromRenderStep("VoidAimbotUpdate")
+    RunService:UnbindFromRenderStep("VoidFlyUpdate")
+    RunService:UnbindFromRenderStep("VoidFreecamUpdate")
+end)
+
+pcall(function()
     if _G.WASOR_ScreenGui and _G.WASOR_ScreenGui.Parent then
         pcall(function() _G.WASOR_ScreenGui:Destroy() end)
         _G.WASOR_ScreenGui = nil
