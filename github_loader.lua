@@ -179,8 +179,7 @@ local function getLatestCommitSHA()
 end
 
 local cachedSHA = nil
-local latestSHA = nil
-local useCache = false
+local hasValidCache = false
 
 if hasFileSystem then
     if not isfolder("WASOR_Classic_Cache") then
@@ -188,21 +187,20 @@ if hasFileSystem then
     end
     if isfile("WASOR_Classic_Cache/commit_sha.txt") then
         local success, val = pcall(readfile, "WASOR_Classic_Cache/commit_sha.txt")
-        if success then cachedSHA = val end
+        if success and val and #val > 0 then
+            cachedSHA = val
+        end
     end
-    latestSHA = getLatestCommitSHA()
-    if latestSHA and cachedSHA and latestSHA == cachedSHA then
-        useCache = true
+    if cachedSHA and isfile("WASOR_Classic_Cache/Core/UI.lua") and isfile("WASOR_Classic_Cache/Core/Runtime.lua") then
+        hasValidCache = true
     end
 end
-
-local downloadFailed = false
 
 local function runFile(path)
     local content = nil
     local cachePath = "WASOR_Classic_Cache/" .. path .. ".lua"
     
-    if useCache and hasFileSystem and isfile(cachePath) then
+    if hasValidCache and hasFileSystem and isfile(cachePath) then
         local success, cachedCode = pcall(readfile, cachePath)
         if success and cachedCode and #cachedCode > 0 then
             content = cachedCode
@@ -214,15 +212,13 @@ local function runFile(path)
         local success, result = pcall(game.HttpGet, game, url)
         if success and result and #result > 0 then
             content = result
-            if hasFileSystem and latestSHA then
+            if hasFileSystem then
                 local folderPath = cachePath:match("(.+)/[^/]+$")
                 if folderPath and not isfolder(folderPath) then
                     pcall(makefolder, folderPath)
                 end
                 pcall(writefile, cachePath, result)
             end
-        else
-            downloadFailed = true
         end
     end
     
@@ -255,9 +251,47 @@ end
 
 runFile("Core/Runtime")
 
-if not useCache and hasFileSystem and latestSHA and not downloadFailed then
-    pcall(writefile, "WASOR_Classic_Cache/commit_sha.txt", latestSHA)
-end
-
 _G.WASOR_Loading = false
 _G.WASOR_Loaded = true
+
+if hasFileSystem then
+    task.spawn(function()
+        local latestSHA = getLatestCommitSHA()
+        if not latestSHA then return end
+        
+        if not cachedSHA then
+            pcall(writefile, "WASOR_Classic_Cache/commit_sha.txt", latestSHA)
+            return
+        end
+        
+        if latestSHA ~= cachedSHA then
+            local allFiles = {}
+            for _, p in ipairs(CoreModules) do table.insert(allFiles, p) end
+            for _, p in ipairs(Modules) do table.insert(allFiles, p) end
+            table.insert(allFiles, "Core/Runtime")
+            
+            local allSuccess = true
+            for _, modulePath in ipairs(allFiles) do
+                local url = BASE_URL .. modulePath .. ".lua"
+                local ok, result = pcall(game.HttpGet, game, url)
+                if ok and result and #result > 0 then
+                    local cachePath = "WASOR_Classic_Cache/" .. modulePath .. ".lua"
+                    local folderPath = cachePath:match("(.+)/[^/]+$")
+                    if folderPath and not isfolder(folderPath) then
+                        pcall(makefolder, folderPath)
+                    end
+                    pcall(writefile, cachePath, result)
+                else
+                    allSuccess = false
+                end
+            end
+            
+            if allSuccess then
+                pcall(writefile, "WASOR_Classic_Cache/commit_sha.txt", latestSHA)
+                if _G.VoidHub and _G.VoidHub.Utils and _G.VoidHub.Utils.notify then
+                    _G.VoidHub.Utils.notify("[WASOR] Update downloaded! Click Reload to apply.", Color3.fromRGB(50, 195, 75))
+                end
+            end
+        end
+    end)
+end
