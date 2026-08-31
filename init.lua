@@ -1,6 +1,15 @@
+if _G.WASOR_Loading then return end
+_G.WASOR_Loading = true
+
 if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
     pcall(_G.VoidHub.Cleanup.cleanupAll)
 end
+
+pcall(function()
+    if delfile and isfile and isfile("autoexec/WASOR.lua") then
+        delfile("autoexec/WASOR.lua")
+    end
+end)
 
 pcall(function()
     local RunService = game:GetService("RunService")
@@ -219,6 +228,9 @@ local success, err = pcall(function()
 
     runFile("Core/Runtime")
 end)
+
+_G.WASOR_Loading = false
+_G.WASOR_Loaded = true
 
 if not success then
     warn("[WASOR Loader] Initialization error: " .. tostring(err))

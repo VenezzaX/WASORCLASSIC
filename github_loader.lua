@@ -1,6 +1,15 @@
+if _G.WASOR_Loading then return end
+_G.WASOR_Loading = true
+
 if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
     pcall(_G.VoidHub.Cleanup.cleanupAll)
 end
+
+pcall(function()
+    if delfile and isfile and isfile("autoexec/WASOR.lua") then
+        delfile("autoexec/WASOR.lua")
+    end
+end)
 
 pcall(function()
     local RunService = game:GetService("RunService")
@@ -249,3 +258,6 @@ runFile("Core/Runtime")
 if not useCache and hasFileSystem and latestSHA and not downloadFailed then
     pcall(writefile, "WASOR_Classic_Cache/commit_sha.txt", latestSHA)
 end
+
+_G.WASOR_Loading = false
+_G.WASOR_Loaded = true
