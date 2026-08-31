@@ -1734,6 +1734,8 @@ UI.InitializeUI = function()
                 end
             end)
             VH.Cleanup.cleanupAll()
+            _G.WASOR_Loading = false
+            _G.WASOR_Loaded = false
             task.wait(0.1)
             loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/refs/heads/main/github_loader.lua"))()
         end)
@@ -1992,31 +1994,7 @@ UI.InitializeUI = function()
     UI.hudServerAge = hudServerAge
     UI.hudArrayListFrame = hudArrayListFrame
     
-    local function runWelcomeToasts()
-        task.spawn(function()
-            task.wait(1.5)
-            local visited = false
-            if isfile and readfile then
-                visited = isfile("utility_hub_visited.txt")
-            end
-            if not visited then
-                if writefile then
-                    pcall(function() writefile("utility_hub_visited.txt", "true") end)
-                end
-                UI.showToast("Welcome to WASOR 3.2!", StudioTheme.blue)
-                task.wait(2.2)
-                UI.showToast("Toggle UI with [Right Control]", StudioTheme.blue)
-                task.wait(2.2)
-                UI.showToast("Configure settings in the Settings tab", StudioTheme.blue)
-                task.wait(2.2)
-                UI.showToast("Press [End] to Panic (disable all)", StudioTheme.red)
-            end
-        end)
-    end
-
-    if S.EulaAccepted == true then
-        runWelcomeToasts()
-    else
+    if S.EulaAccepted ~= true then
         mainUIContainer.Visible = false
         hudWatermark.Visible = false
         hudCoords.Visible = false
@@ -2081,7 +2059,6 @@ UI.InitializeUI = function()
             if VH.runNetworkTagsSync then
                 pcall(VH.runNetworkTagsSync)
             end
-            runWelcomeToasts()
         end
 
         local function declineCallback()

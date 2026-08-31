@@ -19,6 +19,7 @@ State.originalAmbient = VH.Services.Lighting.Ambient
 State.originalOutdoor = VH.Services.Lighting.OutdoorAmbient
 State.originalClockTime = VH.Services.Lighting.ClockTime
 State.uiRunning = true
+State.teleportQueued = false
 State.networkTagsLoopActive = false
 State.wasClimbing = false
 State.wasWallRunning = false

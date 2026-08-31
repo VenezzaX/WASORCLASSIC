@@ -84,10 +84,19 @@ Cleanup.destroyESP = function(p)
 end
 
 Cleanup.cleanupAll = function()
+    _G.WASOR_Loaded = false
+    _G.WASOR_Loading = false
     local S = State.S
     State.uiRunning = false
+    State.teleportQueued = false
     State.networkTagsRunning = false
     State.networkTagsLoopActive = false
+    
+    pcall(function()
+        if delfile and isfile and isfile("autoexec/WASOR.lua") then
+            delfile("autoexec/WASOR.lua")
+        end
+    end)
     
     pcall(function()
         if _G.WASOR_ScreenGui and _G.WASOR_ScreenGui.Parent then
