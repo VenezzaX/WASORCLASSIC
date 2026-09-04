@@ -170,6 +170,27 @@ local Modules = {
 
 local hasFileSystem = (writefile and readfile and isfile and makefolder and isfolder)
 
+local function writeCrashLog(context, err, stack)
+    local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+    local crashMsg = string.format("==================== CRASH LOG [%s] ====================\nContext: %s\nError: %s\nTraceback:\n%s\n=================================================================\n\n", timestamp, tostring(context), tostring(err), tostring(stack or "N/A"))
+    warn(string.format("[WASOR CRASH] [%s] Error: %s\nTraceback:\n%s", tostring(context), tostring(err), tostring(stack or "")))
+    pcall(function()
+        if writefile then
+            local filename = "WASOR_crash.log"
+            if isfile and isfile(filename) then
+                if appendfile then
+                    appendfile(filename, crashMsg)
+                else
+                    local cur = readfile(filename)
+                    writefile(filename, cur .. crashMsg)
+                end
+            else
+                writefile(filename, crashMsg)
+            end
+        end
+    end)
+end
+
 local function httpRequest(url)
     local reqFn = (syn and syn.request) or (http and http.request) or http_request or request
     if reqFn then
@@ -177,15 +198,23 @@ local function httpRequest(url)
             Url = url,
             Method = "GET",
             Headers = {
-                ["User-Agent"] = "WASOR-Loader"
+                ["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                ["Cache-Control"] = "no-cache",
+                ["Pragma"] = "no-cache"
             }
         })
-        if ok and res and (res.StatusCode == 200 or res.Status == 200) and res.Body then
-            return res.Body
+        if ok and res and type(res) == "table" then
+            local body = res.Body or res.body or res.data or res.Data
+            local status = res.StatusCode or res.status_code or res.Status or res.status or 200
+            if (status == 200 or status == "OK") and type(body) == "string" and #body > 0 then
+                return body
+            end
         end
     end
-    local ok, res = pcall(game.HttpGet, game, url)
-    if ok and res then
+    local ok, res = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if ok and type(res) == "string" and #res > 0 then
         return res
     end
     return nil
@@ -238,11 +267,20 @@ local function runFile(path)
     end
     
     if not content then
-        local url = BASE_URL .. path .. ".lua"
+        local url
+        if latestSHA then
+            url = string.format("https://raw.githubusercontent.com/%s/%s/%s/%s.lua", GITHUB_USERNAME, GITHUB_REPO, latestSHA, path)
+        else
+            url = BASE_URL .. path .. ".lua?t=" .. tostring(os.time())
+        end
         local result = httpRequest(url)
+        if not result and latestSHA then
+            result = httpRequest(BASE_URL .. path .. ".lua")
+        end
+        
         if result and #result > 0 then
             content = result
-            if hasFileSystem and latestSHA then
+            if hasFileSystem then
                 local folderPath = cachePath:match("(.+)/[^/]+$")
                 if folderPath and not isfolder(folderPath) then
                     pcall(makefolder, folderPath)
@@ -251,40 +289,58 @@ local function runFile(path)
             end
         else
             downloadFailed = true
+            if hasFileSystem and isfile(cachePath) then
+                local success, cachedCode = pcall(readfile, cachePath)
+                if success and cachedCode and #cachedCode > 0 then
+                    content = cachedCode
+                end
+            end
         end
     end
     
     if content then
         local func, err = loadstring(content, path)
         if func then
-            local runSuccess, runErr = pcall(func)
+            local errTrace = nil
+            local runSuccess, runErr = xpcall(func, function(e)
+                errTrace = debug.traceback(tostring(e), 2)
+                return e
+            end)
             if not runSuccess then
-                warn("[WASOR Loader] Runtime error in " .. path .. ": " .. tostring(runErr))
+                writeCrashLog("Runtime Error in " .. path, runErr, errTrace)
             end
         else
-            warn("[WASOR Loader] Parse error in " .. path .. ": " .. tostring(err))
+            writeCrashLog("Parse Error in " .. path, err, debug.traceback())
         end
     else
-        warn("[WASOR Loader] Failed to load " .. path)
+        writeCrashLog("Download Failed", "Failed to retrieve " .. path, debug.traceback())
     end
 end
 
-for _, modulePath in ipairs(CoreModules) do
-    runFile(modulePath)
-end
+local initSuccess, initErr = pcall(function()
+    for _, modulePath in ipairs(CoreModules) do
+        runFile(modulePath)
+    end
 
-if _G.VoidHub and _G.VoidHub.UI and _G.VoidHub.UI.InitializeUI then
-    _G.VoidHub.UI.InitializeUI()
-end
+    if _G.VoidHub and _G.VoidHub.UI and _G.VoidHub.UI.InitializeUI then
+        _G.VoidHub.UI.InitializeUI()
+    end
 
-for _, modulePath in ipairs(Modules) do
-    runFile(modulePath)
-end
+    for _, modulePath in ipairs(Modules) do
+        runFile(modulePath)
+    end
 
-runFile("Core/Runtime")
+    runFile("Core/Runtime")
+end)
 
 _G.WASOR_Loading = false
 _G.WASOR_Loaded = true
+
+if not initSuccess then
+    writeCrashLog("Loader Initialization", initErr, debug.traceback())
+else
+    print("[WASOR] Loader: FileBuild (GitHub)")
+end
 
 if not useCache and hasFileSystem and latestSHA and not downloadFailed then
     pcall(writefile, "WASOR_Classic_Cache/commit_sha.txt", latestSHA)
