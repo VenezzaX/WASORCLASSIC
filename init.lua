@@ -40,7 +40,7 @@ pcall(function()
     for _, parent in ipairs(containers) do
         pcall(function()
             for _, child in ipairs(parent:GetChildren()) do
-                if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
                     pcall(function() child:Destroy() end)
                 end
             end
@@ -167,6 +167,8 @@ local Modules = {
     "Modules/Movement/AirSwim",
 
     "Modules/Render/ESPBoxOutlines",
+    "Modules/Render/ESPPreview",
+    "Modules/Render/PaperDollHUD",
     "Modules/Render/ESPTracerLines",
     "Modules/Render/ShowPlayerNames",
     "Modules/Render/ShowHealthText",
