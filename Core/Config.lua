@@ -65,7 +65,7 @@ Config.loadConfig = function()
     S.GraphicsReducer = false; S.ForceWalkSpeed = false; S.ForceJumpPower = false; S.Climb = false
     S.AimbotActive = false; S.AimlockActive = false; S.SilentAim = false; S.TriggerbotActive = false; S.AutoplayBot = false; S.TouchAura = false
     S.WallRun = false; S.FlyBypass = false; S.PathfindingWalk = false
-    S.MinimapActive = false; S.OutOfViewIndicators = false
+    S.MinimapActive = false; S.OutOfViewIndicators = false; S.ESPPreviewActive = false
     pcall(function()
         if setfpscap then
             setfpscap(S.FPSCap or 144)
