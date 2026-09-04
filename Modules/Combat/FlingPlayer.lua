@@ -15,12 +15,19 @@ local notify = Utils.notify
 local registerModule = UI.registerModule
 
 local addTextboxOption = UI.addTextboxOption
+local addToggleOption = UI.addToggleOption
 
 local saveConfig = VH.Config.saveConfig
 
 registerModule("Combat", "Fling Player", 20, 50, true, S.FlingActive, function(v)
     S.FlingActive = v
-    if v then S.FlingAllActive = false; local mod = moduleButtons["Fling All"]; if mod then mod.SetActive(false) end
+    if v then
+        S.FlingAllActive = false
+        S.WalkFling = false
+        local modAll = moduleButtons and moduleButtons["Fling All"]
+        if modAll and modAll.SetActive then modAll.SetActive(false) end
+        local modWalk = moduleButtons and moduleButtons["Walk Fling"]
+        if modWalk and modWalk.SetActive then modWalk.SetActive(false) end
     else
         S.FlingTarget = nil
         task.spawn(function() local hrp = getHRP(); if hrp then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero; if S.LastSafePosition then hrp.CFrame = S.LastSafePosition end; task.wait(0.05); if hrp:IsDescendantOf(game) then hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero end end end)
@@ -33,5 +40,9 @@ end, function(drawer)
         for _, p in ipairs(Players:GetPlayers()) do if p ~= LP and (p.Name:lower():find(txt:lower()) or p.DisplayName:lower():find(txt:lower())) then found = p; break end end
         if found then S.FlingTarget = found; notify("Fling target set to: " .. found.DisplayName, Color3.fromRGB(50, 195, 75))
         else S.FlingTarget = nil; notify("Player not found: " .. txt, Color3.fromRGB(218, 38, 38)) end
+    end)
+    addToggleOption(drawer, "Fling Noclip", S.FlingNoclip ~= false, function(v)
+        S.FlingNoclip = v
+        saveConfig()
     end)
 end, false)
