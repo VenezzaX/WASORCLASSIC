@@ -1673,7 +1673,7 @@ UI.InitializeUI = function()
     topTitle.TextSize = 12
     topTitle.TextColor3 = StudioTheme.text
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "WASOR 3.2 (" .. executorName .. ")"
+    topTitle.Text = "WASOR 3.5 (" .. executorName .. ")"
     topTitle.Parent = topBar
     
     navBar = Instance.new("Frame")
@@ -1809,7 +1809,7 @@ UI.InitializeUI = function()
     hudWatermark.TextSize = 12
     hudWatermark.TextColor3 = StudioTheme.blue
     hudWatermark.TextXAlignment = Enum.TextXAlignment.Left
-    hudWatermark.Text = "WASOR 3.2"
+    hudWatermark.Text = "WASOR 3.5"
     hudWatermark.Visible = S.HUDWatermark
     hudWatermark.Parent = screenGui
     
