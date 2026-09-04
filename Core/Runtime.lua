@@ -401,16 +401,21 @@ local function updateESPAndAimbot()
                             boxOutline = Drawing.new("Square"), boxFill = Drawing.new("Square"), tracer = Drawing.new("Line"),
                             nameTag = Drawing.new("Text"), healthText = Drawing.new("Text"), distText = Drawing.new("Text"),
                             healthBarOutline = Drawing.new("Square"), healthBarFill = Drawing.new("Square"), skeleton = {},
-                            corners = {}, losLine = Drawing.new("Line"), indicator = Drawing.new("Triangle")
+                            corners = {}, lines3D = {}, losLine = Drawing.new("Line"), indicator = Drawing.new("Triangle")
                         }
                         for i=1, 20 do table.insert(S.ESPPool[p].skeleton, Drawing.new("Line")) end
                         for i=1, 8 do table.insert(S.ESPPool[p].corners, Drawing.new("Line")) end
+                        for i=1, 12 do table.insert(S.ESPPool[p].lines3D, Drawing.new("Line")) end
                     end
                     local pool = S.ESPPool[p]
                     if pool and #pool.skeleton < 20 then
                         for i = #pool.skeleton + 1, 20 do
                             table.insert(pool.skeleton, Drawing.new("Line"))
                         end
+                    end
+                    if pool and not pool.lines3D then
+                        pool.lines3D = {}
+                        for i = 1, 12 do table.insert(pool.lines3D, Drawing.new("Line")) end
                     end
                     if not pool.losLine then
                         pool.losLine = Drawing.new("Line")
@@ -425,6 +430,7 @@ local function updateESPAndAimbot()
                         pool.healthText.Visible = false; pool.distText.Visible = false; pool.healthBarOutline.Visible = false; pool.healthBarFill.Visible = false
                         for _, line in ipairs(pool.skeleton) do line.Visible = false end
                         for _, line in ipairs(pool.corners) do line.Visible = false end
+                        if pool.lines3D then for _, line in ipairs(pool.lines3D) do line.Visible = false end end
                         if pool.losLine then pool.losLine.Visible = false end
 
                         local dir = (hrp.Position - Camera.CFrame.Position).Unit
@@ -455,47 +461,160 @@ local function updateESPAndAimbot()
                             local topLeft, bottomRight = box[1], box[2]
                             local width, height = bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y
 
-                            local showFull = espAllowed and S.ESPBoxes and S.ESPBoxStyle == "Full"
-                            local showCorners = espAllowed and S.ESPBoxes and S.ESPBoxStyle == "Corners"
+                            local boxStyle = S.ESPBoxStyle or "Full"
+                            local isBrackets = (boxStyle == "Bracket" or boxStyle == "Brackets")
+                            local isTechHex = (boxStyle == "Tech Hex" or boxStyle == "Diamond")
+                            local showFull = espAllowed and S.ESPBoxes and boxStyle == "Full"
+                            local showCorners = espAllowed and S.ESPBoxes and boxStyle == "Corners"
+                            local show3D = espAllowed and S.ESPBoxes and boxStyle == "3D Box"
+                            local showBracket = espAllowed and S.ESPBoxes and isBrackets
+                            local showTechHex = espAllowed and S.ESPBoxes and isTechHex
+                            local showTopBottom = espAllowed and S.ESPBoxes and boxStyle == "Top-Bottom"
 
                             local outline = pool.boxOutline; outline.Visible = showFull; outline.Position = topLeft; outline.Size = Vector2.new(width, height)
                             outline.Color = espDrawCol; outline.Thickness = 1.5; outline.Transparency = 1; outline.Filled = false
 
-                            local fill = pool.boxFill; fill.Visible = espAllowed and S.ESPBoxes; fill.Position = topLeft; fill.Size = Vector2.new(width, height)
-                            fill.Color = espDrawCol; fill.Transparency = 1 - S.ESPTransparency; fill.Filled = true
+                            local fill = pool.boxFill; fill.Visible = espAllowed and S.ESPBoxes and (S.ESPTransparency < 0.99) and (showFull or showCorners or showBracket or showTechHex or showTopBottom); fill.Position = topLeft; fill.Size = Vector2.new(width, height)
+                            fill.Color = espDrawCol; fill.Transparency = math.clamp(1 - S.ESPTransparency, 0, 1); fill.Filled = true
 
                             if showCorners then
-                                local len = math.clamp(math.min(width, height) * 0.25, 4, 15)
+                                local len = math.clamp(math.min(width, height) * 0.22, 6, 18)
                                 local c = pool.corners
+                                local tr = Vector2.new(bottomRight.X, topLeft.Y)
+                                local bl = Vector2.new(topLeft.X, bottomRight.Y)
+                                local br = bottomRight
+                                -- Top-Left Corner
                                 c[1].From = topLeft; c[1].To = topLeft + Vector2.new(len, 0)
                                 c[2].From = topLeft; c[2].To = topLeft + Vector2.new(0, len)
-
-                                local tr = Vector2.new(bottomRight.X, topLeft.Y)
-                                c[3].From = tr; c[3].To = tr + Vector2.new(-len, 0)
+                                -- Top-Right Corner
+                                c[3].From = tr; c[3].To = tr - Vector2.new(len, 0)
                                 c[4].From = tr; c[4].To = tr + Vector2.new(0, len)
-
-                                local bl = Vector2.new(topLeft.X, bottomRight.Y)
+                                -- Bottom-Left Corner
                                 c[5].From = bl; c[5].To = bl + Vector2.new(len, 0)
-                                c[6].From = bl; c[6].To = bl + Vector2.new(0, -len)
+                                c[6].From = bl; c[6].To = bl - Vector2.new(0, len)
+                                -- Bottom-Right Corner
+                                c[7].From = br; c[7].To = br - Vector2.new(len, 0)
+                                c[8].From = br; c[8].To = br - Vector2.new(0, len)
 
-                                c[7].From = bottomRight; c[7].To = bottomRight + Vector2.new(-len, 0)
-                                c[8].From = bottomRight; c[8].To = bottomRight + Vector2.new(0, -len)
-
-                                for _, line in ipairs(c) do
-                                    line.Color = espDrawCol
-                                    line.Thickness = 1.5
-                                    line.Transparency = 1
-                                    line.Visible = true
+                                for i = 1, 8 do
+                                    c[i].Color = espDrawCol; c[i].Thickness = 1.5; c[i].Transparency = 1; c[i].Visible = true
+                                end
+                            elseif showBracket then
+                                local capLen = math.clamp(width * 0.18, 4, 14)
+                                local c = pool.corners
+                                local tr = Vector2.new(bottomRight.X, topLeft.Y)
+                                local bl = Vector2.new(topLeft.X, bottomRight.Y)
+                                local br = bottomRight
+                                -- Left Bracket [
+                                c[1].From = topLeft; c[1].To = bl
+                                c[2].From = topLeft; c[2].To = topLeft + Vector2.new(capLen, 0)
+                                c[3].From = bl; c[3].To = bl + Vector2.new(capLen, 0)
+                                -- Right Bracket ]
+                                c[4].From = tr; c[4].To = br
+                                c[5].From = tr; c[5].To = tr - Vector2.new(capLen, 0)
+                                c[6].From = br; c[6].To = br - Vector2.new(capLen, 0)
+                                c[7].Visible = false; c[8].Visible = false
+                                for i = 1, 6 do
+                                    c[i].Color = espDrawCol; c[i].Thickness = 1.5; c[i].Transparency = 1; c[i].Visible = true
+                                end
+                            elseif showTechHex then
+                                local chamfer = math.clamp(math.min(width, height) * 0.16, 4, 14)
+                                local c = pool.corners
+                                local tr = Vector2.new(bottomRight.X, topLeft.Y)
+                                local bl = Vector2.new(topLeft.X, bottomRight.Y)
+                                local br = bottomRight
+                                -- 8-Sided Chamfered Cyber Box
+                                c[1].From = topLeft + Vector2.new(chamfer, 0); c[1].To = tr - Vector2.new(chamfer, 0)
+                                c[2].From = tr - Vector2.new(chamfer, 0); c[2].To = tr + Vector2.new(0, chamfer)
+                                c[3].From = tr + Vector2.new(0, chamfer); c[3].To = br - Vector2.new(0, chamfer)
+                                c[4].From = br - Vector2.new(0, chamfer); c[4].To = br - Vector2.new(chamfer, 0)
+                                c[5].From = br - Vector2.new(chamfer, 0); c[5].To = bl + Vector2.new(chamfer, 0)
+                                c[6].From = bl + Vector2.new(chamfer, 0); c[6].To = bl - Vector2.new(0, chamfer)
+                                c[7].From = bl - Vector2.new(0, chamfer); c[7].To = topLeft + Vector2.new(0, chamfer)
+                                c[8].From = topLeft + Vector2.new(0, chamfer); c[8].To = topLeft + Vector2.new(chamfer, 0)
+                                for i = 1, 8 do
+                                    c[i].Color = espDrawCol; c[i].Thickness = 1.5; c[i].Transparency = 1; c[i].Visible = true
+                                end
+                            elseif showTopBottom then
+                                local tickLen = math.clamp(height * 0.12, 3, 10)
+                                local c = pool.corners
+                                local tr = Vector2.new(bottomRight.X, topLeft.Y)
+                                local bl = Vector2.new(topLeft.X, bottomRight.Y)
+                                local br = bottomRight
+                                -- Top Horizon Bar
+                                c[1].From = topLeft; c[1].To = tr
+                                c[2].From = topLeft; c[2].To = topLeft + Vector2.new(0, tickLen)
+                                c[3].From = tr; c[3].To = tr + Vector2.new(0, tickLen)
+                                -- Bottom Horizon Bar
+                                c[4].From = bl; c[4].To = br
+                                c[5].From = bl; c[5].To = bl - Vector2.new(0, tickLen)
+                                c[6].From = br; c[6].To = br - Vector2.new(0, tickLen)
+                                c[7].Visible = false; c[8].Visible = false
+                                for i = 1, 6 do
+                                    c[i].Color = espDrawCol; c[i].Thickness = 1.5; c[i].Transparency = 1; c[i].Visible = true
                                 end
                             else
                                 for _, line in ipairs(pool.corners) do
                                     line.Visible = false
                                 end
                             end
+
+                            if show3D and pool.lines3D then
+                                local rootPart = char:FindFirstChild("HumanoidRootPart") or hrp
+                                local cf = rootPart.CFrame
+                                local sz = char:GetExtentsSize()
+                                if not sz or sz.Magnitude < 1 then sz = Vector3.new(4, 5, 2) end
+                                local hw, hh, hd = sz.X / 2, sz.Y / 2, sz.Z / 2
+                                local v3D = {
+                                    cf * Vector3.new(-hw, hh, -hd),  cf * Vector3.new(hw, hh, -hd),
+                                    cf * Vector3.new(hw, -hh, -hd), cf * Vector3.new(-hw, -hh, -hd),
+                                    cf * Vector3.new(-hw, hh, hd),   cf * Vector3.new(hw, hh, hd),
+                                    cf * Vector3.new(hw, -hh, hd),  cf * Vector3.new(-hw, -hh, hd)
+                                }
+                                local sPoints = {}
+                                local ok3D = true
+                                for i = 1, 8 do
+                                    local pScreen, onS = Camera:WorldToViewportPoint(v3D[i])
+                                    if pScreen.Z <= 0 then ok3D = false break end
+                                    sPoints[i] = Vector2.new(pScreen.X, pScreen.Y)
+                                end
+                                if ok3D then
+                                    local edges = {
+                                        {1, 2}, {2, 3}, {3, 4}, {4, 1},
+                                        {5, 6}, {6, 7}, {7, 8}, {8, 5},
+                                        {1, 5}, {2, 6}, {3, 7}, {4, 8}
+                                    }
+                                    for idx, edge in ipairs(edges) do
+                                        local l = pool.lines3D[idx]
+                                        if l then
+                                            l.From = sPoints[edge[1]]
+                                            l.To = sPoints[edge[2]]
+                                            l.Color = espDrawCol
+                                            l.Thickness = 1.5
+                                            l.Transparency = 1
+                                            l.Visible = true
+                                        end
+                                    end
+                                else
+                                    for _, l in ipairs(pool.lines3D) do l.Visible = false end
+                                end
+                            else
+                                if pool.lines3D then
+                                    for _, l in ipairs(pool.lines3D) do l.Visible = false end
+                                end
+                            end
+
                             local tracer = pool.tracer; tracer.Visible = espAllowed and S.ESPTracers
-                            local vp = Camera.ViewportSize; local originY = vp.Y
-                            if S.TracerOrigin == "Center" then originY = vp.Y / 2 elseif S.TracerOrigin == "Top" then originY = 0 end
-                            tracer.From = Vector2.new(vp.X / 2, originY); tracer.To = Vector2.new(sp.X, sp.Y); tracer.Color = espDrawCol; tracer.Thickness = 1.5; tracer.Transparency = 0.8
+                            local vp = Camera.ViewportSize; local originX, originY = vp.X / 2, vp.Y
+                            if S.TracerOrigin == "Center" then
+                                originY = vp.Y / 2
+                            elseif S.TracerOrigin == "Top" then
+                                originY = 0
+                            elseif S.TracerOrigin == "Mouse" then
+                                local mouseLoc = UserInputService:GetMouseLocation()
+                                originX = mouseLoc.X; originY = mouseLoc.Y
+                            end
+                            tracer.From = Vector2.new(originX, originY); tracer.To = Vector2.new(sp.X, sp.Y); tracer.Color = espDrawCol; tracer.Thickness = 1.5; tracer.Transparency = 0.8
                             local hpPct = hum.Health / math.max(hum.MaxHealth, 1)
                             local healthBarOutline = pool.healthBarOutline; healthBarOutline.Visible = espAllowed and S.ESPHealth; healthBarOutline.Position = Vector2.new(topLeft.X - 5, topLeft.Y)
                             healthBarOutline.Size = Vector2.new(2, height); healthBarOutline.Color = Color3.new(0, 0, 0); healthBarOutline.Thickness = 1; healthBarOutline.Filled = true
@@ -564,6 +683,7 @@ local function updateESPAndAimbot()
                             pool.healthText.Visible = false; pool.distText.Visible = false; pool.healthBarOutline.Visible = false; pool.healthBarFill.Visible = false
                             for _, line in ipairs(pool.skeleton) do line.Visible = false end
                             for _, line in ipairs(pool.corners) do line.Visible = false end
+                            if pool.lines3D then for _, line in ipairs(pool.lines3D) do line.Visible = false end end
                             if pool.losLine then pool.losLine.Visible = false end
                         end
                     end
@@ -1090,12 +1210,22 @@ end)
 
 local wasNoclipping = false
 local noclipOrigCanCollide = {}
+local lastNoclipChar = nil
 local wasAntiFling = false
 
 table.insert(S.Connections, RunService.Stepped:Connect(function()
-    local isNoclipping = S.NoClip or S.FlingActive or S.FlingAllActive
+    local char = getChar()
+    if char ~= lastNoclipChar then
+        noclipOrigCanCollide = {}
+        lastNoclipChar = char
+    end
+
+    local menuNoclip = (S.NoClip == true)
+    local isFlingActive = (S.WalkFling == true or S.FlingActive == true or S.FlingAllActive == true)
+    local flingNoclip = isFlingActive and (S.FlingNoclip ~= false)
+    local isNoclipping = menuNoclip or flingNoclip
+
     if isNoclipping then
-        local char = getChar()
         if char then
             for _, p in ipairs(char:GetDescendants()) do
                 if p:IsA("BasePart") then
@@ -1109,15 +1239,14 @@ table.insert(S.Connections, RunService.Stepped:Connect(function()
         wasNoclipping = true
     elseif wasNoclipping then
         wasNoclipping = false
-        local char = getChar()
         if char then
             for _, p in ipairs(char:GetDescendants()) do
                 if p:IsA("BasePart") then
                     if noclipOrigCanCollide[p] ~= nil then
                         p.CanCollide = noclipOrigCanCollide[p]
                     else
-                        local isRootOrTorso = (p.Name == "HumanoidRootPart" or p.Name == "Torso" or p.Name == "UpperTorso" or p.Name == "LowerTorso" or p.Name == "Head") and not p:IsA("Accessory") and not p:FindFirstAncestorOfClass("Accessory") and not p:FindFirstAncestorOfClass("Tool")
-                        p.CanCollide = isRootOrTorso
+                        local isTorsoOrHead = (p.Name == "Torso" or p.Name == "UpperTorso" or p.Name == "LowerTorso" or p.Name == "Head") and not p:IsA("Accessory") and not p:FindFirstAncestorOfClass("Accessory") and not p:FindFirstAncestorOfClass("Tool")
+                        p.CanCollide = isTorsoOrHead
                     end
                 end
             end

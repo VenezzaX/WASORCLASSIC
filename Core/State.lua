@@ -55,7 +55,7 @@ State.S = {
     AimbotActive = false, AimbotTeamCheck = false, AimbotIgnoreFriends = false, AimbotFOV = 120, AimbotSmooth = 5, AimbotPart = "Head",
     AimbotVisibility = false, AimbotShowFOV = false, SilentAim = false, NoRecoil = false, TouchAura = false,
     AimlockActive = false, AimlockSmooth = 1.5,
-    FlingTarget = nil, FlingActive = false, FlingAllActive = false, WalkFling = false,
+    FlingTarget = nil, FlingActive = false, FlingAllActive = false, WalkFling = false, FlingNoclip = true,
     FollowTarget = nil, FollowActive = false,
     InstantPrompts = false, AntiVoid = false, AntiVoidY = -500,
     ToastEnabled = true, ToastChatEnabled = false, AutoReinject = true,
@@ -98,7 +98,10 @@ State.S = {
     AutoplayBotKey = Enum.KeyCode.Unknown,
     FirePromptsFilter = "", FirePromptsDistance = 500,
     FireCDFilter = "", FireCDDistance = 500,
-    FireTouchinterestsActive = false, FireTouchFilter = "", FireTouchDistance = 100
+    FireTouchinterestsActive = false, FireTouchFilter = "", FireTouchDistance = 100,
+    ESPPreviewActive = false, ESPPreviewKey = Enum.KeyCode.Unknown,
+    PaperDollActive = false, PaperDollViewMode = "Front", PaperDollOnlyMoving = false,
+    PaperDollScale = 1.0, PaperDollX = 20, PaperDollY = 60, PaperDollKey = Enum.KeyCode.Unknown
 }
 
 State.serverStatsLabels = { region = nil, ping = nil, players = nil, age = nil }
@@ -203,6 +206,32 @@ pcall(function()
         VH.Services.LP.CharacterAdded:Connect(bindHum)
     end
 end)
+
+VH.ESPSync = {
+    listeners = {},
+    Register = function(self, key, callback)
+        if not self.listeners[key] then
+            self.listeners[key] = {}
+        end
+        table.insert(self.listeners[key], callback)
+        return function()
+            local idx = table.find(self.listeners[key], callback)
+            if idx then table.remove(self.listeners[key], idx) end
+        end
+    end,
+    Set = function(self, key, value, source)
+        State.S[key] = value
+        if VH.Config and VH.Config.saveConfig then
+            pcall(VH.Config.saveConfig)
+        end
+        if self.listeners[key] then
+            for _, cb in ipairs(self.listeners[key]) do
+                pcall(cb, value, source)
+            end
+        end
+    end
+}
+State.ESPSync = VH.ESPSync
 
 VH.State = State
 return State
