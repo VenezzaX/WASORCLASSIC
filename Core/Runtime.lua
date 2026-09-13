@@ -1138,15 +1138,6 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
     pcall(function() if S.HUDCoords and myHRP then local pos = myHRP.Position; hudCoords.Text = string.format("XYZ: %.1f, %.1f, %.1f", pos.X, pos.Y, pos.Z) end end)
 
     pcall(function()
-        if S.AntiFling then
-            if myHRP and not S.FlingActive and not S.FlingAllActive and not S.WalkFling then
-                if myHRP.AssemblyLinearVelocity.Magnitude > 1000 then myHRP.AssemblyLinearVelocity = Vector3.zero end
-                if myHRP.AssemblyAngularVelocity.Magnitude > 300 then myHRP.AssemblyAngularVelocity = Vector3.zero end
-            end
-        end
-    end)
-
-    pcall(function()
         if S.FlingActive and S.FlingTarget and myHRP then
             local targetChar = S.FlingTarget.Character
             local targetHRP = targetChar and (targetChar:FindFirstChild("HumanoidRootPart") or targetChar:FindFirstChild("Torso") or targetChar.PrimaryPart)
@@ -1211,7 +1202,6 @@ end)
 local wasNoclipping = false
 local noclipOrigCanCollide = {}
 local lastNoclipChar = nil
-local wasAntiFling = false
 
 table.insert(S.Connections, RunService.Stepped:Connect(function()
     local char = getChar()
@@ -1252,27 +1242,6 @@ table.insert(S.Connections, RunService.Stepped:Connect(function()
             end
         end
         noclipOrigCanCollide = {}
-    end
-
-    local isFlinging = S.FlingActive or S.FlingAllActive or S.WalkFling
-    if S.AntiFling and not isFlinging then
-        wasAntiFling = true
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LP and p.Character then
-                for _, part in ipairs(p.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then pcall(function() part.CanCollide = false; part.AssemblyLinearVelocity = Vector3.zero; part.AssemblyAngularVelocity = Vector3.zero end) end
-                end
-            end
-        end
-    elseif wasAntiFling then
-        wasAntiFling = false
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LP and p.Character then
-                for _, part in ipairs(p.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then pcall(function() part.CanCollide = true end) end
-                end
-            end
-        end
     end
 end))
 
@@ -1358,6 +1327,14 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
         end
     elseif S.AutoClickerKey and S.AutoClickerKey ~= Enum.KeyCode.Unknown and k == S.AutoClickerKey then
         S.AutoClicker = not S.AutoClicker; notify("Auto Clicker " .. (S.AutoClicker and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Auto Clicker"]; if mod then mod.SetActive(S.AutoClicker) end
+    elseif S.WalkFlingKey and S.WalkFlingKey ~= Enum.KeyCode.Unknown and k == S.WalkFlingKey then
+        local mod = moduleButtons["Walk Fling"]
+        if mod and mod.SetActive then
+            mod.SetActive(not S.WalkFling)
+        else
+            S.WalkFling = not S.WalkFling
+        end
+        notify("Walk Fling " .. (S.WalkFling and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
     elseif S.MinimapKey and S.MinimapKey ~= Enum.KeyCode.Unknown and k == S.MinimapKey then
         S.MinimapActive = not S.MinimapActive; notify("Minimap " .. (S.MinimapActive and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Minimap"]; if mod then mod.SetActive(S.MinimapActive) end
     elseif S.AutoplayBotKey and S.AutoplayBotKey ~= Enum.KeyCode.Unknown and k == S.AutoplayBotKey then

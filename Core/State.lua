@@ -85,7 +85,7 @@ State.S = {
     LastSafePosition = CFrame.new(0, 50, 0), ChatHistory = {}, FavoriteMaps = {},
     FlyKey = Enum.KeyCode.Unknown, NoClipKey = Enum.KeyCode.Unknown, BHopKey = Enum.KeyCode.Unknown,
     InfJumpKey = Enum.KeyCode.Unknown, GhostKey = Enum.KeyCode.Unknown, BlinkKey = Enum.KeyCode.Unknown,
-    JumpStrengthKey = Enum.KeyCode.Unknown,
+    JumpStrengthKey = Enum.KeyCode.Unknown, WalkFlingKey = Enum.KeyCode.Unknown,
     ThemeColor = "Studio Classic", ThemeGradientStyle = "Linear Gradient", ThemeGradientAngle = "Horizontal (0°)", CustomThemeHex = "#007ACC", GalaxyBgStyle = "Deep Space (Black)", GalaxyCustomBgHex = "#080810", TextAnimationStyle = "Static", HUDWatermark = true, HUDCoords = true, HUDArrayList = true, HUDArrayListOutside = true,
     MacroKey = Enum.KeyCode.Unknown, MacroText = "WeAreSkidding On Top!", UIToggleKey = Enum.KeyCode.RightControl,
     AimbotHoldMode = "M2", AimbotHoldKey = Enum.KeyCode.Unknown, HUDArrayListX = 10, HUDArrayListY = 70,
