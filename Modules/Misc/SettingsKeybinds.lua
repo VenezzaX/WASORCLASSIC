@@ -23,4 +23,5 @@ registerModule("Misc", "Settings & Keybinds", 720, 50, false, false, nil, functi
     addKeybindOption(drawer, "Ghost Bind", S.GhostKey, function(k) S.GhostKey = k; saveConfig() end)
     addKeybindOption(drawer, "Blink Bind", S.BlinkKey, function(k) S.BlinkKey = k; saveConfig() end)
     addKeybindOption(drawer, "JumpStrength Bind", S.JumpStrengthKey, function(k) S.JumpStrengthKey = k; saveConfig() end)
+    addKeybindOption(drawer, "Walk Fling Bind", S.WalkFlingKey or Enum.KeyCode.Unknown, function(k) S.WalkFlingKey = k; saveConfig() end)
 end, false)
