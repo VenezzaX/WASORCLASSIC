@@ -9,6 +9,7 @@ local moduleButtons = UI.moduleButtons
 local getHRP = Utils.getHRP
 local registerModule = UI.registerModule
 local addToggleOption = UI.addToggleOption
+local addKeybindOption = UI.addKeybindOption
 
 local saveConfig = VH.Config.saveConfig
 
@@ -33,6 +34,10 @@ registerModule("Combat", "Walk Fling", 20, 50, true, S.WalkFling, function(v)
     end
     saveConfig()
 end, function(drawer)
+    addKeybindOption(drawer, "Walk Fling Bind", S.WalkFlingKey or Enum.KeyCode.Unknown, function(k)
+        S.WalkFlingKey = k
+        saveConfig()
+    end)
     addToggleOption(drawer, "Fling Noclip", S.FlingNoclip ~= false, function(v)
         S.FlingNoclip = v
         saveConfig()
