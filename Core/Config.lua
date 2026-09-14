@@ -28,6 +28,8 @@ Config.saveConfig = function()
             for k, v in pairs(State.S) do
                 if type(v) == "boolean" or type(v) == "number" or type(v) == "string" then
                     configData[k] = v
+                elseif type(v) == "table" and k == "DisabledModules" then
+                    configData[k] = v
                 elseif typeof(v) == "EnumItem" then
                     configData[k] = {__type = "EnumItem", Value = tostring(v)}
                 end
@@ -52,6 +54,9 @@ Config.loadConfig = function()
                     else
                         State.S[k] = v
                     end
+                end
+                if VH.UI and VH.UI.updateAllModuleVisuals then
+                    pcall(VH.UI.updateAllModuleVisuals)
                 end
             end
         end
