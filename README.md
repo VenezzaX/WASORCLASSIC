@@ -3,7 +3,7 @@
   <img src="https://i.imgur.com/XyhEFsY.gif" alt="WASOR v3.7 Banner" width="480" style="border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);" />
 
   # ⚡ WASOR v3.7
-  ### *We Are Security Override Routines*
+  ### *We Are Skidding On Roblox*
 
   [![Documentation](https://img.shields.io/badge/Documentation-Live_on_Vercel-34d399?style=for-the-badge&logo=vercel&logoColor=white)](https://wasordocumentation.vercel.app/#intro)
   [![Version](https://img.shields.io/badge/Version-3.7_Production-7c3aed?style=for-the-badge)](https://wasordocumentation.vercel.app/)
