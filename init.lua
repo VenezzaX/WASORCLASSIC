@@ -188,6 +188,7 @@ local Modules = {
     "Modules/Render/FieldofView",
     "Modules/Render/OutOfViewIndicators",
     "Modules/Render/Minimap",
+    "Modules/Render/SkyboxChanger",
 
     "Modules/World/InstantPrompts",
     "Modules/World/FireAllPrompts",
