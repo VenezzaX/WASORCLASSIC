@@ -8,6 +8,12 @@ UI.tabButtons = {}
 UI.windows = {}
 UI.moduleButtons = {}
 UI.floatingWindows = {}
+UI.moduleCategories = {}
+UI.moduleContainers = {}
+UI.moduleStatusStripes = {}
+UI.moduleLabels = {}
+UI.moduleButtonsRaw = {}
+UI.moduleGears = {}
 
 local StudioTheme = {
     windowBg       = Color3.fromRGB(37, 37, 38),
@@ -141,6 +147,92 @@ local function makeStudioTextBox(parent, text, width, height, placeholder, fontC
     box.BorderColor3 = StudioTheme.border
     box.Parent = parent
     return box
+end
+
+UI.isModuleDisabled = function(name)
+    if not name then return false end
+    if UI.moduleCategories and UI.moduleCategories[name] == "Misc" then return false end
+    return (State.S.DisabledModules and State.S.DisabledModules[name] == true)
+end
+
+UI.updateModuleVisual = function(name)
+    local container = UI.moduleContainers and UI.moduleContainers[name]
+    local btn = UI.moduleButtonsRaw and UI.moduleButtonsRaw[name]
+    local statusStripe = UI.moduleStatusStripes and UI.moduleStatusStripes[name]
+    local label = UI.moduleLabels and UI.moduleLabels[name]
+    local gear = UI.moduleGears and UI.moduleGears[name]
+    local itemObj = UI.moduleButtons and UI.moduleButtons[name]
+    if not container or not btn or not statusStripe or not label then return end
+
+    local cat = UI.moduleCategories and UI.moduleCategories[name]
+    if cat == "Misc" then
+        container.Visible = true
+        return
+    end
+
+    local isDisabled = UI.isModuleDisabled(name)
+    local isSelectMode = (State.S.ModuleDisableMode == true)
+    local style = State.S.DisabledModuleStyle or "Greyish"
+
+    if isDisabled then
+        if style == "Invisible" and not isSelectMode then
+            container.Visible = false
+        else
+            container.Visible = true
+            btn.BackgroundColor3 = Color3.fromRGB(24, 24, 26)
+            statusStripe.BackgroundColor3 = Color3.fromRGB(90, 35, 35)
+            label.TextColor3 = Color3.fromRGB(110, 110, 115)
+            label.Text = (isSelectMode and "[DISABLED] " or "") .. name
+            if gear then gear.Visible = false end
+        end
+    else
+        container.Visible = true
+        local isAct = itemObj and itemObj.IsActive and itemObj.IsActive()
+        statusStripe.BackgroundColor3 = isAct and StudioTheme.green or StudioTheme.borderSubtle
+        label.TextColor3 = isAct and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted
+        label.Text = (isSelectMode and "[ACTIVE] " or "") .. name
+        if gear then gear.Visible = true end
+    end
+end
+
+UI.updateAllModuleVisuals = function()
+    for name, _ in pairs(UI.moduleButtons) do
+        pcall(function() UI.updateModuleVisual(name) end)
+    end
+    if UI.refreshDisabledModulesList then
+        pcall(UI.refreshDisabledModulesList)
+    end
+end
+
+UI.setModuleDisabled = function(name, disabled)
+    if not name then return false end
+    if UI.moduleCategories and UI.moduleCategories[name] == "Misc" then
+        UI.showToast("Cannot disable modules in the Misc tab!", StudioTheme.red)
+        return false
+    end
+    State.S.DisabledModules = State.S.DisabledModules or {}
+    if disabled then
+        State.S.DisabledModules[name] = true
+        local item = UI.moduleButtons[name]
+        if item and item.IsActive and item.IsActive() then
+            item.SetActive(false)
+        end
+    else
+        State.S.DisabledModules[name] = nil
+    end
+    UI.updateModuleVisual(name)
+    VH.Config.saveConfig()
+    if UI.refreshDisabledModulesList then
+        pcall(UI.refreshDisabledModulesList)
+    end
+    return true
+end
+
+UI.revertAllDisabled = function()
+    State.S.DisabledModules = {}
+    UI.updateAllModuleVisuals()
+    VH.Config.saveConfig()
+    UI.showToast("All disabled modules have been reverted!", StudioTheme.green)
 end
 
 UI.showToast = function(message, color)
@@ -915,6 +1007,7 @@ UI.addButtonOption = function(parent, name, callback)
     btn.Activated:Connect(function()
         if callback then callback() end
     end)
+    return { Button = btn, SetText = function(str) btn.Text = str end }
 end
 
 UI.addSectionHeader = function(parent, title)
@@ -1317,6 +1410,12 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     modTextLabel.Text = name
     modTextLabel.Parent = btn
     
+    UI.moduleCategories[name] = catName
+    UI.moduleContainers[name] = container
+    UI.moduleStatusStripes[name] = statusStripe
+    UI.moduleLabels[name] = modTextLabel
+    UI.moduleButtonsRaw[name] = btn
+    
     local function updateVisuals()
         local isAct = isToggle and active
         statusStripe.BackgroundColor3 = isAct and StudioTheme.green or StudioTheme.borderSubtle
@@ -1405,9 +1504,26 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         gear.MouseEnter:Connect(function() gear.BackgroundColor3 = StudioTheme.blue; gear.TextColor3 = Color3.fromRGB(255, 255, 255) end)
         gear.MouseLeave:Connect(function() gear.BackgroundColor3 = StudioTheme.btnBg; gear.TextColor3 = StudioTheme.textMuted end)
         gear.Activated:Connect(toggleMenu)
+        UI.moduleGears[name] = gear
     end
     
     btn.Activated:Connect(function()
+        if State.S.ModuleDisableMode then
+            if catName == "Misc" then
+                UI.showToast("Cannot disable modules in the Misc tab!", StudioTheme.red)
+                return
+            end
+            local nowDisabled = not UI.isModuleDisabled(name)
+            UI.setModuleDisabled(name, nowDisabled)
+            UI.showToast((nowDisabled and "Disabled module: " or "Re-enabled module: ") .. name, nowDisabled and StudioTheme.orange or StudioTheme.green)
+            return
+        end
+        
+        if UI.isModuleDisabled(name) then
+            UI.showToast("'" .. name .. "' is disabled in Module Manager", StudioTheme.textMuted)
+            return
+        end
+        
         if isToggle then
             active = not active
             updateVisuals()
@@ -1421,6 +1537,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         Button = btn,
         TextLabel = modTextLabel,
         SetActive = function(val)
+            if UI.isModuleDisabled(name) and val == true then return end
             if isToggle and active ~= val then
                 active = val
                 updateVisuals()
@@ -1433,6 +1550,9 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         ToggleMenu = toggleMenu
     }
     UI.moduleButtons[name] = itemObj
+    task.defer(function()
+        UI.updateModuleVisual(name)
+    end)
     return itemObj
 end
 
@@ -1456,9 +1576,13 @@ local function selectTab(tabName)
             for _, child in ipairs(win.List:GetChildren()) do
                 if child:IsA("Frame") and child.Name:sub(1, 4) == "Mod_" then
                     local modName = child.Name:sub(5)
+                    local isDisabled = UI.isModuleDisabled(modName)
+                    local isSelectMode = (State.S.ModuleDisableMode == true)
+                    local style = State.S.DisabledModuleStyle or "Greyish"
+                    local hiddenByDisable = (isDisabled and style == "Invisible" and not isSelectMode)
                     local matches = (query == "") or (modName:lower():find(query, 1, true) ~= nil)
-                    child.Visible = matches
-                    if matches then hasVisibleModule = true end
+                    child.Visible = matches and not hiddenByDisable
+                    if child.Visible then hasVisibleModule = true end
                 end
             end
             win.Frame.Visible = (query == "" or hasVisibleModule)
@@ -1673,12 +1797,12 @@ UI.InitializeUI = function()
     topTitle.TextSize = 12
     topTitle.TextColor3 = StudioTheme.text
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "WASOR 3.5 (" .. executorName .. ")"
+    topTitle.Text = "WASOR 3.7 (" .. executorName .. ")"
     topTitle.Parent = topBar
     
     navBar = Instance.new("Frame")
-    navBar.Size = UDim2.new(0, 380, 1, 0)
-    navBar.Position = UDim2.new(0.5, -190, 0, 0)
+    navBar.Size = UDim2.new(0, 520, 1, 0)
+    navBar.Position = UDim2.new(0.5, -260, 0, 0)
     navBar.BackgroundTransparency = 1
     navBar.Parent = topBar
     
@@ -1691,12 +1815,28 @@ UI.InitializeUI = function()
     
     local tabs = {"Modules", "Settings"}
     for _, tabName in ipairs(tabs) do
-        local btn = makeStudioButton(navBar, tabName, 80, 22, (tabName == activeTab) and StudioTheme.blue or StudioTheme.btnBg, (tabName == activeTab) and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted)
+        local btn = makeStudioButton(navBar, tabName, 76, 22, (tabName == activeTab) and StudioTheme.blue or StudioTheme.btnBg, (tabName == activeTab) and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted)
         btn.Activated:Connect(function() selectTab(tabName) end)
         UI.tabButtons[tabName] = btn
     end
     
-    searchBox = makeStudioTextBox(navBar, "", 130, 22, "Search modules...", false)
+    local disableModeBtn = makeStudioButton(navBar, "Disable Mode: OFF", 116, 22, StudioTheme.btnBg, StudioTheme.textMuted, Enum.Font.SourceSansSemibold, 11)
+    local function updateDisableModeBtn()
+        local on = (State.S.ModuleDisableMode == true)
+        disableModeBtn.Text = on and "Disable Mode: ON" or "Disable Mode: OFF"
+        disableModeBtn.BackgroundColor3 = on and Color3.fromRGB(180, 80, 30) or StudioTheme.btnBg
+        disableModeBtn.TextColor3 = on and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted
+    end
+    disableModeBtn.Activated:Connect(function()
+        State.S.ModuleDisableMode = not State.S.ModuleDisableMode
+        updateDisableModeBtn()
+        UI.updateAllModuleVisuals()
+        UI.showToast(State.S.ModuleDisableMode and "Module Selection Mode Enabled (Click non-Misc modules to disable)" or "Module Selection Mode Disabled", State.S.ModuleDisableMode and StudioTheme.orange or StudioTheme.blue)
+    end)
+    UI.updateDisableModeBtn = updateDisableModeBtn
+    updateDisableModeBtn()
+    
+    searchBox = makeStudioTextBox(navBar, "", 115, 22, "Search modules...", false)
     
     local function filterModules(query)
         query = query:lower()
@@ -1705,9 +1845,13 @@ UI.InitializeUI = function()
             for _, child in ipairs(win.List:GetChildren()) do
                 if child:IsA("Frame") and child.Name:sub(1, 4) == "Mod_" then
                     local modName = child.Name:sub(5)
+                    local isDisabled = UI.isModuleDisabled(modName)
+                    local isSelectMode = (State.S.ModuleDisableMode == true)
+                    local style = State.S.DisabledModuleStyle or "Greyish"
+                    local hiddenByDisable = (isDisabled and style == "Invisible" and not isSelectMode)
                     local matches = (query == "") or (modName:lower():find(query, 1, true) ~= nil)
-                    child.Visible = matches
-                    if matches then hasVisibleModule = true end
+                    child.Visible = matches and not hiddenByDisable
+                    if child.Visible then hasVisibleModule = true end
                 end
             end
             win.Frame.Visible = (activeTab == "Modules") and (query == "" or hasVisibleModule)
@@ -1809,7 +1953,7 @@ UI.InitializeUI = function()
     hudWatermark.TextSize = 12
     hudWatermark.TextColor3 = StudioTheme.blue
     hudWatermark.TextXAlignment = Enum.TextXAlignment.Left
-    hudWatermark.Text = "WASOR 3.5"
+    hudWatermark.Text = "WASOR 3.7"
     hudWatermark.Visible = S.HUDWatermark
     hudWatermark.Parent = screenGui
     
@@ -1894,12 +2038,14 @@ UI.InitializeUI = function()
     local pageHUD = createTabPage()
     local pageInput = createTabPage()
     local pageConfig = createTabPage()
+    local pageModules = createTabPage()
     
     local tabPages = {
         ["Interface Settings"] = pageInterface,
         ["HUD Settings"] = pageHUD,
         ["Input & Macros"] = pageInput,
-        ["System & Config"] = pageConfig
+        ["System & Config"] = pageConfig,
+        ["Module Manager"] = pageModules
     }
     
     local function selectSettingsTab(tabName)
@@ -1914,6 +2060,9 @@ UI.InitializeUI = function()
                     setButtonState(btn, StudioTheme.btnBg, StudioTheme.textMuted)
                 end
             end
+        end
+        if tabName == "Module Manager" and UI.refreshDisabledModulesList then
+            pcall(UI.refreshDisabledModulesList)
         end
     end
     
@@ -1930,6 +2079,7 @@ UI.InitializeUI = function()
     createSidebarButton("HUD Settings")
     createSidebarButton("Input & Macros")
     createSidebarButton("System & Config")
+    createSidebarButton("Module Manager")
     
     selectSettingsTab("Interface Settings")
     
@@ -1983,6 +2133,103 @@ UI.InitializeUI = function()
         VH.Config.saveConfig(); VH.Utils.notify("All settings reset to default!", StudioTheme.red)
     end)
     UI.addButtonOption(pageConfig, "Destruct Client GUI Completely", function() VH.Cleanup.cleanupAll() end)
+    
+    UI.addSectionHeader(pageModules, "Module Disabler & Exclusion Mode")
+    UI.addToggleOption(pageModules, "Enable Module Selection Mode", S.ModuleDisableMode, function(v)
+        S.ModuleDisableMode = v
+        if UI.updateDisableModeBtn then UI.updateDisableModeBtn() end
+        UI.updateAllModuleVisuals()
+        UI.showToast(v and "Module Selection Mode Enabled (Click non-Misc modules to disable)" or "Module Selection Mode Disabled", v and StudioTheme.orange or StudioTheme.blue)
+    end)
+    
+    local styleBtn = nil
+    styleBtn = UI.addButtonOption(pageModules, "Disabled Style: " .. (S.DisabledModuleStyle or "Greyish") .. " (Click to Switch)", function()
+        if S.DisabledModuleStyle == "Invisible" then
+            S.DisabledModuleStyle = "Greyish"
+        else
+            S.DisabledModuleStyle = "Invisible"
+        end
+        if styleBtn and styleBtn.SetText then
+            styleBtn.SetText("Disabled Style: " .. S.DisabledModuleStyle .. " (Click to Switch)")
+        end
+        VH.Config.saveConfig()
+        UI.updateAllModuleVisuals()
+        UI.showToast("Disabled modules style set to: " .. S.DisabledModuleStyle, StudioTheme.blue)
+    end)
+    
+    UI.addButtonOption(pageModules, "Revert All Disabled Modules", function()
+        UI.revertAllDisabled()
+    end)
+    
+    UI.addSectionHeader(pageModules, "Disabled Modules List")
+    
+    local disabledListContainer = Instance.new("Frame")
+    disabledListContainer.Name = "DisabledListContainer"
+    disabledListContainer.Size = UDim2.new(1, 0, 0, 0)
+    disabledListContainer.AutomaticSize = Enum.AutomaticSize.Y
+    disabledListContainer.BackgroundTransparency = 1
+    disabledListContainer.Parent = pageModules
+    
+    local dListLayout = Instance.new("UIListLayout")
+    dListLayout.Padding = UDim.new(0, 2)
+    dListLayout.Parent = disabledListContainer
+    
+    local function refreshDisabledList()
+        for _, ch in ipairs(disabledListContainer:GetChildren()) do
+            if ch:IsA("Frame") or ch:IsA("TextLabel") then ch:Destroy() end
+        end
+        local sortedList = {}
+        if S.DisabledModules then
+            for modName, disabled in pairs(S.DisabledModules) do
+                if disabled and (not UI.moduleCategories or UI.moduleCategories[modName] ~= "Misc") then
+                    table.insert(sortedList, modName)
+                end
+            end
+        end
+        table.sort(sortedList)
+        
+        if #sortedList == 0 then
+            local emptyLabel = Instance.new("TextLabel")
+            emptyLabel.Size = UDim2.new(1, 0, 0, 24)
+            emptyLabel.BackgroundTransparency = 1
+            emptyLabel.Font = Enum.Font.SourceSansItalic
+            emptyLabel.TextSize = 12
+            emptyLabel.TextColor3 = StudioTheme.textMuted
+            emptyLabel.Text = "No modules are currently disabled."
+            emptyLabel.Parent = disabledListContainer
+        else
+            for _, modName in ipairs(sortedList) do
+                local cat = (UI.moduleCategories and UI.moduleCategories[modName]) or "Module"
+                local row = Instance.new("Frame")
+                row.Size = UDim2.new(1, 0, 0, 24)
+                row.BackgroundColor3 = StudioTheme.panelBg
+                row.BorderSizePixel = 1
+                row.BorderColor3 = StudioTheme.border
+                row.Parent = disabledListContainer
+                
+                local lbl = Instance.new("TextLabel")
+                lbl.Size = UDim2.new(1, -70, 1, 0)
+                lbl.Position = UDim2.new(0, 8, 0, 0)
+                lbl.BackgroundTransparency = 1
+                lbl.Font = Enum.Font.SourceSansSemibold
+                lbl.TextSize = 11
+                lbl.TextColor3 = StudioTheme.text
+                lbl.TextXAlignment = Enum.TextXAlignment.Left
+                lbl.Text = "[" .. cat .. "] " .. modName
+                lbl.Parent = row
+                
+                local revBtn = makeStudioButton(row, "Re-enable", 60, 18, StudioTheme.btnBg, StudioTheme.text)
+                revBtn.Position = UDim2.new(1, -64, 0.5, -9)
+                revBtn.Activated:Connect(function()
+                    UI.setModuleDisabled(modName, false)
+                    UI.showToast("Re-enabled: " .. modName, StudioTheme.green)
+                    refreshDisabledList()
+                end)
+            end
+        end
+    end
+    UI.refreshDisabledModulesList = refreshDisabledList
+    refreshDisabledList()
     
     catPositions = { ["Combat"] = 20, ["Player"] = 235, ["Movement"] = 450, ["Render"] = 665, ["World"] = 880, ["Misc"] = 1095, ["Search"] = 1310 }
     
