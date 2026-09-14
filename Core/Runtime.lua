@@ -1253,16 +1253,27 @@ local function toggleUIVisibility()
     UI.updateMenuBlur()
 end
 
+local function isModDisabled(...)
+    if not UI or not UI.isModuleDisabled then return false end
+    for i = 1, select("#", ...) do
+        local name = select(i, ...)
+        if UI.isModuleDisabled(name) then return true end
+    end
+    return false
+end
+
 table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gpe)
     if S.SilentAim and inp.UserInputType == Enum.UserInputType.MouseButton1 and not UserInputService:GetFocusedTextBox() then
-        local target = getAimbotTarget()
-        if target then
-            task.spawn(function()
-                local oldCF = Camera.CFrame
-                Camera.CFrame = CFrame.new(oldCF.Position, target.Position)
-                RunService.RenderStepped:Wait()
-                Camera.CFrame = oldCF
-            end)
+        if not isModDisabled("Silent Aim") then
+            local target = getAimbotTarget()
+            if target then
+                task.spawn(function()
+                    local oldCF = Camera.CFrame
+                    Camera.CFrame = CFrame.new(oldCF.Position, target.Position)
+                    RunService.RenderStepped:Wait()
+                    Camera.CFrame = oldCF
+                end)
+            end
         end
     end
     if inp.KeyCode == (S.UIToggleKey or Enum.KeyCode.RightControl) or inp.KeyCode == Enum.KeyCode.RightControl then toggleUIVisibility(); return end
@@ -1277,10 +1288,15 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
     end
     if gpe then return end
     if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-        if S.ClickDelete and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) then local target = Mouse.Target; if target and not target.Parent:FindFirstChildOfClass("Humanoid") then target:Destroy() end
+        if S.ClickDelete and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) then
+            if not isModDisabled("Click-Delete", "Click Delete") then
+                local target = Mouse.Target; if target and not target.Parent:FindFirstChildOfClass("Humanoid") then target:Destroy() end
+            end
         elseif S.ClickTeleport and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-            local hit = Mouse.Hit; local hrp = getHRP(); local hum = getHum()
-            if hit and hrp then if hum then hum.Sit = false end; hrp.CFrame = CFrame.new(hit.Position + Vector3.new(0, 3, 0)) * hrp.CFrame.Rotation; hrp.AssemblyLinearVelocity = Vector3.zero; notify("Teleported to cursor!", Color3.fromRGB(50, 195, 75)) end
+            if not isModDisabled("Click-Teleport", "Click Teleport") then
+                local hit = Mouse.Hit; local hrp = getHRP(); local hum = getHum()
+                if hit and hrp then if hum then hum.Sit = false end; hrp.CFrame = CFrame.new(hit.Position + Vector3.new(0, 3, 0)) * hrp.CFrame.Rotation; hrp.AssemblyLinearVelocity = Vector3.zero; notify("Teleported to cursor!", Color3.fromRGB(50, 195, 75)) end
+            end
         end
     end
     if UserInputService:GetFocusedTextBox() then return end
@@ -1296,61 +1312,83 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
     end
 
     if k == Enum.KeyCode.LeftShift then
-        if S.SprintEnabled then local hum = getHum(); if hum then hum.WalkSpeed = S.SprintSpeed end end
+        if S.SprintEnabled and not isModDisabled("Sprint Speed Boost", "Sprint") then local hum = getHum(); if hum then hum.WalkSpeed = S.SprintSpeed end end
     elseif S.FlyKey and S.FlyKey ~= Enum.KeyCode.Unknown and k == S.FlyKey then
-        S.Fly = not S.Fly; if S.Fly then flyOn() else flyOff() end; notify("Fly Mode " .. (S.Fly and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Fly Mode"]; if mod then mod.SetActive(S.Fly) end
+        if not isModDisabled("Fly Mode", "Fly") then
+            S.Fly = not S.Fly; if S.Fly then flyOn() else flyOff() end; notify("Fly Mode " .. (S.Fly and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Fly Mode"]; if mod then mod.SetActive(S.Fly) end
+        end
     elseif S.NoClipKey and S.NoClipKey ~= Enum.KeyCode.Unknown and k == S.NoClipKey then
-        S.NoClip = not S.NoClip; notify("NoClip " .. (S.NoClip and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Noclip"]; if mod then mod.SetActive(S.NoClip) end
+        if not isModDisabled("Noclip", "NoClip") then
+            S.NoClip = not S.NoClip; notify("NoClip " .. (S.NoClip and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Noclip"]; if mod then mod.SetActive(S.NoClip) end
+        end
     elseif S.BHopKey and S.BHopKey ~= Enum.KeyCode.Unknown and k == S.BHopKey then
-        S.BHop = not S.BHop; notify("Bunnyhop " .. (S.BHop and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Auto Bunnyhop"]; if mod then mod.SetActive(S.BHop) end
+        if not isModDisabled("Auto Bunnyhop", "Bunnyhop") then
+            S.BHop = not S.BHop; notify("Bunnyhop " .. (S.BHop and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Auto Bunnyhop"]; if mod then mod.SetActive(S.BHop) end
+        end
     elseif S.InfJumpKey and S.InfJumpKey ~= Enum.KeyCode.Unknown and k == S.InfJumpKey then
-        S.InfJump = not S.InfJump; notify("Infinite Jump " .. (S.InfJump and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Infinite Jump"]; if mod then mod.SetActive(S.InfJump) end
+        if not isModDisabled("Infinite Jump") then
+            S.InfJump = not S.InfJump; notify("Infinite Jump " .. (S.InfJump and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Infinite Jump"]; if mod then mod.SetActive(S.InfJump) end
+        end
     elseif S.JumpStrengthKey and S.JumpStrengthKey ~= Enum.KeyCode.Unknown and k == S.JumpStrengthKey then
-        S.ForceJumpPower = not S.ForceJumpPower; local hum = getHum()
-        if hum then if S.ForceJumpPower then hum.UseJumpPower = true; hum.JumpPower = S.JumpPower else hum.UseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or true; hum.JumpPower = State.gameDefaultJumpPower or 50 end end
-        notify("Jump Force " .. (S.ForceJumpPower and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Jump Force"]; if mod then mod.SetActive(S.ForceJumpPower) end; saveConfig()
+        if not isModDisabled("Jump Force") then
+            S.ForceJumpPower = not S.ForceJumpPower; local hum = getHum()
+            if hum then if S.ForceJumpPower then hum.UseJumpPower = true; hum.JumpPower = S.JumpPower else hum.UseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or true; hum.JumpPower = State.gameDefaultJumpPower or 50 end end
+            notify("Jump Force " .. (S.ForceJumpPower and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Jump Force"]; if mod then mod.SetActive(S.ForceJumpPower) end; saveConfig()
+        end
     elseif S.GhostKey and S.GhostKey ~= Enum.KeyCode.Unknown and k == S.GhostKey then
-        S.GhostMode = not S.GhostMode; if S.GhostMode then enableGhostMode() else disableGhostMode() end
-        local mod = moduleButtons["Ghost Mode"]; if mod then mod.SetActive(S.GhostMode) end
+        if not isModDisabled("Ghost Mode") then
+            S.GhostMode = not S.GhostMode; if S.GhostMode then enableGhostMode() else disableGhostMode() end
+            local mod = moduleButtons["Ghost Mode"]; if mod then mod.SetActive(S.GhostMode) end
+        end
     elseif S.BlinkKey and S.BlinkKey ~= Enum.KeyCode.Unknown and k == S.BlinkKey then
-        local hrp = getHRP(); local hum = getHum()
-        if hrp and hum then
-            local dir
-            if S.BlinkDirection == "Camera Look" then dir = Camera.CFrame.LookVector else dir = hum.MoveDirection.Magnitude > 0 and hum.MoveDirection or hrp.CFrame.LookVector end
-            local targetPos = hrp.Position + dir.Unit * S.BlinkDistance
-            if not S.Fly then
-                local raycastParams = RaycastParams.new(); raycastParams.FilterType = Enum.RaycastFilterType.Exclude; raycastParams.FilterDescendantsInstances = {LP.Character}
-                local rayResult = Workspace:Raycast(targetPos + Vector3.new(0, 2, 0), Vector3.new(0, -15, 0), raycastParams)
-                if rayResult then targetPos = Vector3.new(targetPos.X, rayResult.Position.Y + 3.0, targetPos.Z) end
+        if not isModDisabled("Blink Teleport", "Blink") then
+            local hrp = getHRP(); local hum = getHum()
+            if hrp and hum then
+                local dir
+                if S.BlinkDirection == "Camera Look" then dir = Camera.CFrame.LookVector else dir = hum.MoveDirection.Magnitude > 0 and hum.MoveDirection or hrp.CFrame.LookVector end
+                local targetPos = hrp.Position + dir.Unit * S.BlinkDistance
+                if not S.Fly then
+                    local raycastParams = RaycastParams.new(); raycastParams.FilterType = Enum.RaycastFilterType.Exclude; raycastParams.FilterDescendantsInstances = {LP.Character}
+                    local rayResult = Workspace:Raycast(targetPos + Vector3.new(0, 2, 0), Vector3.new(0, -15, 0), raycastParams)
+                    if rayResult then targetPos = Vector3.new(targetPos.X, rayResult.Position.Y + 3.0, targetPos.Z) end
+                end
+                hrp.CFrame = CFrame.new(targetPos) * hrp.CFrame.Rotation; notify("Blinked forward safely!", Color3.fromRGB(50, 195, 75))
             end
-            hrp.CFrame = CFrame.new(targetPos) * hrp.CFrame.Rotation; notify("Blinked forward safely!", Color3.fromRGB(50, 195, 75))
         end
     elseif S.AutoClickerKey and S.AutoClickerKey ~= Enum.KeyCode.Unknown and k == S.AutoClickerKey then
-        S.AutoClicker = not S.AutoClicker; notify("Auto Clicker " .. (S.AutoClicker and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Auto Clicker"]; if mod then mod.SetActive(S.AutoClicker) end
-    elseif S.WalkFlingKey and S.WalkFlingKey ~= Enum.KeyCode.Unknown and k == S.WalkFlingKey then
-        local mod = moduleButtons["Walk Fling"]
-        if mod and mod.SetActive then
-            mod.SetActive(not S.WalkFling)
-        else
-            S.WalkFling = not S.WalkFling
+        if not isModDisabled("Auto Clicker") then
+            S.AutoClicker = not S.AutoClicker; notify("Auto Clicker " .. (S.AutoClicker and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Auto Clicker"]; if mod then mod.SetActive(S.AutoClicker) end
         end
-        notify("Walk Fling " .. (S.WalkFling and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
+    elseif S.WalkFlingKey and S.WalkFlingKey ~= Enum.KeyCode.Unknown and k == S.WalkFlingKey then
+        if not isModDisabled("Walk Fling") then
+            local mod = moduleButtons["Walk Fling"]
+            if mod and mod.SetActive then
+                mod.SetActive(not S.WalkFling)
+            else
+                S.WalkFling = not S.WalkFling
+            end
+            notify("Walk Fling " .. (S.WalkFling and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
+        end
     elseif S.MinimapKey and S.MinimapKey ~= Enum.KeyCode.Unknown and k == S.MinimapKey then
-        S.MinimapActive = not S.MinimapActive; notify("Minimap " .. (S.MinimapActive and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Minimap"]; if mod then mod.SetActive(S.MinimapActive) end
+        if not isModDisabled("Minimap") then
+            S.MinimapActive = not S.MinimapActive; notify("Minimap " .. (S.MinimapActive and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Minimap"]; if mod then mod.SetActive(S.MinimapActive) end
+        end
     elseif S.AutoplayBotKey and S.AutoplayBotKey ~= Enum.KeyCode.Unknown and k == S.AutoplayBotKey then
-        S.AutoplayBot = not S.AutoplayBot; notify("Autoplay Bot " .. (S.AutoplayBot and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Autoplay Bot"]; if mod then mod.SetActive(S.AutoplayBot) end
+        if not isModDisabled("Autoplay Bot") then
+            S.AutoplayBot = not S.AutoplayBot; notify("Autoplay Bot " .. (S.AutoplayBot and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Autoplay Bot"]; if mod then mod.SetActive(S.AutoplayBot) end
+        end
     end
 end))
 
 table.insert(S.Connections, UserInputService.InputEnded:Connect(function(inp, gpe)
     if gpe then return end
     if inp.KeyCode == Enum.KeyCode.LeftShift then
-        if S.SprintEnabled then local hum = getHum(); if hum then hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or (State.gameDefaultSpeed or 16) end end
+        if S.SprintEnabled and not isModDisabled("Sprint Speed Boost", "Sprint") then local hum = getHum(); if hum then hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or (State.gameDefaultSpeed or 16) end end
     end
 end))
 
 table.insert(S.Connections, UserInputService.JumpRequest:Connect(function()
-    if S.InfJump then local hum = getHum(); if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end end
+    if S.InfJump and not isModDisabled("Infinite Jump") then local hum = getHum(); if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end end
     if S.AirWalk and S.AirWalkPlat then pcall(function() S.AirWalkPlat:Destroy() end); S.AirWalkPlat = nil end
 end))
 
@@ -1437,8 +1475,8 @@ pcall(connectChatLogger)
 pcall(function() applyThemeColor(S.ThemeColor or "Purple"); updateHUDArrayList() end)
 
 local toggleKeyName = S.UIToggleKey and S.UIToggleKey.Name or "RCtrl"
-logMessage("System", "WASOR 3.2 loaded successfully. Keybind: [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
-notify("WASOR 3.2 loaded! [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
+logMessage("System", "WASOR 3.7 loaded successfully. Keybind: [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
+notify("WASOR 3.7 loaded! [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
 print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내리는 것 또한 그중 하나입니다). 그리고 인내심이야말로 우리 삶의 핵심이라는 사실을 기억하십시오.")
 
     local request = (http and http.request) or http_request or (syn and syn.request)
@@ -1720,4 +1758,36 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
     pcall(setupAutoReinject)
     pcall(function() Utils.setupAutoRejoin() end)
 
+    if UI and UI.updateAllModuleVisuals then
+        pcall(UI.updateAllModuleVisuals)
+    end
 
+    task.spawn(function()
+        task.wait(1.5)
+        local disabledList = {}
+        if S.DisabledModules then
+            for modName, isDisabled in pairs(S.DisabledModules) do
+                if isDisabled then
+                    table.insert(disabledList, tostring(modName))
+                end
+            end
+        end
+        if #disabledList > 0 then
+            table.sort(disabledList)
+            local count = #disabledList
+            local fullNames = table.concat(disabledList, ", ")
+            warn("[WASOR] ⚠️ Warning: " .. count .. " module(s) currently disabled: " .. fullNames)
+            
+            local toastMsg
+            if count <= 3 then
+                toastMsg = "⚠️ Disabled: " .. fullNames
+            else
+                toastMsg = "⚠️ " .. count .. " modules disabled: " .. table.concat({disabledList[1], disabledList[2], disabledList[3]}, ", ") .. " (+" .. (count - 3) .. " more)"
+            end
+            if notify then
+                notify(toastMsg, Color3.fromRGB(241, 196, 15))
+            elseif UI and UI.showToast then
+                UI.showToast(toastMsg, Color3.fromRGB(241, 196, 15))
+            end
+        end
+    end)
