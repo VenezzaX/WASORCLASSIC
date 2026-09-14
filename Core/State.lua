@@ -65,6 +65,8 @@ State.S = {
     AntiAFK = false, GhostTeleportToEnd = false,
     GodMode = false, KillAura = false, KillAuraRange = 15, AutoClicker = false, AutoClickerDelay = 2, AutoClickerInterval = 0.1, AutoInteract = false,
     AutoInteractRadius = 15, ToolMagnet = false, AutoJump = false, SavedWaypointCF = nil, AntiFling = false,
+    DisabledModules = {}, DisabledModuleStyle = "Greyish", ModuleDisableMode = false,
+    SkyboxChangerActive = false, SkyboxAsset = "", SkyboxFPS = 15,
     Climb = false, ClimbSpeed = 25, WallRun = false, FlyBypass = false, InstantRespawn = false,
     PathfindingWalk = false, CustomIdleAnim = false, CustomIdleID = "rbxassetid://507766666",
     JoinLeaveToasts = true, ServerAgeHUD = false,
@@ -235,4 +237,3 @@ State.ESPSync = VH.ESPSync
 
 VH.State = State
 return State
-
