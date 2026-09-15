@@ -88,7 +88,7 @@ WASOR is organized into **6 core modular divisions** containing **98 specialized
 * **Gravity, Anti-Sit & Anti-Anchor** — Total gravitational control, seat trap prevention, and local anchor overrides.
 
 ### 👁️ Visuals, ESP & HUD (24 Modules)
-* **Comprehensive ESP Suite** — 2D Bounding Boxes, Tracers, Player Names, Distance, and Health bars via Drawing API.
+* **Comprehensive ESP** — 2D Bounding Boxes, Tracers, Player Names, Distance, and Health bars via Drawing API.
 * **Chams & Wallhacks** — Native `Highlight` instances with customizable fill, outline, and `AlwaysOnTop` depth modes.
 * **Line of Sight Lasers** — Projects 3D laser vectors showing the exact gaze and aiming angles of opponents.
 * **Skeleton ESP** — Real-time kinematic bone articulation lines for R6 and R15 avatar rigs.
@@ -102,7 +102,7 @@ WASOR is organized into **6 core modular divisions** containing **98 specialized
 ### 🌍 World Manipulation (13 Modules)
 * **Anti-Fling Guardian** — Cancels foreign angular velocities and neutralizes violent player collisions.
 * **Anti-Void Net** — Safety net repositioning the avatar to safe coordinates prior to falling below the kill boundary.
-* **Proximity Prompt Suite** — Auto-trigger prompts, instant interaction (`HoldDuration = 0`), and global bulk activation.
+* **Proximity Prompt** — Auto-trigger prompts, instant interaction (`HoldDuration = 0`), and global bulk activation.
 * **Fire Touchinterests** — Simulates physical contact with badges, checkpoints, and rewards without walking to them.
 * **Fire ClickDetectors** — Triggers buttons, levers, and switches across the entire map simultaneously.
 * **Destroy Killbricks & Seats** — Client-side purges of lethal lava bricks, lasers, and unwanted seats.
