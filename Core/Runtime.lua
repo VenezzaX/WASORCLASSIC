@@ -1687,7 +1687,7 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
                                         if executable then
                                             task.spawn(executable)
                                         else
-                                            warn("Cross-Game Suite Execution Error: " .. tostring(execError))
+                                            warn("Cross-Game Execution Error: " .. tostring(execError))
                                         end
                                     end
                                 end
