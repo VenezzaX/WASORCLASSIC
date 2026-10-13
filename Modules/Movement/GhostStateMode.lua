@@ -10,7 +10,26 @@ local disableGhostMode = Utils.disableGhostMode
 local registerModule = UI.registerModule
 
 local addToggleOption = UI.addToggleOption
+local addSliderOption = UI.addSliderOption
 
 local saveConfig = VH.Config.saveConfig
 
-registerModule("Movement", "Ghost Mode", 300, 50, true, S.GhostMode, function(v) S.GhostMode = v; if v then enableGhostMode() else disableGhostMode() end; saveConfig() end, function(drawer) addToggleOption(drawer, "Teleport to Ghost End", S.GhostTeleportToEnd, function(v) S.GhostTeleportToEnd = v; saveConfig() end) end, false)
+registerModule("Movement", "Ghost Mode", 300, 50, true, S.GhostMode, function(v)
+    S.GhostMode = v
+    if v then
+        enableGhostMode()
+    else
+        disableGhostMode()
+    end
+    saveConfig()
+end, function(drawer)
+    addToggleOption(drawer, "Teleport to Ghost End", S.GhostTeleportToEnd ~= false, function(v)
+        S.GhostTeleportToEnd = v
+        saveConfig()
+    end)
+    addSliderOption(drawer, "Ghost Flight Speed", 15, 150, S.GhostSpeed or 60, function(v)
+        S.GhostSpeed = v
+        saveConfig()
+    end)
+end, false)
+

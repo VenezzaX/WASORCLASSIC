@@ -56,7 +56,8 @@ end
 Utils.processUISpoofText = function(obj)
     if not obj or not obj:IsA("Instance") then return end
     local S = State.S
-    local txt = obj.Text
+    local txt = nil
+    pcall(function() txt = obj.Text end)
     if not txt or type(txt) ~= "string" or txt == "" then return end
 
     local newName = (S.CustomUIText and S.CustomUIText ~= "") and S.CustomUIText or S.SessionSpoofName or State.SessionSpoofName or "Guest_1337"
@@ -96,9 +97,10 @@ Utils.processUISpoofText = function(obj)
     end
 
     if result ~= txt then
-        obj.Text = result
+        pcall(function() obj.Text = result end)
     end
 end
+
 
 
 Utils.applyTallAnimations = function(char)
@@ -275,51 +277,117 @@ Utils.isMouseOverHubUI = function()
     return false
 end
 
+local function optimizeSingleInstance(descendant, S)
+    pcall(function()
+        if descendant:IsA("BasePart") then
+            if S.LagReducePotatoMode then
+                descendant.Material = Enum.Material.SmoothPlastic
+            end
+            if S.LagReduceShadows then
+                descendant.CastShadow = false
+            end
+        elseif (descendant:IsA("Decal") or descendant:IsA("Texture")) and S.LagReduceDecals then
+            descendant.Transparency = 1
+        elseif (descendant:IsA("ParticleEmitter") or descendant:IsA("Fire") or descendant:IsA("Smoke") or descendant:IsA("Sparkles") or descendant:IsA("Trail") or descendant:IsA("Beam")) and S.LagReduceParticles then
+            descendant.Enabled = false
+        end
+    end)
+end
+
 Utils.toggleGraphicsReducer = function(v)
     local S = State.S
     S.GraphicsReducer = v
+
+    if State.lagReducerAddedConn then
+        pcall(function() State.lagReducerAddedConn:Disconnect() end)
+        State.lagReducerAddedConn = nil
+    end
+
     if v then
         pcall(function()
-            for _, descendant in ipairs(Services.Workspace:GetDescendants()) do
-                if descendant:IsA("BasePart") and S.LagReducePotatoMode then
-                    descendant.Material = Enum.Material.SmoothPlastic
-                elseif (descendant:IsA("Decal") or descendant:IsA("Texture")) and S.LagReduceDecals then
-                    descendant.Transparency = 1
-                elseif (descendant:IsA("ParticleEmitter") or descendant:IsA("Fire") or descendant:IsA("Smoke") or descendant:IsA("Sparkles")) and S.LagReduceParticles then
-                    descendant.Enabled = false
-                end
-            end
             if S.LagReduceShadows then
                 Services.Lighting.GlobalShadows = false
             end
             if S.LagReduceEffects then
                 for _, effect in ipairs(Services.Lighting:GetChildren()) do
-                    if effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") then
+                    if effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") or effect:IsA("Atmosphere") then
                         effect.Enabled = false
                     end
                 end
+            end
+            local terrain = Services.Workspace:FindFirstChildOfClass("Terrain") or Services.Workspace.Terrain
+            if terrain then
+                terrain.WaterWaveSize = 0
+                terrain.WaterWaveSpeed = 0
+                terrain.WaterReflectance = 0
+            end
+            if settings and settings().Rendering then
+                pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 end)
+            end
+        end)
+
+        -- Batched non-blocking sweep to prevent frame drops
+        task.spawn(function()
+            local all = Services.Workspace:GetDescendants()
+            local batchSize = 400
+            for i = 1, #all do
+                if not S.GraphicsReducer then break end
+                optimizeSingleInstance(all[i], S)
+                if i % batchSize == 0 then
+                    task.wait()
+                end
+            end
+        end)
+
+        -- Real-time optimizer for newly spawned instances
+        State.lagReducerAddedConn = Services.Workspace.DescendantAdded:Connect(function(desc)
+            if S.GraphicsReducer then
+                optimizeSingleInstance(desc, S)
             end
         end)
     else
         pcall(function()
             Services.Lighting.GlobalShadows = true
-            for _, descendant in ipairs(Services.Workspace:GetDescendants()) do
-                if descendant:IsA("BasePart") then
-                    descendant.Material = Enum.Material.Plastic
-                elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
-                    descendant.Transparency = 0
-                elseif descendant:IsA("ParticleEmitter") or descendant:IsA("Fire") or descendant:IsA("Smoke") or descendant:IsA("Sparkles") then
-                    descendant.Enabled = true
+            for _, effect in ipairs(Services.Lighting:GetChildren()) do
+                if effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") or effect:IsA("Atmosphere") then
+                    effect.Enabled = true
                 end
             end
-            for _, effect in ipairs(Services.Lighting:GetChildren()) do
-                if effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") then
-                    effect.Enabled = true
+            local terrain = Services.Workspace:FindFirstChildOfClass("Terrain") or Services.Workspace.Terrain
+            if terrain then
+                terrain.WaterWaveSize = 0.15
+                terrain.WaterWaveSpeed = 10
+                terrain.WaterReflectance = 0.05
+            end
+            if settings and settings().Rendering then
+                pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic end)
+            end
+        end)
+
+        task.spawn(function()
+            local all = Services.Workspace:GetDescendants()
+            local batchSize = 400
+            for i = 1, #all do
+                if S.GraphicsReducer then break end
+                local descendant = all[i]
+                pcall(function()
+                    if descendant:IsA("BasePart") then
+                        descendant.Material = Enum.Material.Plastic
+                        descendant.CastShadow = true
+                    elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+                        descendant.Transparency = 0
+                    elseif descendant:IsA("ParticleEmitter") or descendant:IsA("Fire") or descendant:IsA("Smoke") or descendant:IsA("Sparkles") or descendant:IsA("Trail") or descendant:IsA("Beam") then
+                        descendant.Enabled = true
+                    end
+                end)
+                if i % batchSize == 0 then
+                    task.wait()
                 end
             end
         end)
     end
 end
+
 
 
 local queue_on_teleport = queue_on_teleport or queueteleport or (syn and syn.queue_on_teleport) or queue_to_teleport or (fluxus and fluxus.queue_on_teleport)
@@ -332,7 +400,7 @@ Utils.setupAutoRejoin = function()
             local errMsg = ""
             pcall(function() errMsg = Services.GuiService:GetErrorMessage() end)
             if errMsg:lower():find("teleport") and not errMsg:lower():find("disconnected") then
-                Utils.notify("[WASOR 3.7] Teleport message: " .. errMsg .. " (UI preserved)", Color3.fromRGB(218, 170, 42))
+                Utils.notify("[WASOR 4.0] Teleport message: " .. errMsg .. " (UI preserved)", Color3.fromRGB(218, 170, 42))
                 return
             end
             pcall(function()
@@ -353,7 +421,7 @@ Utils.setupAutoRejoin = function()
     pcall(function()
         local tpFailConn = Services.TeleportService.TeleportInitFailed:Connect(function(_, result, err)
             State.teleportQueued = false
-            Utils.notify("[WASOR 3.7] Teleport Failed: " .. tostring(err or result) .. " (UI preserved)", Color3.fromRGB(218, 38, 38))
+            Utils.notify("[WASOR 4.0] Teleport Failed: " .. tostring(err or result) .. " (UI preserved)", Color3.fromRGB(218, 38, 38))
         end)
         table.insert(S.Connections, tpFailConn)
     end)
@@ -571,102 +639,134 @@ Utils.enableGhostMode = function()
     local myChar = Services.LP.Character
     local myHRP = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso") or myChar.PrimaryPart)
     local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
-    if not myHRP then return end
+    if not myHRP or not myHum then return end
 
     S.GhostParkedCFrame = myHRP.CFrame
 
+    -- Anchor real character so user does not move at all
+    myHRP.Anchored = true
+    myHRP.AssemblyLinearVelocity = Vector3.zero
+    myHRP.AssemblyAngularVelocity = Vector3.zero
+
+    -- Create Ghost avatar
     pcall(function()
         myChar.Archivable = true
-        local clone = myChar:Clone()
-        clone.Name = "GhostParkedBody"
-        for _, obj in ipairs(clone:GetDescendants()) do
-            if obj:IsA("LuaSourceContainer") or obj:IsA("Script") or obj:IsA("LocalScript") then
-                obj:Destroy()
-            elseif obj:IsA("BodyMover") or obj:IsA("Constraint") or obj:IsA("Attachment") then
-                pcall(function() obj:Destroy() end)
-            elseif obj:IsA("BasePart") then
-                obj.Anchored = true
-                pcall(function() obj.CanCollide = false end)
-                pcall(function() obj.CanTouch = false end)
-                pcall(function() obj.CanQuery = false end)
-                obj.Transparency = 0.4
-            elseif obj:IsA("Humanoid") then
-                obj.PlatformStand = true
-                pcall(function() obj.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end)
-                pcall(function() obj.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff end)
+        local ghost = myChar:Clone()
+        ghost.Name = "WASOR_GhostAvatar"
+
+        for _, desc in ipairs(ghost:GetDescendants()) do
+            if desc:IsA("LuaSourceContainer") or desc:IsA("Script") or desc:IsA("LocalScript") then
+                desc:Destroy()
+            elseif desc:IsA("BodyMover") or desc:IsA("Constraint") or desc:IsA("Attachment") then
+                pcall(function() desc:Destroy() end)
+            elseif desc:IsA("BasePart") then
+                desc.Anchored = true
+                desc.CanCollide = false
+                desc.CanTouch = false
+                desc.CanQuery = false
+                desc.Transparency = 0.5
+                desc.Material = Enum.Material.Neon
+            elseif desc:IsA("Decal") then
+                desc.Transparency = 0.5
+            elseif desc:IsA("Humanoid") then
+                desc.PlatformStand = true
+                pcall(function() desc.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end)
+                pcall(function() desc.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff end)
             end
         end
-        clone.Parent = Services.Workspace
-        S.GhostDummy = clone
+
+        local ghostHRP = ghost:FindFirstChild("HumanoidRootPart") or ghost.PrimaryPart or ghost:FindFirstChild("Torso")
+        local ghostHum = ghost:FindFirstChildOfClass("Humanoid")
+        if ghostHRP then
+            ghostHRP.CFrame = S.GhostParkedCFrame
+            ghostHRP.Anchored = true
+        end
+
+        ghost.Parent = Services.Workspace
+        State.activeGhostModel = ghost
+
+        if ghostHum then
+            Services.Camera.CameraSubject = ghostHum
+        elseif ghostHRP then
+            Services.Camera.CameraSubject = ghostHRP
+        end
+
+        -- Ghost Movement Loop
+        local UIS = Services.UserInputService
+        State.ghostStepConn = Services.RunService.RenderStepped:Connect(function(dt)
+            if not S.GhostMode or not State.activeGhostModel or not State.activeGhostModel.Parent then
+                return
+            end
+            local gHRP = State.activeGhostModel:FindFirstChild("HumanoidRootPart") or State.activeGhostModel.PrimaryPart
+            if not gHRP then return end
+
+            local camCF = Services.Camera.CFrame
+            local moveDir = Vector3.zero
+            if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camCF.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camCF.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camCF.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camCF.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+            if UIS:IsKeyDown(Enum.KeyCode.LeftShift) or UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+
+            if moveDir.Magnitude > 0.01 then
+                local speed = S.GhostSpeed or 60
+                gHRP.CFrame = gHRP.CFrame + (moveDir.Unit * (speed * dt))
+            end
+        end)
     end)
 
-    State.ghostOriginalTransparencies = {}
-    for _, part in ipairs(myChar:GetDescendants()) do
-        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-            State.ghostOriginalTransparencies[part] = part.Transparency
-            part.Transparency = 0.6
-        elseif part:IsA("Decal") then
-            State.ghostOriginalTransparencies[part] = part.Transparency
-            part.Transparency = 0.6
-        end
-    end
-
-    S.Fly = true
-    Utils.flyOn()
-    S.NoClip = true
-
-    Utils.notify("Ghost Mode ON: Body parked, fly freely!", Color3.fromRGB(218, 170, 42))
+    Utils.notify("Ghost Mode ON: Body stationary, control ghost!", Color3.fromRGB(50, 195, 75))
 end
 
 Utils.disableGhostMode = function()
     local S = State.S
     local myChar = Services.LP.Character
     local myHRP = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso") or myChar.PrimaryPart)
-
-    local ghostEndCF = myHRP and myHRP.CFrame
-
-    if S.GhostDummy then
-        pcall(function() S.GhostDummy:Destroy() end)
-        S.GhostDummy = nil
-    end
-
-    if myHRP and (ghostEndCF or S.GhostParkedCFrame) then
-        myHRP.CFrame = ghostEndCF or S.GhostParkedCFrame
-        S.GhostParkedCFrame = nil
-    end
-
-    S.Fly = false
-    Utils.flyOff()
-    S.NoClip = false
-
-    if myChar then
-        for _, part in ipairs(myChar:GetDescendants()) do
-            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                if State.ghostOriginalTransparencies and State.ghostOriginalTransparencies[part] then
-                    part.Transparency = State.ghostOriginalTransparencies[part]
-                else
-                    part.Transparency = 0
-                end
-            elseif part:IsA("Decal") then
-                if State.ghostOriginalTransparencies and State.ghostOriginalTransparencies[part] then
-                    part.Transparency = State.ghostOriginalTransparencies[part]
-                else
-                    part.Transparency = 0
-                end
-            end
-        end
-        State.ghostOriginalTransparencies = nil
-    end
-
-    Utils.notify("Ghost Mode OFF: Teleported to ghost location!", Color3.fromRGB(50, 195, 75))
     local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
+
+    if State.ghostStepConn then
+        pcall(function() State.ghostStepConn:Disconnect() end)
+        State.ghostStepConn = nil
+    end
+
+    local ghostEndCF = nil
+    if State.activeGhostModel and State.activeGhostModel.Parent then
+        local gHRP = State.activeGhostModel:FindFirstChild("HumanoidRootPart") or State.activeGhostModel.PrimaryPart
+        if gHRP then
+            ghostEndCF = gHRP.CFrame
+        end
+        pcall(function() State.activeGhostModel:Destroy() end)
+        State.activeGhostModel = nil
+    end
+
     if myHum then
+        Services.Camera.CameraSubject = myHum
+        myHum.PlatformStand = false
         if State.ghostOriginalDisplayNameType then
             myHum.DisplayDistanceType = State.ghostOriginalDisplayNameType
         else
             myHum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer
         end
         State.ghostOriginalDisplayNameType = nil
+    end
+
+    if myHRP then
+        myHRP.Anchored = false
+        if (S.GhostTeleportToEnd ~= false) and ghostEndCF then
+            myHRP.CFrame = ghostEndCF
+            myHRP.AssemblyLinearVelocity = Vector3.zero
+            myHRP.AssemblyAngularVelocity = Vector3.zero
+            Utils.notify("Ghost Mode OFF: Teleported to ghost location!", Color3.fromRGB(50, 195, 75))
+        elseif S.GhostParkedCFrame then
+            myHRP.CFrame = S.GhostParkedCFrame
+            myHRP.AssemblyLinearVelocity = Vector3.zero
+            myHRP.AssemblyAngularVelocity = Vector3.zero
+            Utils.notify("Ghost Mode OFF: Returned to origin", Color3.fromRGB(218, 170, 42))
+        else
+            Utils.notify("Ghost Mode OFF", Color3.fromRGB(218, 170, 42))
+        end
+        S.GhostParkedCFrame = nil
     end
     S.Fly = false; Utils.flyOff(); S.NoClip = false
 end
@@ -763,18 +863,52 @@ Utils.toggleNo3DRenderCover = function(enable)
 
     if not enable then
         pcall(function() Services.RunService:Set3dRenderingEnabled(true) end)
+
+        if State.previousFPSCap and setfpscap then
+            pcall(function() setfpscap(State.previousFPSCap) end)
+            State.previousFPSCap = nil
+        end
+
+        if State.previousQualityLevel then
+            pcall(function() settings().Rendering.QualityLevel = State.previousQualityLevel end)
+            State.previousQualityLevel = nil
+        end
+
         if State.no3DCoverGui then
             pcall(function() State.no3DCoverGui:Destroy() end)
             State.no3DCoverGui = nil
         end
+        State.no3DStatsRunning = false
         return
     end
 
     pcall(function() Services.RunService:Set3dRenderingEnabled(false) end)
 
+    if setfpscap then
+        local currentCap = (getfpscap and getfpscap()) or S.FPSCap or 60
+        if currentCap > 20 then
+            State.previousFPSCap = currentCap
+        end
+        if S.No3DRenderCapFPS then
+            pcall(function() setfpscap(S.No3DRenderTargetFPS or 15) end)
+        end
+    end
+
+    if S.No3DRenderReduceQuality then
+        pcall(function()
+            State.previousQualityLevel = settings().Rendering.QualityLevel
+            settings().Rendering.QualityLevel = 1
+        end)
+    end
+
     if State.no3DCoverGui then
         pcall(function() State.no3DCoverGui:Destroy() end)
         State.no3DCoverGui = nil
+    end
+
+    -- If user chose to disable cover, no GUI elements are created at all (pure optimization)
+    if S.No3DRenderDisableCover then
+        return
     end
 
     local gui = Instance.new("ScreenGui")
@@ -787,30 +921,28 @@ Utils.toggleNo3DRenderCover = function(enable)
     bgFrame.Name = "BlackBackground"
     bgFrame.Size = UDim2.new(1, 0, 1, 0)
     bgFrame.Position = UDim2.new(0, 0, 0, 0)
-    bgFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    bgFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
     bgFrame.BackgroundTransparency = 0
     bgFrame.BorderSizePixel = 0
     bgFrame.Parent = gui
 
-    if not S.No3DRenderDisableCover then
-        local rawAssetId = (S.No3DRenderCustomCover and S.No3DRenderCustomCover ~= "") and S.No3DRenderCustomCover or "6723684726"
-        local assetId = rawAssetId:match("%d+") or "6723684726"
-        local imgLabel = Instance.new("ImageLabel")
-        imgLabel.Name = "CoverImage"
-        imgLabel.Size = UDim2.new(1, 0, 1, 0)
-        imgLabel.Position = UDim2.new(0, 0, 0, 0)
-        imgLabel.BackgroundTransparency = 1
-        imgLabel.Image = "rbxassetid://" .. assetId
-        imgLabel.ScaleType = Enum.ScaleType.Fit
-        imgLabel.Parent = bgFrame
-    end
+    local rawAssetId = (S.No3DRenderCustomCover and S.No3DRenderCustomCover ~= "") and S.No3DRenderCustomCover or "6723684726"
+    local assetId = rawAssetId:match("%d+") or "6723684726"
+    local imgLabel = Instance.new("ImageLabel")
+    imgLabel.Name = "CoverImage"
+    imgLabel.Size = UDim2.new(1, 0, 1, 0)
+    imgLabel.Position = UDim2.new(0, 0, 0, 0)
+    imgLabel.BackgroundTransparency = 1
+    imgLabel.Image = "rbxassetid://" .. assetId
+    imgLabel.ScaleType = Enum.ScaleType.Fit
+    imgLabel.Parent = bgFrame
 
     local statusLabel = Instance.new("TextLabel")
     statusLabel.Name = "StatusText"
     statusLabel.Size = UDim2.new(1, 0, 0, 30)
     statusLabel.Position = UDim2.new(0, 0, 1, -40)
     statusLabel.BackgroundTransparency = 1
-    statusLabel.Font = Enum.Font.GothamBold
+    statusLabel.Font = Enum.Font.SourceSansBold
     statusLabel.TextSize = 13
     statusLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
     statusLabel.Text = "3D Rendering Paused (No 3D Rendering)"
@@ -828,6 +960,25 @@ Utils.toggleNo3DRenderCover = function(enable)
     end)
 
     State.no3DCoverGui = gui
+    State.no3DStatsRunning = true
+
+    task.spawn(function()
+        local startTime = os.time()
+        while State.no3DStatsRunning and State.no3DCoverGui and S.No3DRender do
+            task.wait(1)
+            pcall(function()
+                if not statusLabel or not statusLabel.Parent then return end
+                local elapsed = os.time() - startTime
+                local mins = math.floor(elapsed / 60)
+                local secs = elapsed % 60
+                local mem = 0
+                if Services.Stats and Services.Stats.GetTotalMemoryUsageMb then
+                    mem = math.floor(Services.Stats:GetTotalMemoryUsageMb())
+                end
+                statusLabel.Text = string.format("3D Rendering Paused | FPS Cap: %d | Mem: %d MB | Active: %02d:%02d", S.No3DRenderTargetFPS or 15, mem, mins, secs)
+            end)
+        end
+    end)
 end
 
 VH.Utils = Utils

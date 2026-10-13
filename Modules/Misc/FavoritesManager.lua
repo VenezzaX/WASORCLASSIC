@@ -13,8 +13,10 @@ local LP = Services.LP
 local notify = Utils.notify
 local registerModule = UI.registerModule
 local addTextboxOption = UI.addTextboxOption
+local addButtonOption = UI.addButtonOption
 local addCustomFrameOption = UI.addCustomFrameOption
 local saveFavorites = VH.Config.saveFavorites
+local loadFavorites = VH.Config.loadFavorites
 
 local StudioTheme = {
     panelBg = Color3.fromRGB(42, 42, 45),
@@ -28,9 +30,12 @@ local StudioTheme = {
     btnBg = Color3.fromRGB(50, 50, 54),
 }
 
+local activeScroll = nil
+
 local function rebuildFavorites(scroll, filter)
+    if not scroll then return end
     for _, child in ipairs(scroll:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
-    for idx, map in ipairs(S.FavoriteMaps) do
+    for idx, map in ipairs(S.FavoriteMaps or {}) do
         local matches = true
         if filter and filter ~= "" then matches = map.name:lower():find(filter:lower()) or tostring(map.id):find(filter) end
         if matches then
@@ -103,28 +108,67 @@ local function rebuildFavorites(scroll, filter)
     end
 end
 
+local function addFavoriteById(pid)
+    S.FavoriteMaps = S.FavoriteMaps or {}
+    for _, item in ipairs(S.FavoriteMaps) do
+        if item.id == pid then
+            notify("Already in favorites!", StudioTheme.yellow)
+            return
+        end
+    end
+    notify("Resolving Place ID info (" .. tostring(pid) .. ")...", StudioTheme.yellow)
+    task.spawn(function()
+        local gameName = "Place: " .. pid
+        local universeId = nil
+        pcall(function()
+            local res = HttpService:JSONDecode(robloxGet(("https://apis.roblox.com/universes/v1/places/%d/universe"):format(pid)))
+            if res and res.universeId then
+                universeId = res.universeId
+                local resDetails = HttpService:JSONDecode(robloxGet(("https://games.roblox.com/v1/games?universeIds=%d"):format(universeId)))
+                if resDetails and resDetails.data and resDetails.data[1] then
+                    gameName = resDetails.data[1].name
+                end
+            end
+        end)
+        table.insert(S.FavoriteMaps, {
+            id = pid,
+            universeId = universeId,
+            iconUrl = nil,
+            name = gameName,
+            lastPlayed = "Added: " .. os.date("%m-%d %H:%M")
+        })
+        saveFavorites()
+        if activeScroll then
+            rebuildFavorites(activeScroll)
+        end
+        notify("Saved: " .. gameName, StudioTheme.green)
+    end)
+end
+
 registerModule("Misc", "Favorite games", 720, 50, false, false, nil, function(drawer)
+    if loadFavorites then pcall(loadFavorites) end
+
     addTextboxOption(drawer, "Save Place ID to Favorites", "Place ID", function(txt)
         local pid = tonumber(txt:match("%d+"))
         if not pid then notify("Enter a valid place ID", StudioTheme.red); return end
-        for _, item in ipairs(S.FavoriteMaps) do if item.id == pid then notify("Already in favorites!", StudioTheme.yellow); return end end
-        notify("Resolving Place ID info...", StudioTheme.yellow)
-        task.spawn(function()
-            local gameName = "Place: " .. pid
-            local universeId = nil
-            pcall(function()
-                local res = HttpService:JSONDecode(robloxGet(("https://apis.roblox.com/universes/v1/places/%d/universe"):format(pid)))
-                if res and res.universeId then
-                    universeId = res.universeId
-                    local resDetails = HttpService:JSONDecode(robloxGet(("https://games.roblox.com/v1/games?universeIds=%d"):format(universeId)))
-                    if resDetails and resDetails.data and resDetails.data[1] then gameName = resDetails.data[1].name end
-                end
-            end)
-            table.insert(S.FavoriteMaps, { id = pid, universeId = universeId, iconUrl = nil, name = gameName, lastPlayed = "Added: " .. os.date("%m-%d %H:%M") })
-            saveFavorites()
-            notify("Saved: " .. gameName, StudioTheme.green)
-        end)
+        addFavoriteById(pid)
     end)
+
+    addButtonOption(drawer, "Add Current Game to Favorites", function()
+        local curId = game.PlaceId
+        if curId and curId > 0 then
+            addFavoriteById(curId)
+        else
+            notify("Current Place ID not available", StudioTheme.red)
+        end
+    end)
+
+    addButtonOption(drawer, "Refresh Favorites List", function()
+        if loadFavorites then pcall(loadFavorites) end
+        if activeScroll then rebuildFavorites(activeScroll) end
+        notify("Favorites refreshed", StudioTheme.green)
+    end)
+
     local frame = addCustomFrameOption(drawer, 100)
     local scroll = Instance.new("ScrollingFrame")
     scroll.Size = UDim2.new(1, -8, 1, -4)
@@ -135,8 +179,12 @@ registerModule("Misc", "Favorite games", 720, 50, false, false, nil, function(dr
     scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
     scroll.Parent = frame
+    activeScroll = scroll
+
     local layout = Instance.new("UIListLayout")
     layout.Padding = UDim.new(0, 2)
     layout.Parent = scroll
+
     rebuildFavorites(scroll)
 end, true, 220, 220)
+

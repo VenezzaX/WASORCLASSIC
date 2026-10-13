@@ -86,6 +86,34 @@ local function setStaticSkybox(assetUri)
     notify("Skybox applied successfully!", Color3.fromRGB(50, 195, 75))
 end
 
+local function setVariousSkybox()
+    cleanupSky()
+    local defaultTex = resolveTexture(S.SkyboxAsset)
+
+    local ft = resolveTexture(S.SkyboxFt ~= "" and S.SkyboxFt or S.SkyboxAsset)
+    local bk = resolveTexture(S.SkyboxBk ~= "" and S.SkyboxBk or S.SkyboxAsset)
+    local lf = resolveTexture(S.SkyboxLf ~= "" and S.SkyboxLf or S.SkyboxAsset)
+    local rt = resolveTexture(S.SkyboxRt ~= "" and S.SkyboxRt or S.SkyboxAsset)
+    local up = resolveTexture(S.SkyboxUp ~= "" and S.SkyboxUp or S.SkyboxAsset)
+    local dn = resolveTexture(S.SkyboxDn ~= "" and S.SkyboxDn or S.SkyboxAsset)
+
+    if ft == "" and bk == "" and lf == "" and rt == "" and up == "" and dn == "" then
+        notify("Skybox Changer: Please enter at least one valid face texture", Color3.fromRGB(218, 170, 42))
+        return
+    end
+
+    local sky = Instance.new("Sky")
+    sky.Name = "CustomExecutorSky"
+    sky.SkyboxFt = ft ~= "" and ft or defaultTex
+    sky.SkyboxBk = bk ~= "" and bk or defaultTex
+    sky.SkyboxLf = lf ~= "" and lf or defaultTex
+    sky.SkyboxRt = rt ~= "" and rt or defaultTex
+    sky.SkyboxUp = up ~= "" and up or defaultTex
+    sky.SkyboxDn = dn ~= "" and dn or defaultTex
+    sky.Parent = Lighting
+    notify("Various Skybox faces applied successfully!", Color3.fromRGB(50, 195, 75))
+end
+
 local function setAnimatedSkybox(frameList, fps)
     cleanupSky()
     fps = math.clamp(tonumber(fps) or 15, 1, 60)
@@ -129,6 +157,11 @@ local function setAnimatedSkybox(frameList, fps)
 end
 
 local function applyCurrentInput()
+    if S.SkyboxMode == "Various" then
+        setVariousSkybox()
+        return
+    end
+
     local text = tostring(S.SkyboxAsset or ""):gsub("^%s+", ""):gsub("%s+$", "")
     if text == "" then
         notify("Skybox Changer: Please enter an Asset ID, URL, or JSON array", Color3.fromRGB(218, 170, 42))
@@ -158,11 +191,59 @@ registerModule("Render", "Skybox Changer", 665, 50, true, S.SkyboxChangerActive,
     end
     saveConfig()
 end, function(drawer)
-    local tb = UI.addTextboxOption(drawer, "Asset ID / URL / JSON", "ID, image URL, or [frames]", function(txt)
+    local modeOptions = {"All the Same", "Various (Individual Sides)"}
+    local defaultModeIdx = (S.SkyboxMode == "Various") and 2 or 1
+    UI.addDropdownOption(drawer, "Skybox Mode", modeOptions, defaultModeIdx, function(_, opt)
+        S.SkyboxMode = opt:find("Various") and "Various" or "All Same"
+        saveConfig()
+        if S.SkyboxChangerActive then
+            applyCurrentInput()
+        end
+    end)
+
+    local tb = UI.addTextboxOption(drawer, "All Sides Texture / Fallback", "ID, image URL, or [frames]", function(txt)
         S.SkyboxAsset = txt
         saveConfig()
     end)
     tb.Set(S.SkyboxAsset or "")
+
+    UI.addSectionHeader(drawer, "Various Sides (Front, Back, etc.)")
+
+    local tbFt = UI.addTextboxOption(drawer, "Front Face (Ft)", "Asset ID or Image URL", function(txt)
+        S.SkyboxFt = txt
+        saveConfig()
+    end)
+    tbFt.Set(S.SkyboxFt or "")
+
+    local tbBk = UI.addTextboxOption(drawer, "Back Face (Bk)", "Asset ID or Image URL", function(txt)
+        S.SkyboxBk = txt
+        saveConfig()
+    end)
+    tbBk.Set(S.SkyboxBk or "")
+
+    local tbLf = UI.addTextboxOption(drawer, "Left Face (Lf)", "Asset ID or Image URL", function(txt)
+        S.SkyboxLf = txt
+        saveConfig()
+    end)
+    tbLf.Set(S.SkyboxLf or "")
+
+    local tbRt = UI.addTextboxOption(drawer, "Right Face (Rt)", "Asset ID or Image URL", function(txt)
+        S.SkyboxRt = txt
+        saveConfig()
+    end)
+    tbRt.Set(S.SkyboxRt or "")
+
+    local tbUp = UI.addTextboxOption(drawer, "Up Face (Top)", "Asset ID or Image URL", function(txt)
+        S.SkyboxUp = txt
+        saveConfig()
+    end)
+    tbUp.Set(S.SkyboxUp or "")
+
+    local tbDn = UI.addTextboxOption(drawer, "Down Face (Bottom)", "Asset ID or Image URL", function(txt)
+        S.SkyboxDn = txt
+        saveConfig()
+    end)
+    tbDn.Set(S.SkyboxDn or "")
 
     UI.addSliderOption(drawer, "Animation FPS", 1, 60, S.SkyboxFPS or 15, function(v)
         S.SkyboxFPS = v
@@ -188,6 +269,7 @@ end, function(drawer)
 
     UI.addSectionHeader(drawer, "Popular Presets")
     UI.addButtonOption(drawer, "Preset: Purple Nebula", function()
+        S.SkyboxMode = "All Same"
         S.SkyboxAsset = "rbxassetid://159454299"
         tb.Set(S.SkyboxAsset)
         saveConfig()
@@ -197,6 +279,7 @@ end, function(drawer)
     end)
 
     UI.addButtonOption(drawer, "Preset: Deep Space & Stars", function()
+        S.SkyboxMode = "All Same"
         S.SkyboxAsset = "rbxassetid://6444884337"
         tb.Set(S.SkyboxAsset)
         saveConfig()
@@ -206,6 +289,7 @@ end, function(drawer)
     end)
 
     UI.addButtonOption(drawer, "Preset: Aesthetic Sunset", function()
+        S.SkyboxMode = "All Same"
         S.SkyboxAsset = "rbxassetid://266070138"
         tb.Set(S.SkyboxAsset)
         saveConfig()
@@ -214,3 +298,4 @@ end, function(drawer)
         if mod and mod.SetActive then mod.SetActive(true) else applyCurrentInput() end
     end)
 end, false)
+

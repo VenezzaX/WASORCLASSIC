@@ -119,7 +119,7 @@ Cleanup.cleanupAll = function()
         for _, parent in ipairs(containers) do
             pcall(function()
                 for _, child in ipairs(parent:GetChildren()) do
-                    if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "NetworkUserTag" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "WASOR_ModelViewerGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                    if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "NetworkUserTag" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "WASOR_ModelViewerGui" or child.Name == "TranscendingViewportGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
                         pcall(function() child:Destroy() end)
                     end
                 end
@@ -136,6 +136,8 @@ Cleanup.cleanupAll = function()
     pcall(function() Services.RunService:UnbindFromRenderStep("VoidFreecamUpdate") end)
     pcall(function() Services.RunService:UnbindFromRenderStep("VoidPaperDollUpdate") end)
     pcall(function() Services.RunService:UnbindFromRenderStep("VoidESPPreviewUpdate") end)
+    pcall(function() Services.RunService:UnbindFromRenderStep("TranscendingFluidSync") end)
+    if State.stopViewportESP then pcall(State.stopViewportESP) end
     
     if S.GodModeConn then pcall(function() S.GodModeConn:Disconnect() end) S.GodModeConn = nil end
     if S.TallRunningConn then pcall(function() S.TallRunningConn:Disconnect() end) S.TallRunningConn = nil end

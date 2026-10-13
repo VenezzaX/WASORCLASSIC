@@ -8,6 +8,7 @@ local UI = VH.UI
 local registerModule = UI.registerModule
 local addToggleOption = UI.addToggleOption
 local addTextboxOption = UI.addTextboxOption
+local addSliderOption = UI.addSliderOption
 local saveConfig = VH.Config.saveConfig
 
 registerModule("Render", "No 3D Rendering", 440, 50, true, S.No3DRender, function(v)
@@ -24,6 +25,29 @@ end, function(drawer)
         if S.No3DRender and Utils.toggleNo3DRenderCover then
             Utils.toggleNo3DRenderCover(true)
         end
+        saveConfig()
+    end)
+
+    addToggleOption(drawer, "Ultra Low Power (Cap FPS)", S.No3DRenderCapFPS ~= false, function(v)
+        S.No3DRenderCapFPS = v
+        if S.No3DRender and Utils.toggleNo3DRenderCover then
+            Utils.toggleNo3DRenderCover(true)
+        end
+        saveConfig()
+    end)
+
+    if addSliderOption then
+        addSliderOption(drawer, "Target Idle FPS", 5, 60, S.No3DRenderTargetFPS or 15, function(val)
+            S.No3DRenderTargetFPS = val
+            if S.No3DRender and S.No3DRenderCapFPS and setfpscap then
+                pcall(function() setfpscap(val) end)
+            end
+            saveConfig()
+        end)
+    end
+
+    addToggleOption(drawer, "Reduce Quality to Min", S.No3DRenderReduceQuality ~= false, function(v)
+        S.No3DRenderReduceQuality = v
         saveConfig()
     end)
 

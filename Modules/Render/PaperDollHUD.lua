@@ -1258,3 +1258,13 @@ end, false)
 if UI.moduleButtons and UI.moduleButtons["Paper DollView"] then
     UI.moduleButtons["Minecraft Paper Doll"] = UI.moduleButtons["Paper DollView"]
 end
+
+if S.PaperDollActive then
+    task.spawn(function()
+        task.wait(0.2)
+        if S.PaperDollActive then
+            togglePaperDollHUD(true)
+        end
+    end)
+end
+

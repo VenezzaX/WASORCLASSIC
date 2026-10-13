@@ -1797,7 +1797,7 @@ UI.InitializeUI = function()
     topTitle.TextSize = 12
     topTitle.TextColor3 = StudioTheme.text
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "WASOR 3.7 (" .. executorName .. ")"
+    topTitle.Text = "WASOR 4.0 (" .. executorName .. ")"
     topTitle.Parent = topBar
     
     navBar = Instance.new("Frame")
@@ -1953,7 +1953,7 @@ UI.InitializeUI = function()
     hudWatermark.TextSize = 12
     hudWatermark.TextColor3 = StudioTheme.blue
     hudWatermark.TextXAlignment = Enum.TextXAlignment.Left
-    hudWatermark.Text = "WASOR 3.7"
+    hudWatermark.Text = "WASOR 4.0"
     hudWatermark.Visible = S.HUDWatermark
     hudWatermark.Parent = screenGui
     
@@ -2241,7 +2241,9 @@ UI.InitializeUI = function()
     UI.hudServerAge = hudServerAge
     UI.hudArrayListFrame = hudArrayListFrame
     
-    if S.EulaAccepted ~= true then
+    if S.EulaAccepted == true then
+        if runWelcomeToasts then runWelcomeToasts() end
+    else
         mainUIContainer.Visible = false
         hudWatermark.Visible = false
         hudCoords.Visible = false
@@ -2250,49 +2252,101 @@ UI.InitializeUI = function()
         
         local eulaFrame = Instance.new("Frame")
         eulaFrame.Name = "EulaFrame"
-        eulaFrame.Size = UDim2.new(0, 380, 0, 250)
-        eulaFrame.Position = UDim2.new(0.5, -190, 0.5, -125)
-        eulaFrame.BackgroundColor3 = StudioTheme.windowBg
-        eulaFrame.BorderSizePixel = 1
-        eulaFrame.BorderColor3 = StudioTheme.border
+        eulaFrame.Size = UDim2.new(0, 360, 0, 240)
+        eulaFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        eulaFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+        eulaFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        eulaFrame.BorderSizePixel = 0
         eulaFrame.Parent = screenGui
+
+        local eulaCorner = Instance.new("UICorner")
+        eulaCorner.CornerRadius = UDim.new(0, 6)
+        eulaCorner.Parent = eulaFrame
+
+        local eulaStroke = Instance.new("UIStroke")
+        eulaStroke.Color = Color3.fromRGB(45, 45, 45)
+        eulaStroke.Thickness = 1.2
+        eulaStroke.Parent = eulaFrame
 
         local header = Instance.new("Frame")
         header.Size = UDim2.new(1, 0, 0, 24)
-        header.BackgroundColor3 = StudioTheme.headerBg
-        header.BorderSizePixel = 1
-        header.BorderColor3 = StudioTheme.border
+        header.BackgroundColor3 = State.currentThemeColor or StudioTheme.blue or Color3.fromRGB(0, 122, 204)
+        header.BorderSizePixel = 0
         header.Parent = eulaFrame
+        
+        local headerCorner = Instance.new("UICorner")
+        headerCorner.CornerRadius = UDim.new(0, 6)
+        headerCorner.Parent = header
+        
+        local headerHide = Instance.new("Frame")
+        headerHide.Size = UDim2.new(1, 0, 0, 6)
+        headerHide.Position = UDim2.new(0, 0, 1, -6)
+        headerHide.BackgroundColor3 = State.currentThemeColor or StudioTheme.blue or Color3.fromRGB(0, 122, 204)
+        headerHide.BorderSizePixel = 0
+        headerHide.Parent = header
 
         local titleLbl = Instance.new("TextLabel")
-        titleLbl.Size = UDim2.new(1, -12, 1, 0)
-        titleLbl.Position = UDim2.new(0, 8, 0, 0)
+        titleLbl.Size = UDim2.new(1, -20, 1, 0)
+        titleLbl.Position = UDim2.new(0, 10, 0, 0)
         titleLbl.BackgroundTransparency = 1
-        titleLbl.Font = Enum.Font.SourceSansBold
-        titleLbl.TextSize = 12
-        titleLbl.TextColor3 = StudioTheme.text
+        titleLbl.Font = Enum.Font.GothamBold
+        titleLbl.TextSize = 10
+        titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
         titleLbl.TextXAlignment = Enum.TextXAlignment.Left
-        titleLbl.Text = "WASOR - Security Agreement"
+        titleLbl.Text = "WASOR - EULA"
         titleLbl.Parent = header
 
         local textLbl = Instance.new("TextLabel")
-        textLbl.Size = UDim2.new(1, -16, 0, 140)
-        textLbl.Position = UDim2.new(0, 8, 0, 32)
+        textLbl.Size = UDim2.new(1, -24, 0, 130)
+        textLbl.Position = UDim2.new(0, 12, 0, 36)
         textLbl.BackgroundTransparency = 1
-        textLbl.Font = Enum.Font.SourceSans
-        textLbl.TextSize = 12
-        textLbl.TextColor3 = StudioTheme.text
+        textLbl.Font = Enum.Font.GothamMedium
+        textLbl.TextSize = 10
+        textLbl.TextColor3 = Color3.fromRGB(220, 220, 220)
         textLbl.TextXAlignment = Enum.TextXAlignment.Left
         textLbl.TextYAlignment = Enum.TextYAlignment.Top
         textLbl.TextWrapped = true
-        textLbl.Text = "This script is designed for utility and testing. Features may trigger server anticheats in games with strict heuristics.\n\nBy agreeing, you acknowledge client network telemetry may connect for version synchronization. The script is open-source and un-obfuscated."
+        textLbl.RichText = true
+        textLbl.Text = "This script may ban in games that have strict anti cheats towards unallowed services before injecting to a new game. saving it always after the use decision.\n\nBy agreeing to this you will be connected to a SUPABASE database whenever you use the script for client detection and more😨, If it seems to evasive you can fork the repository and remove it. This was mean't to be a friends-only project so this is why the evasive features so beware we have access to remote execution, The script is fully open source and not obfuscated."
         textLbl.Parent = eulaFrame
 
         local buttonsFrame = Instance.new("Frame")
-        buttonsFrame.Size = UDim2.new(1, -16, 0, 26)
-        buttonsFrame.Position = UDim2.new(0, 8, 1, -34)
+        buttonsFrame.Size = UDim2.new(1, -24, 0, 32)
+        buttonsFrame.Position = UDim2.new(0, 12, 1, -44)
         buttonsFrame.BackgroundTransparency = 1
         buttonsFrame.Parent = eulaFrame
+
+        local function createButton(name, xPosition, bgColor, callback)
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(0.48, 0, 1, 0)
+            btn.Position = xPosition
+            btn.BackgroundColor3 = bgColor
+            btn.BorderSizePixel = 0
+            btn.Font = Enum.Font.GothamBold
+            btn.TextSize = 10
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.Text = name
+            btn.Parent = buttonsFrame
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 4)
+            corner.Parent = btn
+
+            local stroke = Instance.new("UIStroke")
+            stroke.Color = Color3.fromRGB(255, 255, 255)
+            stroke.Transparency = 0.85
+            stroke.Parent = btn
+
+            btn.MouseEnter:Connect(function()
+                Services.TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(math.clamp(bgColor.R*255 + 20, 0, 255), math.clamp(bgColor.G*255 + 20, 0, 255), math.clamp(bgColor.B*255 + 20, 0, 255))}):Play()
+            end)
+            btn.MouseLeave:Connect(function()
+                Services.TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = bgColor}):Play()
+            end)
+
+            btn.MouseButton1Click:Connect(callback)
+            return btn
+        end
 
         local function agreeCallback()
             S.EulaAccepted = true
@@ -2314,13 +2368,8 @@ UI.InitializeUI = function()
             VH.Cleanup.cleanupAll()
         end
 
-        local agreeBtn = makeStudioButton(buttonsFrame, "Agree", UDim2.new(0.48, 0, 1, 0), 26, StudioTheme.green, Color3.fromRGB(255, 255, 255))
-        agreeBtn.Position = UDim2.new(0, 0, 0, 0)
-        agreeBtn.Activated:Connect(agreeCallback)
-
-        local declineBtn = makeStudioButton(buttonsFrame, "Decline", UDim2.new(0.48, 0, 1, 0), 26, StudioTheme.btnBg, StudioTheme.red)
-        declineBtn.Position = UDim2.new(0.52, 0, 0, 0)
-        declineBtn.Activated:Connect(declineCallback)
+        createButton("Agree", UDim2.new(0, 0, 0, 0), Color3.fromRGB(46, 204, 113), agreeCallback)
+        createButton("Decline", UDim2.new(0.52, 0, 0, 0), Color3.fromRGB(218, 38, 38), declineCallback)
         
         makeDraggable(eulaFrame, header)
     end

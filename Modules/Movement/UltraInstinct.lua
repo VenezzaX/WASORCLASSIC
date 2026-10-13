@@ -21,6 +21,8 @@ local saveConfig = VH.Config.saveConfig
 
 local ultraInstinctConn = nil
 local lastDodge = 0
+local lastNotifyTime = 0
+local threatCooldowns = {}
 
 local function startUltraInstinct()
     if ultraInstinctConn then return end
@@ -40,13 +42,15 @@ local function startUltraInstinct()
 
         local myChar = getChar()
         local myHRP = getHRP()
-        if not myChar or not myHRP then
+        local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
+        if not myChar or not myHRP or not myHum or myHum.Health <= 0 then
             if State.UI_CirclePart then
                 State.UI_CirclePart.Transparency = 1
             end
             return
         end
 
+        -- Create/Update Circle Visual
         local radius = S.UltraInstinctRadius or 12
         if not State.UI_CirclePart or not State.UI_CirclePart.Parent then
             pcall(function()
@@ -81,19 +85,39 @@ local function startUltraInstinct()
             end)
         end
 
+        -- Dodge Check
         local now = tick()
-        if now - lastDodge > 0.15 then
+        local dodgeCooldown = S.UltraInstinctCooldown or 0.45
+        if now - lastDodge > dodgeCooldown then
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LP and p.Character then
                     if S.UltraInstinctTeamCheck and p.Team == LP.Team then
                         continue
                     end
+
+                    -- Check individual threat cooldown to prevent single-player push abuse
+                    local pCooldown = threatCooldowns[p] or 0
+                    if now < pCooldown then
+                        continue
+                    end
+
                     local hrp = p.Character:FindFirstChild("HumanoidRootPart") or p.Character:FindFirstChild("Torso") or p.Character.PrimaryPart
                     local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                    if hrp and hum and hum.Health > 0 then
+                    if hrp and hum and hum.Health > 0 and not hum.Sit then
                         local dist = (hrp.Position - myHRP.Position).Magnitude
                         if dist <= radius then
+                            -- Consistency: check if the other player is actually moving towards us or critical panic distance
+                            local relVel = hrp.AssemblyLinearVelocity
+                            local toMe = (myHRP.Position - hrp.Position)
+                            local isApproaching = (relVel.Magnitude > 1.5 and relVel:Dot(toMe) > 0) or (dist < radius * 0.45)
+                            local onlyApproaching = (S.UltraInstinctOnlyApproaching ~= false)
+                            if onlyApproaching and not isApproaching then
+                                continue
+                            end
+
                             lastDodge = now
+                            threatCooldowns[p] = now + 1.2
+
                             local dir = (myHRP.Position - hrp.Position)
                             local dirH = Vector3.new(dir.X, 0, dir.Z)
                             local dodgeDir = dirH.Magnitude > 0.01 and dirH.Unit or myHRP.CFrame.LookVector
@@ -106,26 +130,26 @@ local function startUltraInstinct()
                                     local angleOffset = (i == 0) and 0 or (math.rad(i * 45) * (i % 2 == 0 and 1 or -1))
                                     local testDir = (CFrame.Angles(0, angleOffset, 0) * Vector3.new(dodgeDir.X, 0, dodgeDir.Z)).Unit
                                     
-                                    local testDist = radius + 5
+                                    local testDist = radius + 6
                                     local testPos = myHRP.Position + (testDir * testDist)
                                     
-                                    if S.UltraInstinctAntiClip then
+                                    if S.UltraInstinctAntiClip ~= false then
                                         local rayParams = RaycastParams.new()
                                         rayParams.FilterType = Enum.RaycastFilterType.Exclude
-                                        rayParams.FilterDescendantsInstances = {myChar, State.UI_CirclePart}
+                                        rayParams.FilterDescendantsInstances = {myChar, State.UI_CirclePart, p.Character}
                                         local rayResult = Workspace:Raycast(myHRP.Position, testDir * testDist, rayParams)
                                         if rayResult then
-                                            testPos = rayResult.Position - (testDir * 2)
+                                            testPos = rayResult.Position - (testDir * 3)
                                         end
                                     end
                                     
                                     local hasGround = true
                                     local finalGroundY = testPos.Y
-                                    if S.UltraInstinctSolidGround then
+                                    if S.UltraInstinctSolidGround ~= false then
                                         local rayParams = RaycastParams.new()
                                         rayParams.FilterType = Enum.RaycastFilterType.Exclude
                                         rayParams.FilterDescendantsInstances = {myChar, State.UI_CirclePart}
-                                        local rayResult = Workspace:Raycast(testPos + Vector3.new(0, 2, 0), Vector3.new(0, -22, 0), rayParams)
+                                        local rayResult = Workspace:Raycast(testPos + Vector3.new(0, 3, 0), Vector3.new(0, -25, 0), rayParams)
                                         if rayResult then
                                             finalGroundY = rayResult.Position.Y + 3.2
                                         else
@@ -143,16 +167,20 @@ local function startUltraInstinct()
                                 if success then
                                     myHRP.CFrame = finalCF
                                     myHRP.AssemblyLinearVelocity = Vector3.zero
+                                    myHRP.AssemblyAngularVelocity = Vector3.zero
                                     
                                     if State.UI_CirclePart then
-                                        State.UI_CirclePart.Color = Color3.fromRGB(0, 255, 0)
-                                        task.delay(0.15, function()
+                                        State.UI_CirclePart.Color = Color3.fromRGB(0, 255, 120)
+                                        task.delay(0.2, function()
                                             if State.UI_CirclePart and S.UltraInstinct then
                                                 State.UI_CirclePart.Color = Color3.fromRGB(255, 0, 0)
                                             end
                                         end)
                                     end
-                                    notify("Ultra Instinct Dodged: " .. p.DisplayName, Color3.fromRGB(50, 195, 75))
+                                    if now - lastNotifyTime > 1.5 then
+                                        lastNotifyTime = now
+                                        notify("Ultra Instinct Dodged: " .. p.DisplayName, Color3.fromRGB(50, 195, 75))
+                                    end
                                 end
                             end)
                             break
@@ -177,11 +205,28 @@ registerModule("Movement", "Ultra Instinct", 300, 50, true, S.UltraInstinct, fun
     end
     saveConfig()
 end, function(drawer)
-    addToggleOption(drawer, "Anti-Clip (No Wall Dodge)", S.UltraInstinctAntiClip, function(v) S.UltraInstinctAntiClip = v; saveConfig() end)
-    addToggleOption(drawer, "Solid Ground Only", S.UltraInstinctSolidGround, function(v) S.UltraInstinctSolidGround = v; saveConfig() end)
-    addToggleOption(drawer, "Team Check", S.UltraInstinctTeamCheck, function(v) S.UltraInstinctTeamCheck = v; saveConfig() end)
+    addToggleOption(drawer, "Dodge Only Approaching (Anti-Abuse)", S.UltraInstinctOnlyApproaching ~= false, function(v)
+        S.UltraInstinctOnlyApproaching = v
+        saveConfig()
+    end)
+    addToggleOption(drawer, "Anti-Clip (No Wall Dodge)", S.UltraInstinctAntiClip ~= false, function(v)
+        S.UltraInstinctAntiClip = v
+        saveConfig()
+    end)
+    addToggleOption(drawer, "Solid Ground Only", S.UltraInstinctSolidGround ~= false, function(v)
+        S.UltraInstinctSolidGround = v
+        saveConfig()
+    end)
+    addToggleOption(drawer, "Team Check", S.UltraInstinctTeamCheck, function(v)
+        S.UltraInstinctTeamCheck = v
+        saveConfig()
+    end)
     addSliderOption(drawer, "Dodge Radius", 5, 30, S.UltraInstinctRadius or 12, function(v)
         S.UltraInstinctRadius = v
+        saveConfig()
+    end)
+    addSliderOption(drawer, "Dodge Cooldown (ms)", 200, 1500, math.round((S.UltraInstinctCooldown or 0.45) * 1000), function(v)
+        S.UltraInstinctCooldown = v / 1000
         saveConfig()
     end)
 end, false)

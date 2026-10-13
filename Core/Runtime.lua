@@ -1377,6 +1377,13 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
         if not isModDisabled("Autoplay Bot") then
             S.AutoplayBot = not S.AutoplayBot; notify("Autoplay Bot " .. (S.AutoplayBot and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Autoplay Bot"]; if mod then mod.SetActive(S.AutoplayBot) end
         end
+    elseif S.ViewportESPKey and S.ViewportESPKey ~= Enum.KeyCode.Unknown and k == S.ViewportESPKey then
+        if not isModDisabled("Viewport ESP") then
+            S.ViewportESP = not S.ViewportESP
+            notify("Viewport ESP " .. (S.ViewportESP and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
+            local mod = moduleButtons["Viewport ESP"]
+            if mod and mod.SetActive then mod.SetActive(S.ViewportESP) end
+        end
     end
 end))
 
@@ -1475,8 +1482,8 @@ pcall(connectChatLogger)
 pcall(function() applyThemeColor(S.ThemeColor or "Purple"); updateHUDArrayList() end)
 
 local toggleKeyName = S.UIToggleKey and S.UIToggleKey.Name or "RCtrl"
-logMessage("System", "WASOR 3.7 loaded successfully. Keybind: [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
-notify("WASOR 3.7 loaded! [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
+logMessage("System", "WASOR 4.0 loaded successfully. Keybind: [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
+notify("WASOR 4.0 loaded! [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
 print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내리는 것 또한 그중 하나입니다). 그리고 인내심이야말로 우리 삶의 핵심이라는 사실을 기억하십시오.")
 
     local request = (http and http.request) or http_request or (syn and syn.request)

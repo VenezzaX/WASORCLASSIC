@@ -1,12 +1,12 @@
 <div align="center">
 
-  <img src="https://i.imgur.com/XyhEFsY.gif" alt="WASOR v3.7 Banner" width="480" style="border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);" />
+  <img src="https://i.imgur.com/XyhEFsY.gif" alt="WASOR v4.0 Banner" width="480" style="border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);" />
 
-  # ⚡ WASOR v3.7
+  # ⚡ WASOR v4.0
   ### *We Are Skidding On Roblox*
 
   [![Documentation](https://img.shields.io/badge/Documentation-Live_on_Vercel-34d399?style=for-the-badge&logo=vercel&logoColor=white)](https://wasordocumentation.vercel.app/#intro)
-  [![Version](https://img.shields.io/badge/Version-3.7_Production-7c3aed?style=for-the-badge)](https://wasordocumentation.vercel.app/)
+  [![Version](https://img.shields.io/badge/Version-4.0_Production-7c3aed?style=for-the-badge)](https://wasordocumentation.vercel.app/)
   [![Roblox](https://img.shields.io/badge/Platform-Roblox_Lua-00a2ff?style=for-the-badge&logo=roblox&logoColor=white)](https://wasordocumentation.vercel.app/)
   [![Languages](https://img.shields.io/badge/i18n-10_Languages-f59e0b?style=for-the-badge)](https://wasordocumentation.vercel.app/)
   [![Modules](https://img.shields.io/badge/Modules-98_Active-10b981?style=for-the-badge)](https://wasordocumentation.vercel.app/)
@@ -33,7 +33,7 @@ The complete reference documentation is deployed and accessible at:
 
 ## ⚡ Quickstart & Execution
 
-To execute the production build of WASOR v3.7 directly in any modern executor:
+To execute the production build of WASOR v4.0 directly in any modern executor:
 
 ```lua
 if identifyexecutor then
@@ -175,5 +175,5 @@ To test and modify WASOR source code locally:
 ---
 
 <div align="center">
-  <sub>WASOR v3.7 is developed for software interoperability testing and educational security research.</sub>
+  <sub>WASOR v4.0 is developed for software interoperability testing and educational security research.</sub>
 </div>

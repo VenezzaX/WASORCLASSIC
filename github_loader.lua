@@ -40,7 +40,7 @@ pcall(function()
     for _, parent in ipairs(containers) do
         pcall(function()
             for _, child in ipairs(parent:GetChildren()) do
-                if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "TranscendingViewportGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
                     pcall(function() child:Destroy() end)
                 end
             end
@@ -103,13 +103,21 @@ for _, child in ipairs(ScreenContainer:GetChildren()) do
     end
 end
 
-local entropy = os.time() + math.floor(os.clock() * 1000000) + math.floor(tick() * 1000)
-math.randomseed(entropy)
-local rng = Random.new(entropy)
-for _ = 1, math.random(3, 7) do rng:NextNumber() end
-
-local chosenIndex = rng:NextInteger(1, #Wallpapers)
-local chosenUrl = Wallpapers[chosenIndex]
+local loadingScreenMode = "Normal"
+pcall(function()
+    if readfile and isfile then
+        if isfile("WASOR_Cache/loading_mode.txt") then
+            local mode = readfile("WASOR_Cache/loading_mode.txt")
+            if mode and #mode > 0 then loadingScreenMode = mode end
+        elseif isfile("utility_hub_config.json") then
+            local HttpService = game:GetService("HttpService")
+            local cfg = HttpService:JSONDecode(readfile("utility_hub_config.json"))
+            if cfg and cfg.LoadingScreenMode then
+                loadingScreenMode = cfg.LoadingScreenMode
+            end
+        end
+    end
+end)
 
 local function loadWallpaper(url)
     local hasFs = (writefile and readfile and isfile)
@@ -157,189 +165,223 @@ local function loadWallpaper(url)
     return nil
 end
 
-local wallpaperAsset = loadWallpaper(chosenUrl)
+local LoadingScreenGui = nil
+local MainFrame = nil
+local BgImage = nil
+local RightContainer = nil
+local BarFill = nil
+local StatusText = nil
+local PercentText = nil
 
-local LoadingScreenGui = Instance.new("ScreenGui")
-LoadingScreenGui.Name = "WASOR_Minimal_LoadingScreen"
-LoadingScreenGui.ResetOnSpawn = false
-LoadingScreenGui.IgnoreGuiInset = true
-LoadingScreenGui.DisplayOrder = 2147483647
-LoadingScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+if loadingScreenMode ~= "Fully Hidden" then
+    local wallpaperAsset = nil
+    if loadingScreenMode == "Normal" then
+        local entropy = os.time() + math.floor(os.clock() * 1000000) + math.floor(tick() * 1000)
+        math.randomseed(entropy)
+        local rng = Random.new(entropy)
+        for _ = 1, math.random(3, 7) do rng:NextNumber() end
+        local chosenIndex = rng:NextInteger(1, #Wallpapers)
+        local chosenUrl = Wallpapers[chosenIndex]
+        wallpaperAsset = loadWallpaper(chosenUrl)
+    end
 
-pcall(function() LoadingScreenGui.ScreenInsets = Enum.ScreenInsets.None end)
-pcall(function() LoadingScreenGui.ClipToDeviceSafeArea = false end)
+    LoadingScreenGui = Instance.new("ScreenGui")
+    LoadingScreenGui.Name = "WASOR_Minimal_LoadingScreen"
+    LoadingScreenGui.ResetOnSpawn = false
+    LoadingScreenGui.IgnoreGuiInset = true
+    LoadingScreenGui.DisplayOrder = 2147483647
+    LoadingScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(1, 0, 1, 0)
-MainFrame.Position = UDim2.new(0, 0, 0, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.ZIndex = 2147483640
-MainFrame.Parent = LoadingScreenGui
+    pcall(function() LoadingScreenGui.ScreenInsets = Enum.ScreenInsets.None end)
+    pcall(function() LoadingScreenGui.ClipToDeviceSafeArea = false end)
 
-local BgImage = Instance.new("ImageLabel")
-BgImage.Name = "BgImage"
-BgImage.Size = UDim2.new(1, 0, 1, 0)
-BgImage.Position = UDim2.new(0, 0, 0, 0)
-BgImage.BackgroundTransparency = 1
-BgImage.ScaleType = Enum.ScaleType.Crop
-BgImage.ImageTransparency = 1
-BgImage.ZIndex = 2147483641
+    MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(1, 0, 1, 0)
+    MainFrame.Position = UDim2.new(0, 0, 0, 0)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.ZIndex = 2147483640
 
-if wallpaperAsset then
-    BgImage.Image = wallpaperAsset
-else
-    BgImage.BackgroundColor3 = Color3.fromRGB(10, 8, 14)
-    BgImage.BackgroundTransparency = 0
+    if loadingScreenMode == "Transparent" then
+        MainFrame.BackgroundTransparency = 1
+        MainFrame.Active = false
+    elseif loadingScreenMode == "No Image" then
+        MainFrame.BackgroundColor3 = Color3.fromRGB(12, 10, 16)
+        MainFrame.BackgroundTransparency = 0
+        MainFrame.Active = true
+    else
+        MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        MainFrame.BackgroundTransparency = 0
+        MainFrame.Active = true
+    end
+    MainFrame.Parent = LoadingScreenGui
+
+    if loadingScreenMode == "Normal" then
+        BgImage = Instance.new("ImageLabel")
+        BgImage.Name = "BgImage"
+        BgImage.Size = UDim2.new(1, 0, 1, 0)
+        BgImage.Position = UDim2.new(0, 0, 0, 0)
+        BgImage.BackgroundTransparency = 1
+        BgImage.ScaleType = Enum.ScaleType.Crop
+        BgImage.ImageTransparency = 1
+        BgImage.ZIndex = 2147483641
+
+        if wallpaperAsset then
+            BgImage.Image = wallpaperAsset
+        else
+            BgImage.BackgroundColor3 = Color3.fromRGB(10, 8, 14)
+            BgImage.BackgroundTransparency = 0
+        end
+        BgImage.Parent = MainFrame
+    end
+
+    RightContainer = Instance.new("Frame")
+    RightContainer.Name = "RightContainer"
+    RightContainer.AnchorPoint = Vector2.new(1, 1)
+    RightContainer.Position = UDim2.new(1, -44, 1, -40)
+    RightContainer.Size = UDim2.new(0, 360, 0, 110)
+    RightContainer.BackgroundTransparency = 1
+    RightContainer.ZIndex = 2147483644
+    RightContainer.Parent = MainFrame
+
+    local SizeConstraint = Instance.new("UISizeConstraint")
+    SizeConstraint.MaxSize = Vector2.new(420, 120)
+    SizeConstraint.MinSize = Vector2.new(260, 95)
+    SizeConstraint.Parent = RightContainer
+
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Name = "TitleLabel"
+    TitleLabel.Size = UDim2.new(1, 0, 0, 30)
+    TitleLabel.Position = UDim2.new(0, 0, 0, 0)
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.Text = "W - A - S - O - R"
+    TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TitleLabel.TextSize = 24
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Right
+    TitleLabel.ZIndex = 2147483645
+    TitleLabel.Parent = RightContainer
+
+    local TitleStroke = Instance.new("UIStroke")
+    TitleStroke.Color = Color3.fromRGB(0, 0, 0)
+    TitleStroke.Thickness = 1.8
+    TitleStroke.Transparency = 0.3
+    TitleStroke.Parent = TitleLabel
+
+    local SubtitleLabel = Instance.new("TextLabel")
+    SubtitleLabel.Name = "SubtitleLabel"
+    SubtitleLabel.Size = UDim2.new(1, 0, 0, 18)
+    SubtitleLabel.Position = UDim2.new(0, 0, 0, 32)
+    SubtitleLabel.BackgroundTransparency = 1
+    SubtitleLabel.Font = Enum.Font.GothamMedium
+    SubtitleLabel.Text = "We Are Skidding On Roblox"
+    SubtitleLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
+    SubtitleLabel.TextSize = 13
+    SubtitleLabel.TextXAlignment = Enum.TextXAlignment.Right
+    SubtitleLabel.ZIndex = 2147483645
+    SubtitleLabel.Parent = RightContainer
+
+    local SubtitleStroke = Instance.new("UIStroke")
+    SubtitleStroke.Color = Color3.fromRGB(0, 0, 0)
+    SubtitleStroke.Thickness = 1.4
+    SubtitleStroke.Transparency = 0.4
+    SubtitleStroke.Parent = SubtitleLabel
+
+    local StatusRow = Instance.new("Frame")
+    StatusRow.Name = "StatusRow"
+    StatusRow.Size = UDim2.new(1, 0, 0, 16)
+    StatusRow.Position = UDim2.new(0, 0, 0, 60)
+    StatusRow.BackgroundTransparency = 1
+    StatusRow.ZIndex = 2147483645
+    StatusRow.Parent = RightContainer
+
+    StatusText = Instance.new("TextLabel")
+    StatusText.Name = "StatusText"
+    StatusText.Size = UDim2.new(0.8, 0, 1, 0)
+    StatusText.BackgroundTransparency = 1
+    StatusText.Font = Enum.Font.Gotham
+    StatusText.Text = "Initializing WASOR..."
+    StatusText.TextColor3 = Color3.fromRGB(210, 210, 225)
+    StatusText.TextSize = 11
+    StatusText.TextXAlignment = Enum.TextXAlignment.Left
+    StatusText.ZIndex = 2147483646
+    StatusText.Parent = StatusRow
+
+    local StatusStroke = Instance.new("UIStroke")
+    StatusStroke.Color = Color3.fromRGB(0, 0, 0)
+    StatusStroke.Thickness = 1.2
+    StatusStroke.Transparency = 0.5
+    StatusStroke.Parent = StatusText
+
+    PercentText = Instance.new("TextLabel")
+    PercentText.Name = "PercentText"
+    PercentText.Size = UDim2.new(0.2, 0, 1, 0)
+    PercentText.Position = UDim2.new(0.8, 0, 0, 0)
+    PercentText.BackgroundTransparency = 1
+    PercentText.Font = Enum.Font.GothamBold
+    PercentText.Text = "0%"
+    PercentText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PercentText.TextSize = 12
+    PercentText.TextXAlignment = Enum.TextXAlignment.Right
+    PercentText.ZIndex = 2147483646
+    PercentText.Parent = StatusRow
+
+    local PercentStroke = Instance.new("UIStroke")
+    PercentStroke.Color = Color3.fromRGB(0, 0, 0)
+    PercentStroke.Thickness = 1.2
+    PercentStroke.Transparency = 0.5
+    PercentStroke.Parent = PercentText
+
+    local BarTrack = Instance.new("Frame")
+    BarTrack.Name = "BarTrack"
+    BarTrack.Size = UDim2.new(1, 0, 0, 3)
+    BarTrack.Position = UDim2.new(0, 0, 0, 84)
+    BarTrack.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    BarTrack.BackgroundTransparency = 0.8
+    BarTrack.BorderSizePixel = 0
+    BarTrack.ZIndex = 2147483645
+    BarTrack.Parent = RightContainer
+
+    local TrackCorner = Instance.new("UICorner")
+    TrackCorner.CornerRadius = UDim.new(1, 0)
+    TrackCorner.Parent = BarTrack
+
+    BarFill = Instance.new("Frame")
+    BarFill.Name = "BarFill"
+    BarFill.Size = UDim2.new(0, 0, 1, 0)
+    BarFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    BarFill.BackgroundTransparency = 0
+    BarFill.BorderSizePixel = 0
+    BarFill.ZIndex = 2147483646
+    BarFill.Parent = BarTrack
+
+    local FillCorner = Instance.new("UICorner")
+    FillCorner.CornerRadius = UDim.new(1, 0)
+    FillCorner.Parent = BarFill
+
+    local BarTip = Instance.new("Frame")
+    BarTip.Name = "BarTip"
+    BarTip.AnchorPoint = Vector2.new(1, 0.5)
+    BarTip.Size = UDim2.new(0, 8, 2.5, 0)
+    BarTip.Position = UDim2.new(1, 0, 0.5, 0)
+    BarTip.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    BarTip.BackgroundTransparency = 0.25
+    BarTip.BorderSizePixel = 0
+    BarTip.ZIndex = 2147483647
+    BarTip.Parent = BarFill
+
+    local TipCorner = Instance.new("UICorner")
+    TipCorner.CornerRadius = UDim.new(1, 0)
+    TipCorner.Parent = BarTip
+
+    LoadingScreenGui.Parent = ScreenContainer
+
+    if BgImage then
+        TweenService:Create(BgImage, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            ImageTransparency = 0
+        }):Play()
+    end
 end
-BgImage.Parent = MainFrame
-
-local RightContainer = Instance.new("Frame")
-RightContainer.Name = "RightContainer"
-RightContainer.AnchorPoint = Vector2.new(1, 1)
-RightContainer.Position = UDim2.new(1, -44, 1, -40)
-RightContainer.Size = UDim2.new(0, 360, 0, 110)
-RightContainer.BackgroundTransparency = 1
-RightContainer.ZIndex = 2147483644
-RightContainer.Parent = MainFrame
-
-local SizeConstraint = Instance.new("UISizeConstraint")
-SizeConstraint.MaxSize = Vector2.new(420, 120)
-SizeConstraint.MinSize = Vector2.new(260, 95)
-SizeConstraint.Parent = RightContainer
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Name = "TitleLabel"
-TitleLabel.Size = UDim2.new(1, 0, 0, 30)
-TitleLabel.Position = UDim2.new(0, 0, 0, 0)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.Text = "W - A - S - O - R"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 24
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Right
-TitleLabel.ZIndex = 2147483645
-TitleLabel.Parent = RightContainer
-
-local TitleStroke = Instance.new("UIStroke")
-TitleStroke.Color = Color3.fromRGB(0, 0, 0)
-TitleStroke.Thickness = 1.8
-TitleStroke.Transparency = 0.3
-TitleStroke.Parent = TitleLabel
-
-local SubtitleLabel = Instance.new("TextLabel")
-SubtitleLabel.Name = "SubtitleLabel"
-SubtitleLabel.Size = UDim2.new(1, 0, 0, 18)
-SubtitleLabel.Position = UDim2.new(0, 0, 0, 32)
-SubtitleLabel.BackgroundTransparency = 1
-SubtitleLabel.Font = Enum.Font.GothamMedium
-SubtitleLabel.Text = "We Are Skidding On Roblox"
-SubtitleLabel.TextColor3 = Color3.fromRGB(235, 235, 245)
-SubtitleLabel.TextSize = 13
-SubtitleLabel.TextXAlignment = Enum.TextXAlignment.Right
-SubtitleLabel.ZIndex = 2147483645
-SubtitleLabel.Parent = RightContainer
-
-local SubtitleStroke = Instance.new("UIStroke")
-SubtitleStroke.Color = Color3.fromRGB(0, 0, 0)
-SubtitleStroke.Thickness = 1.4
-SubtitleStroke.Transparency = 0.4
-SubtitleStroke.Parent = SubtitleLabel
-
-local StatusRow = Instance.new("Frame")
-StatusRow.Name = "StatusRow"
-StatusRow.Size = UDim2.new(1, 0, 0, 16)
-StatusRow.Position = UDim2.new(0, 0, 0, 60)
-StatusRow.BackgroundTransparency = 1
-StatusRow.ZIndex = 2147483645
-StatusRow.Parent = RightContainer
-
-local StatusText = Instance.new("TextLabel")
-StatusText.Name = "StatusText"
-StatusText.Size = UDim2.new(0.8, 0, 1, 0)
-StatusText.BackgroundTransparency = 1
-StatusText.Font = Enum.Font.Gotham
-StatusText.Text = "Initializing WASOR..."
-StatusText.TextColor3 = Color3.fromRGB(210, 210, 225)
-StatusText.TextSize = 11
-StatusText.TextXAlignment = Enum.TextXAlignment.Left
-StatusText.ZIndex = 2147483646
-StatusText.Parent = StatusRow
-
-local StatusStroke = Instance.new("UIStroke")
-StatusStroke.Color = Color3.fromRGB(0, 0, 0)
-StatusStroke.Thickness = 1.2
-StatusStroke.Transparency = 0.5
-StatusStroke.Parent = StatusText
-
-local PercentText = Instance.new("TextLabel")
-PercentText.Name = "PercentText"
-PercentText.Size = UDim2.new(0.2, 0, 1, 0)
-PercentText.Position = UDim2.new(0.8, 0, 0, 0)
-PercentText.BackgroundTransparency = 1
-PercentText.Font = Enum.Font.GothamBold
-PercentText.Text = "0%"
-PercentText.TextColor3 = Color3.fromRGB(255, 255, 255)
-PercentText.TextSize = 12
-PercentText.TextXAlignment = Enum.TextXAlignment.Right
-PercentText.ZIndex = 2147483646
-PercentText.Parent = StatusRow
-
-local PercentStroke = Instance.new("UIStroke")
-PercentStroke.Color = Color3.fromRGB(0, 0, 0)
-PercentStroke.Thickness = 1.2
-PercentStroke.Transparency = 0.5
-PercentStroke.Parent = PercentText
-
-local BarTrack = Instance.new("Frame")
-BarTrack.Name = "BarTrack"
-BarTrack.Size = UDim2.new(1, 0, 0, 3)
-BarTrack.Position = UDim2.new(0, 0, 0, 84)
-BarTrack.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-BarTrack.BackgroundTransparency = 0.8
-BarTrack.BorderSizePixel = 0
-BarTrack.ZIndex = 2147483645
-BarTrack.Parent = RightContainer
-
-local TrackCorner = Instance.new("UICorner")
-TrackCorner.CornerRadius = UDim.new(1, 0)
-TrackCorner.Parent = BarTrack
-
-local BarFill = Instance.new("Frame")
-BarFill.Name = "BarFill"
-BarFill.Size = UDim2.new(0, 0, 1, 0)
-BarFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-BarFill.BackgroundTransparency = 0
-BarFill.BorderSizePixel = 0
-BarFill.ZIndex = 2147483646
-BarFill.Parent = BarTrack
-
-local FillCorner = Instance.new("UICorner")
-FillCorner.CornerRadius = UDim.new(1, 0)
-FillCorner.Parent = BarFill
-
-local BarTip = Instance.new("Frame")
-BarTip.Name = "BarTip"
-BarTip.AnchorPoint = Vector2.new(1, 0.5)
-BarTip.Size = UDim2.new(0, 8, 2.5, 0)
-BarTip.Position = UDim2.new(1, 0, 0.5, 0)
-BarTip.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-BarTip.BackgroundTransparency = 0.25
-BarTip.BorderSizePixel = 0
-BarTip.ZIndex = 2147483647
-BarTip.Parent = BarFill
-
-local TipCorner = Instance.new("UICorner")
-TipCorner.CornerRadius = UDim.new(1, 0)
-TipCorner.Parent = BarTip
-
-LoadingScreenGui.Parent = ScreenContainer
-
-TweenService:Create(BgImage, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-    ImageTransparency = 0
-}):Play()
 
 local GITHUB_USERNAME = "VenezzaX"
 local GITHUB_REPO = "WASORCLASSIC"
@@ -384,6 +426,8 @@ local Modules = {
     "Modules/Player/AntiAFK",
     "Modules/Player/AutoRejoin",
     "Modules/Player/SpectateFreecam",
+    "Modules/Player/HatDrop",
+    "Modules/Player/ReturnByDeath",
 
     "Modules/Movement/SpeedModification",
     "Modules/Movement/SprintSpeedBoost",
@@ -433,6 +477,8 @@ local Modules = {
     "Modules/Render/OutOfViewIndicators",
     "Modules/Render/Minimap",
     "Modules/Render/SkyboxChanger",
+    "Modules/Render/AudioVisualizer",
+    "Modules/Render/ViewportESP",
 
     "Modules/World/InstantPrompts",
     "Modules/World/FireAllPrompts",
@@ -456,6 +502,7 @@ local Modules = {
     "Modules/Misc/UNCcomplianceAudits",
     "Modules/Misc/ConsoleLogViewer",
     "Modules/Misc/SettingsKeybinds",
+    "Modules/Misc/HideLoadingScreen",
     "Modules/Misc/NetworkChatHub",
     "Modules/Misc/SaveGame"
 }
@@ -651,26 +698,40 @@ end)
 if BarFill then BarFill.Size = UDim2.new(1, 0, 1, 0) end
 if PercentText then PercentText.Text = "100%" end
 if StatusText then StatusText.Text = "Ready!" end
-task.wait(0.5)
 
-if BgImage then
-    local fadeBg = TweenService:Create(BgImage, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { 
-        ImageTransparency = 1 
-    })
-    fadeBg:Play()
+if LoadingScreenGui and LoadingScreenGui.Parent then
+    task.wait(0.3)
+    local fadeBg = nil
+    if BgImage and BgImage.Parent then
+        fadeBg = TweenService:Create(BgImage, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { 
+            ImageTransparency = 1 
+        })
+        fadeBg:Play()
+    end
 
-    for _, desc in ipairs(RightContainer:GetDescendants()) do
-        if desc:IsA("TextLabel") then
-            TweenService:Create(desc, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1 }):Play()
-        elseif desc:IsA("UIStroke") then
-            TweenService:Create(desc, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 }):Play()
-        elseif desc:IsA("Frame") then
-            TweenService:Create(desc, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 }):Play()
+    if RightContainer and RightContainer.Parent then
+        for _, desc in ipairs(RightContainer:GetDescendants()) do
+            if desc:IsA("TextLabel") then
+                TweenService:Create(desc, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1 }):Play()
+            elseif desc:IsA("UIStroke") then
+                TweenService:Create(desc, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 }):Play()
+            elseif desc:IsA("Frame") then
+                TweenService:Create(desc, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 }):Play()
+            end
         end
     end
 
-    fadeBg.Completed:Wait()
-    if LoadingScreenGui then LoadingScreenGui:Destroy() end
+    if MainFrame and MainFrame.BackgroundTransparency < 1 then
+        TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 }):Play()
+    end
+
+    if fadeBg then
+        fadeBg.Completed:Wait()
+    else
+        task.wait(0.35)
+    end
+    pcall(function() LoadingScreenGui:Destroy() end)
+    LoadingScreenGui = nil
 end
 
 _G.WASOR_Loading = false
