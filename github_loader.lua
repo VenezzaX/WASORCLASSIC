@@ -51,30 +51,16 @@ end)
 _G.VoidHub = {}
 
 local Wallpapers = {
-    "https://i.pinimg.com/1200x/97/e4/f7/97e4f7952175029a8a606ebbc279b169.jpg",
-    "https://i.pinimg.com/1200x/e1/95/97/e195971a0e803c0501e1617d4a644bfd.jpg",
-    "https://i.pinimg.com/736x/43/6f/d7/436fd71cea52fa6423442a0ea809c960.jpg",
-    "https://i.pinimg.com/736x/8b/30/4b/8b304b04d4cc2f398aa29e4687331bb0.jpg",
-    "https://i.pinimg.com/1200x/72/20/2c/72202c9a1510560d0b79b168662c2a5f.jpg",
-    "https://i.pinimg.com/736x/a3/71/5c/a3715cfcf007a932d9d1944c30d21b57.jpg",
-    "https://i.pinimg.com/1200x/e8/ca/70/e8ca70cc4cc7132799c9d69936705507.jpg",
-    "https://i.pinimg.com/736x/c3/25/21/c3252117e76c482e708f8b15cd7284af.jpg",
-    "https://i.pinimg.com/1200x/91/9e/01/919e0112d159fb574650d937eee6ed72.jpg",
-    "https://i.pinimg.com/1200x/54/09/0c/54090c9c283f5c88f6aff0a7ea5d157c.jpg",
-    "https://i.pinimg.com/736x/79/a0/4e/79a04e89d83970afaa524574858a7f71.jpg",
-    "https://i.pinimg.com/1200x/b1/10/99/b11099a740518d4a62329925f7de746e.jpg",
-    "https://i.pinimg.com/1200x/66/7c/98/667c9833dc1af0f62fba85f03fb1b4db.jpg",
-    "https://i.pinimg.com/1200x/fd/ca/88/fdca880e184501f6d81cc921c194429a.jpg",
-    "https://i.pinimg.com/736x/5e/08/9c/5e089c57eecac254f7c38db3a06866da.jpg",
-    "https://i.pinimg.com/736x/2f/a6/e3/2fa6e31d0ab6f3c4dd7ef7d38da1567b.jpg",
-    "https://i.pinimg.com/736x/38/a1/79/38a179e084924541a37184547b42f255.jpg",
-    "https://i.pinimg.com/736x/0b/a7/6a/0ba76ac5e70edf6868ef4c0b6c908e77.jpg",
-    "https://i.pinimg.com/736x/09/d6/c3/09d6c3bbef9df6c12585b78f3db8369f.jpg",
-    "https://i.pinimg.com/736x/00/5f/0e/005f0e599757b20d1b2272f3425372d2.jpg",
-    "https://i.pinimg.com/736x/f5/40/66/f540661fff65ea19ea159536d80e73fb.jpg",
-    "https://i.pinimg.com/1200x/7b/4d/48/7b4d48d372320cc67b6a88d6712efb50.jpg",
-    "https://i.pinimg.com/1200x/e6/6d/f0/e66df06af7f73694cf196c07757ce814.jpg",
-    "https://i.pinimg.com/736x/34/bf/fa/34bffa64c7815e353a9190b714aa8edf.jpg"
+    "https://i.pinimg.com/736x/3d/60/f1/3d60f1d1d3d16d222b0e9944cc26c631.jpg",
+    "https://i.pinimg.com/1200x/28/e2/57/28e257b746182ca3b70ce04f2785a35f.jpg",
+    "https://i.pinimg.com/736x/7f/17/d8/7f17d86c487a8a1072122d3a084d7e6f.jpg",
+    "https://i.pinimg.com/1200x/3a/b9/fe/3ab9febe374d7adde7f69464df9129c8.jpg",
+    "https://i.pinimg.com/736x/e6/29/a7/e629a7903924beb41bd1586255502667.jpg",
+    "https://i.pinimg.com/736x/a4/50/8b/a4508bab44e95df8b5bf7a6bab405d77.jpg",
+    "https://i.pinimg.com/736x/30/50/4c/30504cd470176b3b369b80aa52750de3.jpg",
+    "https://i.pinimg.com/736x/f8/dc/d4/f8dcd4d0bf9c7f4452052d319c913b2a.jpg",
+    "https://i.pinimg.com/1200x/3e/1d/84/3e1d84ed48093d0960d50afc8165004e.jpg",
+    "https://i.pinimg.com/736x/d5/4e/d3/d54ed3a47092eedef1e80791f7b202ea.jpg",
 }
 
 local TweenService = game:GetService("TweenService")
