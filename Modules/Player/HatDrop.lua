@@ -31,7 +31,7 @@ local function dropAccessories()
         if item:IsA("Accessory") then
             local handle = item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart")
             if handle and handle:IsA("BasePart") then
-                -- Break all joints and welds connected to this accessory
+
                 pcall(function()
                     for _, joint in ipairs(handle:GetJoints()) do
                         pcall(function() joint:Destroy() end)
@@ -43,10 +43,9 @@ local function dropAccessories()
                     end
                 end)
 
-                -- Setup physical properties
                 handle.CanCollide = true
                 handle.Anchored = false
-                
+
                 if S.HatDropScatter then
                     local rx = (math.random() - 0.5) * 30
                     local rz = (math.random() - 0.5) * 30

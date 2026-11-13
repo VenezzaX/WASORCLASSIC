@@ -96,12 +96,10 @@ local function startAirSwim()
             local cam = Workspace.CurrentCamera
             if not curHum or not curHrp or curHum.Health <= 0 or not cam then return end
 
-            -- Maintain swimming state
             if curHum:GetState() ~= Enum.HumanoidStateType.Swimming then
                 curHum:ChangeState(Enum.HumanoidStateType.Swimming)
             end
 
-            -- Ensure body mover exists on active HRP
             if not swimBodyVelocity or swimBodyVelocity.Parent ~= curHrp then
                 cleanupSwimMover()
                 local newBv = Instance.new("BodyVelocity")
@@ -142,7 +140,6 @@ local function startAirSwim()
                 end
             end
 
-            -- Vertical ascend / descend
             if spacePressed then
                 targetVelocity = Vector3.new(targetVelocity.X, speed, targetVelocity.Z)
             elseif shiftPressed then

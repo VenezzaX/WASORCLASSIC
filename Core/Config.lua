@@ -28,7 +28,7 @@ Config.saveConfig = function()
             for k, v in pairs(State.S) do
                 if type(v) == "boolean" or type(v) == "number" or type(v) == "string" then
                     configData[k] = v
-                elseif type(v) == "table" and k == "DisabledModules" then
+                elseif type(v) == "table" and (k == "DisabledModules" or k == "ModuleBinds") then
                     configData[k] = v
                 elseif typeof(v) == "EnumItem" then
                     configData[k] = {__type = "EnumItem", Value = tostring(v)}
@@ -61,16 +61,20 @@ Config.loadConfig = function()
             end
         end
     end)
-    
+
     local S = State.S
-    S.Fly = false; S.NoClip = false; S.BHop = false; S.AirWalk = false; S.GhostMode = false
-    S.Float = false; S.WaterWalk = false; S.TallAnim = false; S.Spin = false; S.GravityEnabled = false
-    S.GodMode = false; S.KillAura = false; S.AutoClicker = false; S.FlingActive = false; S.FlingAllActive = false; S.WalkFling = false
-    S.FollowActive = false; S.AntiAnchor = false; S.No3DRender = false; S.ClickTeleport = false; S.SprintEnabled = false
-    S.GraphicsReducer = false; S.ForceWalkSpeed = false; S.ForceJumpPower = false; S.Climb = false
-    S.AimbotActive = false; S.AimlockActive = false; S.SilentAim = false; S.TriggerbotActive = false; S.AutoplayBot = false; S.TouchAura = false
-    S.WallRun = false; S.FlyBypass = false; S.PathfindingWalk = false
-    S.MinimapActive = false; S.OutOfViewIndicators = false; S.ESPPreviewActive = false
+    S.WallWalk = false
+    if S.SaveConfigBetweenTeleports ~= true then
+        S.Fly = false; S.NoClip = false; S.BHop = false; S.AirWalk = false; S.GhostMode = false
+        S.Float = false; S.WaterWalk = false; S.TallAnim = false; S.Spin = false; S.GravityEnabled = false
+        S.GodMode = false; S.KillAura = false; S.AutoClicker = false; S.FlingActive = false; S.FlingAllActive = false; S.WalkFling = false
+        S.FollowActive = false; S.AntiAnchor = false; S.No3DRender = false; S.ClickTeleport = false; S.SprintEnabled = false
+        S.GraphicsReducer = false; S.ForceWalkSpeed = false; S.ForceJumpPower = false; S.Climb = false
+        S.AimbotActive = false; S.AimlockActive = false; S.SilentAim = false; S.TriggerbotActive = false; S.AutoplayBot = false; S.TouchAura = false
+        S.WallRun = false; S.WallWalk = false; S.FlyBypass = false; S.PathfindingWalk = false
+        S.MinimapActive = false; S.OutOfViewIndicators = false; S.ESPPreviewActive = false
+        S.ClickDelete = false; S.CameraMaxZoomEnabled = false
+    end
     pcall(function()
         if setfpscap then
             setfpscap(S.FPSCap or 144)

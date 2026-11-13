@@ -7,9 +7,9 @@ local State = VH.State
 Logger.logCrash = function(context, err, stack)
     local timestamp = os.date("%Y-%m-%d %H:%M:%S")
     local crashHeader = string.format("==================== CRASH LOG [%s] ====================\nContext: %s\nError: %s\nTraceback:\n%s\n=================================================================\n\n", timestamp, tostring(context), tostring(err), tostring(stack or "N/A"))
-    
+
     warn(string.format("[WASOR CRASH] [%s] Error: %s\nTraceback: %s", tostring(context), tostring(err), tostring(stack or "")))
-    
+
     pcall(function()
         if writefile then
             local filename = "WASOR_crash.log"
@@ -66,7 +66,7 @@ Logger.connectConsoleLogger = function()
             end
         end
     end)
-    
+
     local con = LogService.MessageOut:Connect(function(msg, msgType)
         local timestamp = os.date("%H:%M:%S"); local key = msgType.Value .. "_" .. msg
         local existingLog = State.consoleLogsMap[key]
@@ -119,7 +119,7 @@ Logger.connectChatLogger = function()
     local chatService = game:GetService("TextChatService"); local useModern = false
     local S = State.S
     pcall(function() if chatService.ChatVersion == Enum.ChatVersion.TextChatService then useModern = true end end)
-    
+
     if useModern then
         pcall(function()
             local modernCon = chatService.MessageReceived:Connect(function(msgObj)

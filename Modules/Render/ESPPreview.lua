@@ -55,7 +55,6 @@ local isDraggingOrbit = false
 local dragStartPos = Vector2.zero
 local startOrbitAngle = 0
 
--- Preview ESP Visual Overlay Elements
 local espContainer = nil
 local previewBoxOutline = nil
 local previewBoxFill = nil
@@ -127,7 +126,7 @@ end
 local function sanitizeClone(char)
     if not char then return nil end
     makeModelArchivable(char)
-    
+
     previewPartMap = {}
     previewBoneMap = {}
     previewMotorMap = {}
@@ -136,13 +135,13 @@ local function sanitizeClone(char)
     previewTrackedMotors = {}
     previewTrackedDirty = true
     lastPreviewScanTime = 0
-    
+
     local id = 0
     for _, desc in ipairs(char:GetDescendants()) do
         id = id + 1
         desc:SetAttribute("WasorPreviewId", id)
     end
-    
+
     local clone = char:Clone()
     if not clone then
         for _, desc in ipairs(char:GetDescendants()) do
@@ -151,7 +150,7 @@ local function sanitizeClone(char)
         return nil
     end
     clone.Name = "ESPPreviewAvatar"
-    
+
     local cloneMap = {}
     for _, desc in ipairs(clone:GetDescendants()) do
         local cid = desc:GetAttribute("WasorPreviewId")
@@ -168,7 +167,7 @@ local function sanitizeClone(char)
             desc.CastShadow = false
         end
     end
-    
+
     for _, desc in ipairs(char:GetDescendants()) do
         local cid = desc:GetAttribute("WasorPreviewId")
         if cid and cloneMap[cid] then
@@ -183,13 +182,13 @@ local function sanitizeClone(char)
         end
         desc:SetAttribute("WasorPreviewId", nil)
     end
-    
+
     local hrp = clone:FindFirstChild("HumanoidRootPart") or clone:FindFirstChild("Torso") or clone.PrimaryPart
     if hrp then
         clone.PrimaryPart = hrp
         hrp.CFrame = CFrame.new(0, 0, 0)
     end
-    
+
     local hum = clone:FindFirstChildOfClass("Humanoid")
     if hum then
         hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
@@ -198,7 +197,7 @@ local function sanitizeClone(char)
         local anim = hum:FindFirstChildOfClass("Animator")
         if anim then pcall(function() anim:Destroy() end) end
     end
-    
+
     return clone
 end
 
@@ -225,7 +224,7 @@ local function setupPreviewModel()
     previewTrackedDirty = true
     lastPreviewScanTime = 0
     if not previewWorld then return end
-    
+
     local char = localPlayer.Character
     if char then
         previewCharClone = sanitizeClone(char)
@@ -248,7 +247,7 @@ local function connectPreviewCharListeners(char)
     if wsChildConnection then wsChildConnection:Disconnect(); wsChildConnection = nil end
     if camChildConnection then camChildConnection:Disconnect(); camChildConnection = nil end
     if not char then return end
-    
+
     appearanceConnection = localPlayer.CharacterAppearanceLoaded:Connect(function()
         task.wait(0.2)
         previewTrackedDirty = true
@@ -256,7 +255,7 @@ local function connectPreviewCharListeners(char)
             setupPreviewModel()
         end
     end)
-    
+
     descendantConnection = char.DescendantAdded:Connect(function(desc)
         pcall(function() desc.Archivable = true end)
         previewTrackedDirty = true
@@ -268,7 +267,7 @@ local function connectPreviewCharListeners(char)
             end)
         end
     end)
-    
+
     descendantRemovingConnection = char.DescendantRemoving:Connect(function(desc)
         previewTrackedDirty = true
         if desc:IsA("BasePart") then
@@ -303,7 +302,7 @@ local function connectPreviewCharListeners(char)
             previewMotorMap[desc] = nil
         end
     end)
-    
+
     toolAddedConnection = char.ChildAdded:Connect(function(child)
         if child:IsA("Tool") then
             previewTrackedDirty = true
@@ -315,7 +314,7 @@ local function connectPreviewCharListeners(char)
             end)
         end
     end)
-    
+
     toolRemovedConnection = char.ChildRemoved:Connect(function(child)
         if child:IsA("Tool") then
             previewTrackedDirty = true
@@ -336,7 +335,7 @@ local function connectPreviewCharListeners(char)
             end
         end
     end)
-    
+
     pcall(function()
         wsChildConnection = Workspace.ChildAdded:Connect(function()
             previewTrackedDirty = true
@@ -354,19 +353,16 @@ end
 local function getAllRealCharacterParts(realChar)
     local parts = {}
     local seen = {}
-    
+
     if not realChar or not realChar.Parent then return parts end
-    
-    -- 1. All BaseParts inside realChar
+
     for _, desc in ipairs(realChar:GetDescendants()) do
         if desc:IsA("BasePart") and not seen[desc] then
             seen[desc] = true
             table.insert(parts, desc)
         end
     end
-    
-    -- 2. Traverse connected parts for all parts found in realChar
-    -- Using GetConnectedParts(true) gets parts connected via Welds, Motor6Ds, Snaps, WeldConstraints
+
     local i = 1
     while i <= #parts do
         local currentPart = parts[i]
@@ -381,8 +377,7 @@ local function getAllRealCharacterParts(realChar)
         end)
         i = i + 1
     end
-    
-    -- 3. Any welds or joints inside realChar pointing to external parts
+
     for _, desc in ipairs(realChar:GetDescendants()) do
         if desc:IsA("JointInstance") or desc:IsA("WeldConstraint") then
             local p0, p1 = desc.Part0, desc.Part1
@@ -396,21 +391,20 @@ local function getAllRealCharacterParts(realChar)
             end
         end
     end
-    
-    -- 4. Check Workspace, Camera, and Player for external morph models/folders
+
     local charName = realChar.Name:lower()
     local playerName = localPlayer.Name:lower()
     local playerDisplay = localPlayer.DisplayName:lower()
     local hrp = realChar:FindFirstChild("HumanoidRootPart") or realChar:FindFirstChild("Torso") or realChar.PrimaryPart
-    
+
     local function checkContainer(container)
         if not container then return end
         for _, child in ipairs(container:GetChildren()) do
             if (child:IsA("Model") or child:IsA("Folder")) and child ~= realChar then
                 if not Players:GetPlayerFromCharacter(child) then
                     local cName = child.Name:lower()
-                    local isMatch = cName:find(charName, 1, true) 
-                        or cName:find(playerName, 1, true) 
+                    local isMatch = cName:find(charName, 1, true)
+                        or cName:find(playerName, 1, true)
                         or cName:find(playerDisplay, 1, true)
                         or cName:find("morph", 1, true)
                         or cName:find("custom", 1, true)
@@ -422,7 +416,7 @@ local function getAllRealCharacterParts(realChar)
                         or cName:find("tail", 1, true)
                         or cName:find("rig", 1, true)
                         or cName:find("avatar", 1, true)
-                    
+
                     if isMatch then
                         for _, p in ipairs(child:GetDescendants()) do
                             if p:IsA("BasePart") and not seen[p] and not p.Anchored and not p:IsA("Terrain") and p.Name ~= "Baseplate" then
@@ -442,8 +436,8 @@ local function getAllRealCharacterParts(realChar)
                 end
             elseif child:IsA("BasePart") and child ~= realChar and not seen[child] and not child.Anchored and not child:IsA("Terrain") and child.Name ~= "Baseplate" then
                 local cName = child.Name:lower()
-                local isMatch = cName:find(charName, 1, true) 
-                    or cName:find(playerName, 1, true) 
+                local isMatch = cName:find(charName, 1, true)
+                    or cName:find(playerName, 1, true)
                     or cName:find(playerDisplay, 1, true)
                     or cName:find("morph", 1, true)
                     or cName:find("custom", 1, true)
@@ -469,11 +463,11 @@ local function getAllRealCharacterParts(realChar)
             end
         end
     end
-    
+
     pcall(function() checkContainer(Workspace) end)
     pcall(function() checkContainer(Workspace.CurrentCamera) end)
     pcall(function() checkContainer(localPlayer) end)
-    
+
     return parts
 end
 
@@ -483,19 +477,19 @@ local function getOrCreateMatchingPartInClone(realPart, cloneChar)
     if existing and existing.Parent ~= nil then
         return existing
     end
-    
+
     pcall(function()
         realPart.Archivable = true
         for _, desc in ipairs(realPart:GetDescendants()) do
             desc.Archivable = true
         end
     end)
-    
+
     local clonePart = nil
     pcall(function()
         clonePart = realPart:Clone()
     end)
-    
+
     if not clonePart then
         pcall(function()
             if realPart:IsA("MeshPart") then
@@ -518,7 +512,7 @@ local function getOrCreateMatchingPartInClone(realPart, cloneChar)
             clonePart.Color = realPart.Color
             clonePart.Material = realPart.Material
             clonePart.Reflectance = realPart.Reflectance
-            
+
             for _, child in ipairs(realPart:GetChildren()) do
                 if child:IsA("SpecialMesh") then
                     pcall(function()
@@ -545,17 +539,17 @@ local function getOrCreateMatchingPartInClone(realPart, cloneChar)
             end
         end)
     end
-    
+
     if not clonePart then
         return nil
     end
-    
+
     clonePart.Anchored = true
     clonePart.CanCollide = false
     clonePart.CanTouch = false
     clonePart.CanQuery = false
     clonePart.CastShadow = false
-    
+
     for _, desc in ipairs(clonePart:GetDescendants()) do
         if desc:IsA("LocalScript") or desc:IsA("Script") or desc:IsA("Sound") or desc:IsA("BillboardGui") or desc:IsA("Highlight") then
             pcall(function() desc:Destroy() end)
@@ -581,7 +575,7 @@ local function getOrCreateMatchingPartInClone(realPart, cloneChar)
             end
         end
     end
-    
+
     local parent = realPart.Parent
     if parent == localPlayer.Character then
         clonePart.Parent = cloneChar
@@ -620,15 +614,14 @@ local function getOrCreateMatchingPartInClone(realPart, cloneChar)
     else
         clonePart.Parent = cloneChar
     end
-    
+
     previewPartMap[realPart] = clonePart
     return clonePart
 end
 
 local function syncClothingAndColors(realChar, cloneChar)
     if not realChar or not cloneChar then return end
-    
-    -- 1. Shirt
+
     local realShirt = realChar:FindFirstChildOfClass("Shirt")
     local cloneShirt = cloneChar:FindFirstChildOfClass("Shirt")
     if realShirt then
@@ -644,8 +637,7 @@ local function syncClothingAndColors(realChar, cloneChar)
     elseif cloneShirt then
         pcall(function() cloneShirt:Destroy() end)
     end
-    
-    -- 2. Pants
+
     local realPants = realChar:FindFirstChildOfClass("Pants")
     local clonePants = cloneChar:FindFirstChildOfClass("Pants")
     if realPants then
@@ -661,8 +653,7 @@ local function syncClothingAndColors(realChar, cloneChar)
     elseif clonePants then
         pcall(function() clonePants:Destroy() end)
     end
-    
-    -- 3. ShirtGraphic (T-Shirt)
+
     local realGraphic = realChar:FindFirstChildOfClass("ShirtGraphic")
     local cloneGraphic = cloneChar:FindFirstChildOfClass("ShirtGraphic")
     if realGraphic then
@@ -678,8 +669,7 @@ local function syncClothingAndColors(realChar, cloneChar)
     elseif cloneGraphic then
         pcall(function() cloneGraphic:Destroy() end)
     end
-    
-    -- 4. BodyColors
+
     local realBC = realChar:FindFirstChildOfClass("BodyColors")
     local cloneBC = cloneChar:FindFirstChildOfClass("BodyColors")
     if realBC then
@@ -718,8 +708,7 @@ local faceControlProperties = {
 
 local function refreshPreviewTrackedInstances(realChar, cloneChar)
     if not realChar or not cloneChar then return end
-    
-    -- 0. Prune stale or destroyed parts from previewPartMap
+
     for realPart, clonePart in pairs(previewPartMap) do
         if not realPart or not realPart.Parent or not realPart:IsDescendantOf(game) then
             previewPartMap[realPart] = nil
@@ -728,17 +717,16 @@ local function refreshPreviewTrackedInstances(realChar, cloneChar)
             end
         end
     end
-    
-    -- Prune empty accessories, tools, or folders in cloneChar
+
     for _, child in ipairs(cloneChar:GetChildren()) do
         if (child:IsA("Accessory") or child:IsA("Tool") or child:IsA("Folder")) and #child:GetChildren() == 0 then
             pcall(function() child:Destroy() end)
         end
     end
-    
+
     local allParts = getAllRealCharacterParts(realChar)
     previewTrackedParts = {}
-    
+
     for _, realDesc in ipairs(allParts) do
         if realDesc:IsA("BasePart") then
             local cloneDesc = previewPartMap[realDesc] or getOrCreateMatchingPartInClone(realDesc, cloneChar)
@@ -761,8 +749,7 @@ local function refreshPreviewTrackedInstances(realChar, cloneChar)
                         if newMesh then newMesh.Parent = cloneDesc; cloneMesh = newMesh end
                     end)
                 end
-                
-                -- SurfaceAppearance synchronization
+
                 local realSA = realDesc:FindFirstChildOfClass("SurfaceAppearance")
                 local cloneSA = cloneDesc:FindFirstChildOfClass("SurfaceAppearance")
                 if realSA and not cloneSA then
@@ -774,8 +761,7 @@ local function refreshPreviewTrackedInstances(realChar, cloneChar)
                 elseif not realSA and cloneSA then
                     pcall(function() cloneSA:Destroy() end)
                 end
-                
-                -- Body decals and textures
+
                 for _, d in ipairs(realDesc:GetChildren()) do
                     if (d:IsA("Decal") or d:IsA("Texture")) and d.Name ~= "face" then
                         local cd = cloneDesc:FindFirstChild(d.Name)
@@ -788,7 +774,7 @@ local function refreshPreviewTrackedInstances(realChar, cloneChar)
                         end
                     end
                 end
-                
+
                 table.insert(previewTrackedParts, {
                     real = realDesc,
                     clone = cloneDesc,
@@ -799,8 +785,7 @@ local function refreshPreviewTrackedInstances(realChar, cloneChar)
             end
         end
     end
-    
-    -- Cache Bones once without FindFirstChild(..., true) inside the render loop
+
     previewTrackedBones = {}
     local seenBones = {}
     local function addTrackedBone(b)
@@ -821,8 +806,7 @@ local function refreshPreviewTrackedInstances(realChar, cloneChar)
             if desc:IsA("Bone") then addTrackedBone(desc) end
         end
     end
-    
-    -- Cache Motors once
+
     previewTrackedMotors = {}
     local seenMotors = {}
     local function addTrackedMotor(m)
@@ -843,8 +827,7 @@ local function refreshPreviewTrackedInstances(realChar, cloneChar)
             if desc:IsA("Motor6D") then addTrackedMotor(desc) end
         end
     end
-    
-    -- CharacterMesh synchronization
+
     for _, realCM in ipairs(realChar:GetChildren()) do
         if realCM:IsA("CharacterMesh") then
             local cloneCM = cloneChar:FindFirstChild(realCM.Name)
@@ -869,42 +852,40 @@ local function refreshPreviewTrackedInstances(realChar, cloneChar)
             end
         end
     end
-    
+
     previewTrackedDirty = false
 end
 
 local function syncPreviewPose(realChar, cloneChar)
     local realHRP = realChar:FindFirstChild("HumanoidRootPart") or realChar:FindFirstChild("Torso") or realChar.PrimaryPart
     if not realHRP or not cloneChar then return end
-    
+
     local realRootCF = realHRP.CFrame
     local now = os.clock()
-    
-    -- Refresh tracked instances only when hierarchy changes or throttled check (1.0s)
+
     if previewTrackedDirty or (now - lastPreviewScanTime > 1.0) then
         refreshPreviewTrackedInstances(realChar, cloneChar)
         lastPreviewScanTime = now
     end
-    
-    -- 1. Synchronize all BaseParts (FAST: directly from cached table, zero FindFirstChild / GetDescendants)
+
     for i = 1, #previewTrackedParts do
         local item = previewTrackedParts[i]
         local realDesc, cloneDesc = item.real, item.clone
         if realDesc.Parent and cloneDesc.Parent then
             local relCF = realRootCF:ToObjectSpace(realDesc.CFrame)
             cloneDesc.CFrame = relCF
-            
+
             local targetTransparency = realDesc.Transparency
             if item.isHRP or realDesc.Name == "HumanoidRootPart" or (realDesc.Name:lower():find("root") and targetTransparency >= 0.95) then
                 targetTransparency = 1
             end
-            
+
             if cloneDesc.Transparency ~= targetTransparency then cloneDesc.Transparency = targetTransparency end
             if cloneDesc.Color ~= realDesc.Color then cloneDesc.Color = realDesc.Color end
             if cloneDesc.Material ~= realDesc.Material then cloneDesc.Material = realDesc.Material end
             if cloneDesc.Reflectance ~= realDesc.Reflectance then cloneDesc.Reflectance = realDesc.Reflectance end
             if cloneDesc.Size ~= realDesc.Size then cloneDesc.Size = realDesc.Size end
-            
+
             if cloneDesc:IsA("MeshPart") and realDesc:IsA("MeshPart") then
                 if cloneDesc.TextureID ~= realDesc.TextureID then
                     cloneDesc.TextureID = realDesc.TextureID
@@ -926,20 +907,17 @@ local function syncPreviewPose(realChar, cloneChar)
             end
         end
     end
-    
-    -- 2. Synchronize Skinned Mesh Bones (FAST: direct array iteration!)
+
     for i = 1, #previewTrackedBones do
         local b = previewTrackedBones[i]
         b.clone.Transform = b.real.Transform
     end
-    
-    -- 3. Synchronize Motor6D Keyframe Transforms (FAST: direct array iteration!)
+
     for i = 1, #previewTrackedMotors do
         local m = previewTrackedMotors[i]
         m.clone.Transform = m.real.Transform
     end
-    
-    -- 4. Synchronize Facial Expressions & Face Decals
+
     local realHead = realChar:FindFirstChild("Head")
     local cloneHead = cloneChar:FindFirstChild("Head")
     if realHead and cloneHead then
@@ -952,10 +930,10 @@ local function syncPreviewPose(realChar, cloneChar)
                 end)
             end
         end
-        
+
         local realFace = realHead:FindFirstChild("face") or realHead:FindFirstChildOfClass("Decal")
         local cloneFace = cloneHead:FindFirstChild("face") or cloneHead:FindFirstChildOfClass("Decal")
-        
+
         if realFace and cloneFace then
             if cloneFace.Texture ~= realFace.Texture then cloneFace.Texture = realFace.Texture end
             if cloneFace.Transparency ~= realFace.Transparency then cloneFace.Transparency = realFace.Transparency end
@@ -963,44 +941,42 @@ local function syncPreviewPose(realChar, cloneChar)
         elseif cloneFace and not realFace then
             cloneFace.Transparency = 1
         end
-        
+
         if realFC or realHead:FindFirstChildOfClass("SurfaceAppearance") then
             if not realFace or realFace.Transparency >= 0.9 or realFace.Texture == "" then
                 if cloneFace then cloneFace.Transparency = 1 end
             end
         end
     end
-    
-    -- 5. Synchronize Clothing & Body Colors live
+
     syncClothingAndColors(realChar, cloneChar)
 end
 
--- Mathematically exact 3D perspective projection for ViewportFrames
 local function worldToViewportPoint(cam, worldPos, vpSize)
     if not cam or not worldPos or not vpSize or vpSize.X <= 0 or vpSize.Y <= 0 then
         return Vector2.zero, false
     end
-    
+
     local pCam = cam.CFrame:PointToObjectSpace(worldPos)
     if pCam.Z >= -0.05 then
         return Vector2.zero, false
     end
-    
+
     local fovRad = math.rad(cam.FieldOfView or 50)
     local aspect = vpSize.X / vpSize.Y
     local halfHeight = math.tan(fovRad / 2) * -pCam.Z
     local halfWidth = halfHeight * aspect
-    
+
     if halfHeight <= 0 or halfWidth <= 0 then
         return Vector2.zero, false
     end
-    
+
     local normX = pCam.X / halfWidth
     local normY = pCam.Y / halfHeight
-    
+
     local screenX = (normX * 0.5 + 0.5) * vpSize.X
     local screenY = (-normY * 0.5 + 0.5) * vpSize.Y
-    
+
     return Vector2.new(screenX, screenY), true
 end
 
@@ -1024,7 +1000,7 @@ local function drawUILine(lineFrame, p1, p2, color, thickness)
     end
     local center = (p1 + p2) / 2
     local angle = math.deg(math.atan2(p2.Y - p1.Y, p2.X - p1.X))
-    
+
     lineFrame.Size = UDim2.new(0, dist, 0, thickness or 1.5)
     lineFrame.Position = UDim2.new(0, center.X, 0, center.Y)
     lineFrame.Rotation = angle
@@ -1032,7 +1008,6 @@ local function drawUILine(lineFrame, p1, p2, color, thickness)
     lineFrame.Visible = true
 end
 
--- Two-way module synchronizer between preview chips and WASOR main menu
 local function toggleFeatureSync(modName, configKey)
     local newVal = not S[configKey]
     if ESPSync then
@@ -1051,7 +1026,7 @@ end
 local function initESPPreviewUI()
     if previewInitialized and previewFrame and previewFrame.Parent then return end
     previewInitialized = true
-    
+
     local existingGui = getGuiParent():FindFirstChild("WASOR_ESPPreviewGui")
     if existingGui then
         pcall(function() existingGui:Destroy() end)
@@ -1060,14 +1035,13 @@ local function initESPPreviewUI()
         pcall(function() previewFrame:Destroy() end)
         previewFrame = nil
     end
-    
+
     local parentGui = Instance.new("ScreenGui")
     parentGui.Name = "WASOR_ESPPreviewGui"
     parentGui.ResetOnSpawn = false
     parentGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     parentGui.Parent = getGuiParent()
-    
-    -- Main Preview Window
+
     previewFrame = Instance.new("Frame")
     previewFrame.Name = "ESPPreviewWindow"
     previewFrame.Size = UDim2.new(0, 300, 0, 390)
@@ -1078,15 +1052,14 @@ local function initESPPreviewUI()
     previewFrame.ClipsDescendants = true
     previewFrame.Visible = false
     previewFrame.Parent = parentGui
-    
-    -- Header Bar
+
     local header = Instance.new("Frame")
     header.Size = UDim2.new(1, 0, 0, 24)
     header.BackgroundColor3 = StudioTheme.headerBg
     header.BorderSizePixel = 1
     header.BorderColor3 = StudioTheme.border
     header.Parent = previewFrame
-    
+
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -60, 1, 0)
     titleLbl.Position = UDim2.new(0, 8, 0, 0)
@@ -1097,7 +1070,7 @@ local function initESPPreviewUI()
     titleLbl.TextXAlignment = Enum.TextXAlignment.Left
     titleLbl.Text = "ESP Live Visual Preview"
     titleLbl.Parent = header
-    
+
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 24, 1, 0)
     closeBtn.Position = UDim2.new(1, -24, 0, 0)
@@ -1115,8 +1088,7 @@ local function initESPPreviewUI()
         S.ESPPreviewActive = false
         saveConfig()
     end)
-    
-    -- Draggable Window
+
     local dragging, dragStart, startPos = false, Vector3.zero, UDim2.new()
     header.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1134,8 +1106,7 @@ local function initESPPreviewUI()
             previewFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
-    
-    -- Viewport Frame Container
+
     local vpContainer = Instance.new("Frame")
     vpContainer.Size = UDim2.new(1, -12, 0, 245)
     vpContainer.Position = UDim2.new(0, 6, 0, 28)
@@ -1144,7 +1115,7 @@ local function initESPPreviewUI()
     vpContainer.BorderColor3 = StudioTheme.border
     vpContainer.ClipsDescendants = true
     vpContainer.Parent = previewFrame
-    
+
     viewport = Instance.new("ViewportFrame")
     viewport.Size = UDim2.new(1, 0, 1, 0)
     viewport.BackgroundTransparency = 1
@@ -1154,23 +1125,21 @@ local function initESPPreviewUI()
     viewport.Ambient = Color3.fromRGB(180, 180, 180)
     viewport.LightDirection = Vector3.new(-1, -1, -1)
     viewport.Parent = vpContainer
-    
+
     previewWorld = Instance.new("WorldModel")
     previewWorld.Parent = viewport
-    
+
     previewCamera = Instance.new("Camera")
     previewCamera.FieldOfView = 50
     viewport.CurrentCamera = previewCamera
     previewCamera.Parent = viewport
-    
-    -- ESP Overlay Container (inside vpContainer)
+
     espContainer = Instance.new("Frame")
     espContainer.Size = UDim2.new(1, 0, 1, 0)
     espContainer.BackgroundTransparency = 1
     espContainer.ZIndex = 5
     espContainer.Parent = vpContainer
-    
-    -- Empty State Hint Label (shown if all ESP modules are off)
+
     emptyHintLabel = Instance.new("TextLabel")
     emptyHintLabel.Size = UDim2.new(1, -20, 0, 28)
     emptyHintLabel.Position = UDim2.new(0, 10, 1, -34)
@@ -1185,8 +1154,7 @@ local function initESPPreviewUI()
     emptyHintLabel.Visible = false
     emptyHintLabel.ZIndex = 7
     emptyHintLabel.Parent = espContainer
-    
-    -- ESP Overlay: Box Outline & Fill with exact GUI transparency
+
     previewBoxFill = Instance.new("Frame")
     previewBoxFill.BorderSizePixel = 0
     previewBoxFill.BackgroundColor3 = Color3.fromRGB(220, 40, 40)
@@ -1194,34 +1162,28 @@ local function initESPPreviewUI()
     previewBoxFill.Visible = false
     previewBoxFill.ZIndex = 6
     previewBoxFill.Parent = espContainer
-    
+
     previewBoxOutline = Instance.new("UIStroke")
     previewBoxOutline.Color = Color3.fromRGB(220, 40, 40)
     previewBoxOutline.Thickness = 1.5
     previewBoxOutline.Parent = previewBoxFill
-    
-    -- Corner & Bracket lines (8 lines)
+
     for i = 1, 8 do
         previewCorners[i] = createLineFrame(espContainer, Color3.fromRGB(220, 40, 40), 1.5)
     end
-    
-    -- 3D Wireframe lines (12 lines)
+
     for i = 1, 12 do
         previewLines3D[i] = createLineFrame(espContainer, Color3.fromRGB(220, 40, 40), 1.5)
     end
-    
-    -- Skeleton lines (up to 20 lines)
+
     for i = 1, 20 do
         previewSkeletonLines[i] = createLineFrame(espContainer, Color3.fromRGB(220, 40, 40), 1.5)
     end
-    
-    -- Tracer Line
+
     previewTracer = createLineFrame(espContainer, Color3.fromRGB(220, 40, 40), 1.5)
-    
-    -- Line of Sight Line
+
     previewLosLine = createLineFrame(espContainer, Color3.fromRGB(220, 40, 40), 1.5)
-    
-    -- Health Bar
+
     previewHealthBarOutline = Instance.new("Frame")
     previewHealthBarOutline.Size = UDim2.new(0, 3, 0, 100)
     previewHealthBarOutline.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -1229,15 +1191,14 @@ local function initESPPreviewUI()
     previewHealthBarOutline.Visible = false
     previewHealthBarOutline.ZIndex = 8
     previewHealthBarOutline.Parent = espContainer
-    
+
     previewHealthBarFill = Instance.new("Frame")
     previewHealthBarFill.Size = UDim2.new(1, 0, 1, 0)
     previewHealthBarFill.BackgroundColor3 = Color3.fromRGB(50, 220, 50)
     previewHealthBarFill.BorderSizePixel = 0
     previewHealthBarFill.ZIndex = 9
     previewHealthBarFill.Parent = previewHealthBarOutline
-    
-    -- Name Tag
+
     previewNameTag = Instance.new("TextLabel")
     previewNameTag.Size = UDim2.new(0, 120, 0, 14)
     previewNameTag.AnchorPoint = Vector2.new(0.5, 1)
@@ -1249,13 +1210,12 @@ local function initESPPreviewUI()
     previewNameTag.Visible = false
     previewNameTag.ZIndex = 10
     previewNameTag.Parent = espContainer
-    
+
     local nameStroke = Instance.new("UIStroke")
     nameStroke.Color = Color3.fromRGB(0, 0, 0)
     nameStroke.Thickness = 1
     nameStroke.Parent = previewNameTag
-    
-    -- Health Text
+
     previewHealthText = Instance.new("TextLabel")
     previewHealthText.Size = UDim2.new(0, 80, 0, 12)
     previewHealthText.AnchorPoint = Vector2.new(0.5, 0)
@@ -1267,13 +1227,12 @@ local function initESPPreviewUI()
     previewHealthText.Visible = false
     previewHealthText.ZIndex = 10
     previewHealthText.Parent = espContainer
-    
+
     local hpStroke = Instance.new("UIStroke")
     hpStroke.Color = Color3.fromRGB(0, 0, 0)
     hpStroke.Thickness = 1
     hpStroke.Parent = previewHealthText
-    
-    -- Distance Text
+
     previewDistText = Instance.new("TextLabel")
     previewDistText.Size = UDim2.new(0, 80, 0, 12)
     previewDistText.AnchorPoint = Vector2.new(0.5, 0)
@@ -1285,13 +1244,12 @@ local function initESPPreviewUI()
     previewDistText.Visible = false
     previewDistText.ZIndex = 10
     previewDistText.Parent = espContainer
-    
+
     local distStroke = Instance.new("UIStroke")
     distStroke.Color = Color3.fromRGB(0, 0, 0)
     distStroke.Thickness = 1
     distStroke.Parent = previewDistText
-    
-    -- Interactive Viewport Dragging (Rotate preview)
+
     viewport.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingOrbit = true
@@ -1310,8 +1268,7 @@ local function initESPPreviewUI()
             orbitAngle = startOrbitAngle + (delta.X * 0.8)
         end
     end)
-    
-    -- Bottom Controls Bar
+
     local controlsBar = Instance.new("Frame")
     controlsBar.Size = UDim2.new(1, -12, 0, 106)
     controlsBar.Position = UDim2.new(0, 6, 1, -112)
@@ -1319,7 +1276,7 @@ local function initESPPreviewUI()
     controlsBar.BorderSizePixel = 1
     controlsBar.BorderColor3 = StudioTheme.border
     controlsBar.Parent = previewFrame
-    
+
     local function makeControlBtn(text, xPos, yPos, width, height, callback)
         local b = Instance.new("TextButton")
         b.Size = UDim2.new(0, width, 0, height or 22)
@@ -1332,20 +1289,18 @@ local function initESPPreviewUI()
         b.TextColor3 = StudioTheme.text
         b.Text = text
         b.Parent = controlsBar
-        
+
         b.MouseEnter:Connect(function() b.BackgroundColor3 = StudioTheme.btnHover end)
         b.MouseLeave:Connect(function() b.BackgroundColor3 = StudioTheme.btnBg end)
         b.MouseButton1Click:Connect(callback)
         return b
     end
-    
-    -- Row 1: Camera Controls
+
     makeControlBtn("Front", 4, 3, 64, 22, function() orbitAngle = 180; autoSpin = false end)
     makeControlBtn("Back", 72, 3, 64, 22, function() orbitAngle = 0; autoSpin = false end)
     makeControlBtn("Spin 360°", 140, 3, 72, 22, function() autoSpin = not autoSpin end)
     makeControlBtn("Reset", 216, 3, 66, 22, function() orbitAngle = 180; viewDistance = 7.5; autoSpin = false end)
-    
-    -- Row 2: Style Cycler
+
     local styleLabel = Instance.new("TextLabel")
     hudStyleLabel = styleLabel
     styleLabel.Size = UDim2.new(0, 130, 0, 22)
@@ -1357,7 +1312,7 @@ local function initESPPreviewUI()
     styleLabel.TextXAlignment = Enum.TextXAlignment.Left
     styleLabel.Text = "Style: " .. (S.ESPBoxStyle or "Full")
     styleLabel.Parent = controlsBar
-    
+
     makeControlBtn("Next Style ►", 188, 28, 94, 22, function()
         local cur = table.find(allStyles, S.ESPBoxStyle or "Full") or 1
         local nxt = (cur % #allStyles) + 1
@@ -1370,8 +1325,7 @@ local function initESPPreviewUI()
         end
         styleLabel.Text = "Style: " .. newStyle
     end)
-    
-    -- Row 3: Two-Way Synchronized Toggle Chips
+
     chipRefreshers = {}
     local function makeChip(name, modName, configKey, xPos, width)
         local btn = Instance.new("TextButton")
@@ -1382,7 +1336,7 @@ local function initESPPreviewUI()
         btn.TextSize = 10
         btn.Text = name
         btn.Parent = controlsBar
-        
+
         local function refreshChip()
             local active = (S[configKey] == true)
             btn.BackgroundColor3 = active and StudioTheme.blue or StudioTheme.btnBg
@@ -1391,14 +1345,14 @@ local function initESPPreviewUI()
         end
         refreshChip()
         table.insert(chipRefreshers, refreshChip)
-        
+
         btn.MouseButton1Click:Connect(function()
             toggleFeatureSync(modName, configKey)
             refreshChip()
         end)
         return btn
     end
-    
+
     makeChip("Box", "ESP Box Outlines", "ESPBoxes", 4, 36)
     makeChip("Skel", "Skeleton ESP", "SkeletonESP", 43, 36)
     makeChip("Tracer", "ESP Tracer Lines", "ESPTracers", 82, 42)
@@ -1406,8 +1360,7 @@ local function initESPPreviewUI()
     makeChip("Name", "Show Player Names", "ESPNames", 172, 38)
     makeChip("Dist", "Show Distance Text", "ESPDistances", 213, 34)
     makeChip("LoS", "Line of Sight", "LineOfSight", 250, 30)
-    
-    -- Row 4: Color Quick Cycler
+
     local colorLabel = Instance.new("TextLabel")
     hudColorLabel = colorLabel
     colorLabel.Size = UDim2.new(0, 130, 0, 20)
@@ -1419,7 +1372,7 @@ local function initESPPreviewUI()
     colorLabel.TextXAlignment = Enum.TextXAlignment.Left
     colorLabel.Text = "Color: " .. (S.ESPColor or "Team Color")
     colorLabel.Parent = controlsBar
-    
+
     makeControlBtn("Next Color ►", 188, 78, 94, 20, function()
         local cur = table.find(colorOptions, S.ESPColor or "Team Color") or 1
         local nxt = (cur % #colorOptions) + 1
@@ -1432,7 +1385,7 @@ local function initESPPreviewUI()
         end
         colorLabel.Text = "Color: " .. newColor
     end)
-    
+
     setupPreviewModel()
     if localPlayer.Character then
         connectPreviewCharListeners(localPlayer.Character)
@@ -1453,42 +1406,40 @@ local bonesR15 = {
 
 local function updatePreviewRender()
     if not previewFrame or not previewFrame.Visible or not previewWorld then return end
-    
+
     local realChar = localPlayer.Character
     if not realChar then return end
-    
+
     if not previewCharClone or not previewCharClone.Parent then
         setupPreviewModel()
         return
     end
-    
+
     syncPreviewPose(realChar, previewCharClone)
-    
+
     if autoSpin then
         orbitAngle = (orbitAngle + 1.2) % 360
     end
-    
+
     local rad = math.rad(orbitAngle)
     local camPos = Vector3.new(math.sin(rad) * viewDistance, viewHeight, math.cos(rad) * viewDistance)
     previewCamera.CFrame = CFrame.new(camPos, Vector3.new(0, viewHeight, 0))
-    
+
     local char = previewCharClone
     local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char.PrimaryPart
     if not hrp then return end
-    
+
     local teamCol = Color3.fromRGB(80, 160, 255)
     local espCol = espColorMapping[S.ESPColor] or teamCol
     local vpSize = viewport.AbsoluteSize
     if vpSize.X <= 0 or vpSize.Y <= 0 then return end
-    
-    -- Real-time synchronization of chip visuals with active configs
+
     if chipRefreshers then
         for _, refreshFn in ipairs(chipRefreshers) do
             refreshFn()
         end
     end
-    
-    -- Active module states (fully synced with all WASOR Render modules)
+
     local showBoxes = (S.ESPBoxes == true)
     local showSkeleton = (S.SkeletonESP == true)
     local showTracers = (S.ESPTracers == true)
@@ -1496,16 +1447,15 @@ local function updatePreviewRender()
     local showNames = (S.ESPNames == true)
     local showDistance = (S.ESPDistances == true)
     local showLoS = (S.LineOfSight == true)
-    
+
     local anyFeatureActive = showBoxes or showSkeleton or showTracers or showHealth or showNames or showDistance or showLoS
     if emptyHintLabel then
         emptyHintLabel.Visible = not anyFeatureActive
     end
-    
-    -- Calculate 2D bounding box from model bounding box (FAST: 8 corner projections instead of 800)
+
     local minX, minY, maxX, maxY = math.huge, math.huge, -math.huge, -math.huge
     local anyVisible = false
-    
+
     local modelCF, modelSize = char:GetBoundingBox()
     local hw, hh, hd = modelSize.X / 2, modelSize.Y / 2, modelSize.Z / 2
     local corners = {
@@ -1524,8 +1474,7 @@ local function updatePreviewRender()
             maxY = math.max(maxY, sp.Y)
         end
     end
-    
-    -- Fallback bounding box around character center if parts are streaming
+
     if not anyVisible or minX >= maxX or minY >= maxY then
         local fhw, fhh, fhd = 1.6, 2.6, 1.0
         local fcorners = {
@@ -1545,12 +1494,12 @@ local function updatePreviewRender()
             end
         end
     end
-    
+
     local boxW = maxX - minX
     local boxH = maxY - minY
     local topLeft = Vector2.new(minX, minY)
     local bottomRight = Vector2.new(maxX, maxY)
-    
+
     local boxStyle = S.ESPBoxStyle or "Full"
     local isBrackets = (boxStyle == "Bracket" or boxStyle == "Brackets")
     local isTechHex = (boxStyle == "Tech Hex" or boxStyle == "Diamond")
@@ -1560,54 +1509,52 @@ local function updatePreviewRender()
     local showBracket = showBoxes and isBrackets
     local showTechHex = showBoxes and isTechHex
     local showTopBottom = showBoxes and boxStyle == "Top-Bottom"
-    
-    -- Box Outline & Fill with exact GUI transparency
+
     previewBoxFill.Size = UDim2.new(0, boxW, 0, boxH)
     previewBoxFill.Position = UDim2.new(0, minX, 0, minY)
     previewBoxFill.BackgroundColor3 = espCol
     previewBoxFill.BackgroundTransparency = math.clamp(S.ESPTransparency or 0.8, 0, 1)
     previewBoxFill.Visible = showBoxes and (S.ESPTransparency < 0.99) and (showFull or showCorners or showBracket or showTechHex or showTopBottom)
-    
+
     previewBoxOutline.Color = espCol
     previewBoxOutline.Thickness = 1.5
     previewBoxOutline.Transparency = (showBoxes and showFull) and 0 or 1
-    
-    -- 1. Precision CS2 Corner Box (Corners)
+
     if showBoxes and showCorners then
         local len = math.clamp(math.min(boxW, boxH) * 0.22, 6, 18)
         local c = previewCorners
         local tr = Vector2.new(bottomRight.X, topLeft.Y)
         local bl = Vector2.new(topLeft.X, bottomRight.Y)
         local br = bottomRight
-        -- Top-Left
+
         drawUILine(c[1], topLeft, topLeft + Vector2.new(len, 0), espCol, 1.5)
         drawUILine(c[2], topLeft, topLeft + Vector2.new(0, len), espCol, 1.5)
-        -- Top-Right
+
         drawUILine(c[3], tr, tr - Vector2.new(len, 0), espCol, 1.5)
         drawUILine(c[4], tr, tr + Vector2.new(0, len), espCol, 1.5)
-        -- Bottom-Left
+
         drawUILine(c[5], bl, bl + Vector2.new(len, 0), espCol, 1.5)
         drawUILine(c[6], bl, bl - Vector2.new(0, len), espCol, 1.5)
-        -- Bottom-Right
+
         drawUILine(c[7], br, br - Vector2.new(len, 0), espCol, 1.5)
         drawUILine(c[8], br, br - Vector2.new(0, len), espCol, 1.5)
-    -- 2. Tactical Military Brackets [ ]
+
     elseif showBoxes and showBracket then
         local capLen = math.clamp(boxW * 0.18, 4, 14)
         local c = previewCorners
         local tr = Vector2.new(bottomRight.X, topLeft.Y)
         local bl = Vector2.new(topLeft.X, bottomRight.Y)
         local br = bottomRight
-        -- Left Bracket [
+
         drawUILine(c[1], topLeft, bl, espCol, 1.5)
         drawUILine(c[2], topLeft, topLeft + Vector2.new(capLen, 0), espCol, 1.5)
         drawUILine(c[3], bl, bl + Vector2.new(capLen, 0), espCol, 1.5)
-        -- Right Bracket ]
+
         drawUILine(c[4], tr, br, espCol, 1.5)
         drawUILine(c[5], tr, tr - Vector2.new(capLen, 0), espCol, 1.5)
         drawUILine(c[6], br, br - Vector2.new(capLen, 0), espCol, 1.5)
         c[7].Visible = false; c[8].Visible = false
-    -- 3. 8-Sided Futuristic Chamfered Cyber Box (Tech Hex)
+
     elseif showBoxes and showTechHex then
         local chamfer = math.clamp(math.min(boxW, boxH) * 0.16, 4, 14)
         local c = previewCorners
@@ -1622,18 +1569,18 @@ local function updatePreviewRender()
         drawUILine(c[6], bl + Vector2.new(chamfer, 0), bl - Vector2.new(0, chamfer), espCol, 1.5)
         drawUILine(c[7], bl - Vector2.new(0, chamfer), topLeft + Vector2.new(0, chamfer), espCol, 1.5)
         drawUILine(c[8], topLeft + Vector2.new(0, chamfer), topLeft + Vector2.new(chamfer, 0), espCol, 1.5)
-    -- 4. Clean Horizon Bars (Top-Bottom)
+
     elseif showBoxes and showTopBottom then
         local tickLen = math.clamp(boxH * 0.12, 3, 10)
         local c = previewCorners
         local tr = Vector2.new(bottomRight.X, topLeft.Y)
         local bl = Vector2.new(topLeft.X, bottomRight.Y)
         local br = bottomRight
-        -- Top Horizon Bar
+
         drawUILine(c[1], topLeft, tr, espCol, 1.5)
         drawUILine(c[2], topLeft, topLeft + Vector2.new(0, tickLen), espCol, 1.5)
         drawUILine(c[3], tr, tr + Vector2.new(0, tickLen), espCol, 1.5)
-        -- Bottom Horizon Bar
+
         drawUILine(c[4], bl, br, espCol, 1.5)
         drawUILine(c[5], bl, bl - Vector2.new(0, tickLen), espCol, 1.5)
         drawUILine(c[6], br, br - Vector2.new(0, tickLen), espCol, 1.5)
@@ -1641,8 +1588,7 @@ local function updatePreviewRender()
     else
         for _, c in ipairs(previewCorners) do c.Visible = false end
     end
-    
-    -- 5. True 3D Wireframe Bounding Box (3D Box)
+
     if showBoxes and show3D then
         local rootPart = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char.PrimaryPart
         local cf = rootPart and rootPart.CFrame or CFrame.new(0, 0, 0)
@@ -1662,9 +1608,9 @@ local function updatePreviewRender()
         end
         if ok3D then
             local edges = {
-                {1, 2}, {2, 3}, {3, 4}, {4, 1}, -- Top Ring
-                {5, 6}, {6, 7}, {7, 8}, {8, 5}, -- Bottom Ring
-                {1, 5}, {2, 6}, {3, 7}, {4, 8}  -- Vertical Pillars
+                {1, 2}, {2, 3}, {3, 4}, {4, 1},
+                {5, 6}, {6, 7}, {7, 8}, {8, 5},
+                {1, 5}, {2, 6}, {3, 7}, {4, 8}
             }
             for idx, edge in ipairs(edges) do
                 drawUILine(previewLines3D[idx], sPoints[edge[1]], sPoints[edge[2]], espCol, 1.5)
@@ -1675,8 +1621,7 @@ local function updatePreviewRender()
     else
         for _, l in ipairs(previewLines3D) do l.Visible = false end
     end
-    
-    -- 6. Tracer Line
+
     if showTracers then
         local rootPart = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char.PrimaryPart
         local rootPos = rootPart and rootPart.Position or Vector3.new(0, 0, 0)
@@ -1695,8 +1640,7 @@ local function updatePreviewRender()
     else
         previewTracer.Visible = false
     end
-    
-    -- 7. Skeleton Bones (CS2 Joint Hierarchy)
+
     if showSkeleton then
         local isR15 = char:FindFirstChild("UpperTorso") ~= nil
         local bones = isR15 and bonesR15 or bonesR6
@@ -1721,8 +1665,7 @@ local function updatePreviewRender()
     else
         for _, l in ipairs(previewSkeletonLines) do l.Visible = false end
     end
-    
-    -- 8. Line of Sight (View Angle Vector)
+
     if showLoS then
         local head = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
         if head then
@@ -1741,8 +1684,7 @@ local function updatePreviewRender()
     else
         previewLosLine.Visible = false
     end
-    
-    -- 9. Pro Health Bar
+
     if showHealth then
         previewHealthBarOutline.Position = UDim2.new(0, minX - 6, 0, minY)
         previewHealthBarOutline.Size = UDim2.new(0, 3, 0, boxH)
@@ -1751,8 +1693,7 @@ local function updatePreviewRender()
     else
         previewHealthBarOutline.Visible = false
     end
-    
-    -- 10. DisplayName Tag
+
     if showNames then
         previewNameTag.Position = UDim2.new(0, minX + boxW / 2, 0, minY - 4)
         previewNameTag.Text = localPlayer.DisplayName or localPlayer.Name
@@ -1760,15 +1701,14 @@ local function updatePreviewRender()
     else
         previewNameTag.Visible = false
     end
-    
-    -- 11. Health Text & Distance Text
+
     if showHealth then
         previewHealthText.Position = UDim2.new(0, minX + boxW / 2, 0, maxY + 2)
         previewHealthText.Visible = true
     else
         previewHealthText.Visible = false
     end
-    
+
     if showDistance then
         local yOffset = showHealth and 14 or 2
         previewDistText.Position = UDim2.new(0, minX + boxW / 2, 0, maxY + yOffset)
@@ -1801,7 +1741,6 @@ VH.openESPPreview = function()
     toggleESPPreview(true)
 end
 
--- Respawn listener to re-clone local avatar
 if localPlayer then
     localPlayer.CharacterAdded:Connect(function(newChar)
         connectPreviewCharListeners(newChar)
@@ -1877,7 +1816,7 @@ if ESPSync then
             hudStyleLabel.Text = "Style: " .. (val or "Full")
         end
     end)
-    
+
     ESPSync:Register("ESPColor", function(val, source)
         if source ~= "ESPPreviewDrawer" and previewColorDropdown and previewColorDropdown.Set then
             previewColorDropdown.Set(val or "Team Color")
@@ -1886,13 +1825,13 @@ if ESPSync then
             hudColorLabel.Text = "Color: " .. (val or "Team Color")
         end
     end)
-    
+
     ESPSync:Register("TracerOrigin", function(val, source)
         if source ~= "ESPPreviewDrawer" and previewTracerOriginDropdown and previewTracerOriginDropdown.Set then
             previewTracerOriginDropdown.Set(val or "Bottom")
         end
     end)
-    
+
     ESPSync:Register("ESPTransparency", function(val, source)
         if source ~= "ESPPreviewDrawer" and previewTransparencySlider and previewTransparencySlider.Set then
             previewTransparencySlider.Set(math.round((val or 0.8) * 100))
@@ -1901,7 +1840,7 @@ if ESPSync then
             previewBoxFill.BackgroundTransparency = val or 0.8
         end
     end)
-    
+
     local function syncChip(val, source)
         if chipRefreshers then
             for _, ref in ipairs(chipRefreshers) do
@@ -1916,7 +1855,7 @@ if ESPSync then
     ESPSync:Register("ESPNames", syncChip)
     ESPSync:Register("ESPDistances", syncChip)
     ESPSync:Register("LineOfSight", syncChip)
-    
+
     ESPSync:Register("ESPPreviewActive", function(val, source)
         if source ~= "ESPPreview" and UI.moduleButtons and UI.moduleButtons["ESP Preview"] and UI.moduleButtons["ESP Preview"].SetActive then
             UI.moduleButtons["ESP Preview"].SetActive(val)

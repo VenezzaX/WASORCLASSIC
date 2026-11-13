@@ -68,19 +68,19 @@ if ESPSync then
             transparencySliderObj.Set(math.round((val or 0.8) * 100))
         end
     end)
-    
+
     ESPSync:Register("ESPColor", function(val, source)
         if source ~= "ESPBoxOutlines" and colorDropdownObj and colorDropdownObj.Set then
             colorDropdownObj.Set(val or "Team Color")
         end
     end)
-    
+
     ESPSync:Register("ESPBoxStyle", function(val, source)
         if source ~= "ESPBoxOutlines" and boxStyleDropdownObj and boxStyleDropdownObj.Set then
             boxStyleDropdownObj.Set(val or "Full")
         end
     end)
-    
+
     ESPSync:Register("ESPBoxes", function(val, source)
         if source ~= "ESPBoxOutlines" and UI.moduleButtons and UI.moduleButtons["ESP Box Outlines"] and UI.moduleButtons["ESP Box Outlines"].SetActive then
             UI.moduleButtons["ESP Box Outlines"].SetActive(val)

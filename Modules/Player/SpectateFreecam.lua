@@ -29,7 +29,7 @@ local disableFreecam = Utils.disableFreecam
 local spectateStatsLabels = State.spectateStatsLabels
 
 local currentSpectateTarget = nil
-local isFreecam = false 
+local isFreecam = false
 
 local StudioTheme = {
     panelBg = Color3.fromRGB(42, 42, 45),
@@ -50,9 +50,9 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
     spectateStatsLabels.name = rName.Label
     spectateStatsLabels.hp = rHp.Label
     spectateStatsLabels.team = rTeam.Label
-    
+
     addToggleOption(drawer, "Auto Follow Player", S.FollowActive, function(v) S.FollowActive = v; S.FollowTarget = currentSpectateTarget; saveConfig() end)
-    
+
     addButtonOption(drawer, "Teleport to Nearest Player", function()
         local myHRP = getHRP()
         if not myHRP then notify("Self root part not found!", StudioTheme.red); return end
@@ -68,7 +68,7 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
             if teleportToHRP(targetHRP) then notify("Teleported to nearest: " .. nearest.DisplayName .. string.format(" (%.1f studs)", shortestDist), StudioTheme.green) end
         else notify("No other players found nearby", StudioTheme.red) end
     end)
-    
+
     addButtonOption(drawer, "Teleport to Random Player", function()
         local list = {}
         for _, p in ipairs(Players:GetPlayers()) do
@@ -83,14 +83,14 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
             if teleportToHRP(targetHRP) then notify("Teleported to random: " .. chosen.DisplayName, StudioTheme.green) end
         else notify("No alternative player found to teleport to", StudioTheme.red) end
     end)
-    
+
     addSliderOption(drawer, "Freecam Speed", 10, 300, S.FreecamSpeed, function(v) S.FreecamSpeed = v; saveConfig() end)
-    
-    addToggleOption(drawer, "Freecam Active Mode", isFreecam, function(v) 
-        isFreecam = v 
-        if v then enableFreecam() else disableFreecam() end 
+
+    addToggleOption(drawer, "Freecam Active Mode", isFreecam, function(v)
+        isFreecam = v
+        if v then enableFreecam() else disableFreecam() end
     end)
-    
+
     local listContainer = addCustomFrameOption(drawer, 130)
     local box = Instance.new("TextBox")
     box.Size = UDim2.new(1, -8, 0, 20)
@@ -119,7 +119,7 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
     local layout = Instance.new("UIListLayout")
     layout.Padding = UDim.new(0, 2)
     layout.Parent = scroll
-    
+
     local function renderPlayers()
         for _, child in ipairs(scroll:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
         local filter = box.Text:lower()
@@ -144,7 +144,7 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
                     nameL.TextXAlignment = Enum.TextXAlignment.Left
                     nameL.Text = p.DisplayName
                     nameL.Parent = card
-                    
+
                     local tp = Instance.new("TextButton")
                     tp.Size = UDim2.new(0, 30, 0, 16)
                     tp.Position = UDim2.new(1, -76, 0.5, -8)
@@ -160,7 +160,7 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
                         local targetHRP = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
                         if targetHRP and teleportToHRP(targetHRP) then notify("Teleported to " .. p.DisplayName, StudioTheme.green) else notify("Target not loaded", StudioTheme.red) end
                     end)
-                    
+
                     local isViewing = (currentSpectateTarget == p)
                     local view = Instance.new("TextButton")
                     view.Size = UDim2.new(0, 42, 0, 16)
@@ -173,33 +173,33 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
                     view.TextColor3 = Color3.fromRGB(255, 255, 255)
                     view.Text = isViewing and "UNVIEW" or "VIEW"
                     view.Parent = card
-                    
-                    view.MouseButton1Click:Connect(function() 
-                        if currentSpectateTarget == p then 
-                            spectatePlayer(nil) 
+
+                    view.MouseButton1Click:Connect(function()
+                        if currentSpectateTarget == p then
+                            spectatePlayer(nil)
                             currentSpectateTarget = nil
-                        else 
-                            spectatePlayer(p) 
+                        else
+                            spectatePlayer(p)
                             currentSpectateTarget = p
                         end
-                        renderPlayers() 
+                        renderPlayers()
                     end)
                 end
             end
         end
     end
-    
+
     box:GetPropertyChangedSignal("Text"):Connect(renderPlayers)
-    
+
     local addedCon = Players.PlayerAdded:Connect(renderPlayers)
-    local removedCon = Players.PlayerRemoving:Connect(function(p) 
-        if currentSpectateTarget == p then 
-            spectatePlayer(nil) 
+    local removedCon = Players.PlayerRemoving:Connect(function(p)
+        if currentSpectateTarget == p then
+            spectatePlayer(nil)
             currentSpectateTarget = nil
         end
-        renderPlayers() 
+        renderPlayers()
     end)
-    
+
     table.insert(S.Connections, addedCon)
     table.insert(S.Connections, removedCon)
     renderPlayers()

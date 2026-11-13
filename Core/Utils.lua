@@ -4,11 +4,9 @@ local Utils = {}
 local Services = VH.Services
 local State = VH.State
 
-
 Utils.getChar = function() return Services.LP.Character end
 Utils.getHRP = function() local c = Utils.getChar(); return c and (c:FindFirstChild("HumanoidRootPart") or c:FindFirstChild("Torso") or c.PrimaryPart) end
 Utils.getHum = function() local c = Utils.getChar(); return c and c:FindFirstChildOfClass("Humanoid") end
-
 
 Utils.notify = function(msg, color)
     if VH.UI and VH.UI.showToast then
@@ -18,13 +16,12 @@ Utils.notify = function(msg, color)
     end
 end
 
-
 Utils.updateLocalNametag = function()
     local char = Services.LP.Character; if not char then return end
     local head = char:FindFirstChild("Head"); if not head then return end
     local bill = head:FindFirstChild("VoidCustomNametag")
     local S = State.S
-    
+
     if S.CustomNametag then
         if not bill then
             bill = Instance.new("BillboardGui"); bill.Name = "VoidCustomNametag"; bill.Size = UDim2.new(0, 200, 0, 50)
@@ -42,7 +39,7 @@ Utils.updateLocalNametag = function()
             end)
         else
             local lbl = bill:FindFirstChild("TextLabel")
-            if lbl then 
+            if lbl then
                 if lbl.Text ~= S.CustomNametagText then lbl.Text = S.CustomNametagText or "WeAreSkidding" end
                 if lbl.TextColor3 ~= State.currentThemeColor then lbl.TextColor3 = State.currentThemeColor end
             end
@@ -51,7 +48,6 @@ Utils.updateLocalNametag = function()
         if bill then bill:Destroy() end
     end
 end
-
 
 Utils.processUISpoofText = function(obj)
     if not obj or not obj:IsA("Instance") then return end
@@ -101,20 +97,18 @@ Utils.processUISpoofText = function(obj)
     end
 end
 
-
-
 Utils.applyTallAnimations = function(char)
     local S = State.S
     local hum = char:WaitForChild("Humanoid", 5); if not hum then return end
     if S.TallWalkTrack then S.TallWalkTrack:Stop() end; if S.TallIdleTrack then S.TallIdleTrack:Stop() end
     if S.TallRunningConn then S.TallRunningConn:Disconnect() end
-    
+
     hum.WalkSpeed = 34; hum.UseJumpPower = true; hum.JumpPower = 75; hum.JumpHeight = 7.2
     local walkAnim = Instance.new("Animation"); walkAnim.AnimationId = "rbxassetid://128769966446762"
     S.TallWalkTrack = hum:LoadAnimation(walkAnim); S.TallWalkTrack.Looped = true
     local idleAnim = Instance.new("Animation"); idleAnim.AnimationId = "rbxassetid://87574253549013"
     S.TallIdleTrack = hum:LoadAnimation(idleAnim); S.TallIdleTrack.Looped = true
-    
+
     S.TallRunningConn = hum.Running:Connect(function(speedVal)
         if speedVal > 0 then
             if S.TallIdleTrack then S.TallIdleTrack:Stop() end
@@ -146,7 +140,7 @@ Utils.applyCustomIdle = function(char)
     local S = State.S
     if not char then return end; local hum = char:FindFirstChildOfClass("Humanoid"); if not hum then return end
     if S.CustomIdleTrack then S.CustomIdleTrack:Stop() S.CustomIdleTrack = nil end
-    
+
     if S.CustomIdleAnim then
         local animId = S.CustomIdleID
         if not animId or animId == "" then animId = State.animPresets[math.random(1, #State.animPresets)]; S.CustomIdleID = animId end
@@ -164,7 +158,6 @@ Utils.applyCustomIdle = function(char)
         end
     end
 end
-
 
 Utils.applyGodMode = function(character)
     local S = State.S
@@ -185,7 +178,6 @@ Utils.disableGodMode = function()
     if humanoid then humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true); humanoid.MaxHealth = 100; humanoid.Health = 100 end
 end
 
-
 Utils.toggleFloat = function(v)
     local S = State.S
     S.Float = v; local char = Services.LP.Character; local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -205,19 +197,52 @@ Utils.toggleWaterWalk = function(v)
     if not v and S.WaterPlat then pcall(function() S.WaterPlat:Destroy() end); S.WaterPlat = nil end
 end
 
+Utils.updateMapXrayTransparency = function(percent)
+    local S = State.S
+    local targetTrans = math.clamp((percent or 50) / 100, 0.01, 0.99)
+    for part, origTrans in pairs(S.OriginalPartTransparencies) do
+        if part and part.Parent and part:IsA("BasePart") then
+            part.Transparency = targetTrans
+        end
+    end
+end
 
 Utils.toggleMapXray = function(v)
     local S = State.S
     S.MapXray = v
+    if State.mapXrayAddedConn then
+        pcall(function() State.mapXrayAddedConn:Disconnect() end)
+        State.mapXrayAddedConn = nil
+    end
+
+    local targetTrans = math.clamp((S.MapXrayTransparency or 50) / 100, 0.01, 0.99)
+
     if v then
-        for _, part in ipairs(Services.Workspace:GetDescendants()) do
-            if part:IsA("BasePart") and not part.Parent:FindFirstChildOfClass("Humanoid") and part.Name ~= "Terrain" then
-                S.OriginalPartTransparencies[part] = part.Transparency; part.Transparency = 0.5
+        local function applyXray(part)
+            if not part:IsA("BasePart") then return end
+            if part.Name == "Terrain" or part.Name == "HumanoidRootPart" then return end
+            if part.Parent and part.Parent:FindFirstChildOfClass("Humanoid") then return end
+            if part.Transparency >= 0.9 or part.Material == Enum.Material.ForceField then return end
+            if S.OriginalPartTransparencies[part] == nil then
+                S.OriginalPartTransparencies[part] = part.Transparency
             end
+            part.Transparency = targetTrans
         end
+
+        for _, part in ipairs(Services.Workspace:GetDescendants()) do
+            applyXray(part)
+        end
+
+        State.mapXrayAddedConn = Services.Workspace.DescendantAdded:Connect(function(desc)
+            if S.MapXray then
+                applyXray(desc)
+            end
+        end)
     else
         for part, trans in pairs(S.OriginalPartTransparencies) do
-            if part and part.Parent then part.Transparency = trans end
+            if part and part.Parent then
+                pcall(function() part.Transparency = trans end)
+            end
         end
         S.OriginalPartTransparencies = {}
     end
@@ -280,6 +305,15 @@ end
 local function optimizeSingleInstance(descendant, S)
     pcall(function()
         if descendant:IsA("BasePart") then
+            if descendant.Transparency >= 0.95 or descendant.LocalTransparencyModifier >= 0.95 then
+                return
+            end
+            if descendant.Material == Enum.Material.ForceField then
+                return
+            end
+            if descendant.Name == "HumanoidRootPart" or (descendant.Parent and descendant.Parent:FindFirstChildOfClass("Humanoid")) then
+                return
+            end
             if S.LagReducePotatoMode then
                 descendant.Material = Enum.Material.SmoothPlastic
             end
@@ -287,6 +321,9 @@ local function optimizeSingleInstance(descendant, S)
                 descendant.CastShadow = false
             end
         elseif (descendant:IsA("Decal") or descendant:IsA("Texture")) and S.LagReduceDecals then
+            if descendant.Parent and descendant.Parent:IsA("BasePart") and descendant.Parent.Transparency >= 0.95 then
+                return
+            end
             descendant.Transparency = 1
         elseif (descendant:IsA("ParticleEmitter") or descendant:IsA("Fire") or descendant:IsA("Smoke") or descendant:IsA("Sparkles") or descendant:IsA("Trail") or descendant:IsA("Beam")) and S.LagReduceParticles then
             descendant.Enabled = false
@@ -326,7 +363,6 @@ Utils.toggleGraphicsReducer = function(v)
             end
         end)
 
-        -- Batched non-blocking sweep to prevent frame drops
         task.spawn(function()
             local all = Services.Workspace:GetDescendants()
             local batchSize = 400
@@ -339,7 +375,6 @@ Utils.toggleGraphicsReducer = function(v)
             end
         end)
 
-        -- Real-time optimizer for newly spawned instances
         State.lagReducerAddedConn = Services.Workspace.DescendantAdded:Connect(function(desc)
             if S.GraphicsReducer then
                 optimizeSingleInstance(desc, S)
@@ -388,8 +423,6 @@ Utils.toggleGraphicsReducer = function(v)
     end
 end
 
-
-
 local queue_on_teleport = queue_on_teleport or queueteleport or (syn and syn.queue_on_teleport) or queue_to_teleport or (fluxus and fluxus.queue_on_teleport)
 
 Utils.setupAutoRejoin = function()
@@ -400,7 +433,7 @@ Utils.setupAutoRejoin = function()
             local errMsg = ""
             pcall(function() errMsg = Services.GuiService:GetErrorMessage() end)
             if errMsg:lower():find("teleport") and not errMsg:lower():find("disconnected") then
-                Utils.notify("[WASOR 4.0] Teleport message: " .. errMsg .. " (UI preserved)", Color3.fromRGB(218, 170, 42))
+                Utils.notify("[WASOR 4.5] Teleport message: " .. errMsg .. " (UI preserved)", Color3.fromRGB(218, 170, 42))
                 return
             end
             pcall(function()
@@ -421,7 +454,7 @@ Utils.setupAutoRejoin = function()
     pcall(function()
         local tpFailConn = Services.TeleportService.TeleportInitFailed:Connect(function(_, result, err)
             State.teleportQueued = false
-            Utils.notify("[WASOR 4.0] Teleport Failed: " .. tostring(err or result) .. " (UI preserved)", Color3.fromRGB(218, 38, 38))
+            Utils.notify("[WASOR 4.5] Teleport Failed: " .. tostring(err or result) .. " (UI preserved)", Color3.fromRGB(218, 38, 38))
         end)
         table.insert(S.Connections, tpFailConn)
     end)
@@ -445,11 +478,11 @@ Utils.setupAutoReinject = function()
     local qot = queue_on_teleport or queueteleport or (syn and syn.queue_on_teleport) or queue_to_teleport or (fluxus and fluxus.queue_on_teleport)
     if qot then
         State.teleportQueued = true
-        local code = [[ 
-            repeat task.wait() until game:IsLoaded() 
+        local code = [[
+            repeat task.wait() until game:IsLoaded()
             if _G.WASOR_Loaded or _G.WASOR_Loading then return end
             pcall(function()
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/main/github_loader.lua"))() 
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/main/github_loader.lua"))()
             end)
         ]]
         pcall(qot, code)
@@ -495,7 +528,6 @@ Utils.teleportToHRP = function(targetHRP)
     return false
 end
 
-
 Utils.spectatePlayer = function(target)
     State.currentSpectateTarget = target
     if target and target.Character then
@@ -517,7 +549,7 @@ Utils.enableFreecam = function()
     if hrp then hrp.Anchored = true end
     Services.Camera.CameraType = Enum.CameraType.Scriptable; State.freecamBasePos = Services.Camera.CFrame
     local moveVector = Vector3.zero
-    
+
     State.freecamInputBeganConn = Services.UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe then return end; local key = input.KeyCode
         if key == Enum.KeyCode.W then moveVector = moveVector + Vector3.new(0, 0, -1)
@@ -527,7 +559,7 @@ Utils.enableFreecam = function()
         elseif key == Enum.KeyCode.Space then moveVector = moveVector + Vector3.new(0, 1, 0)
         elseif key == Enum.KeyCode.LeftShift then moveVector = moveVector + Vector3.new(0, -1, 0) end
     end)
-    
+
     State.freecamInputEndedConn = Services.UserInputService.InputEnded:Connect(function(input)
         local key = input.KeyCode
         if key == Enum.KeyCode.W then moveVector = moveVector - Vector3.new(0, 0, -1)
@@ -537,7 +569,7 @@ Utils.enableFreecam = function()
         elseif key == Enum.KeyCode.Space then moveVector = moveVector - Vector3.new(0, 1, 0)
         elseif key == Enum.KeyCode.LeftShift then moveVector = moveVector - Vector3.new(0, -1, 0) end
     end)
-    
+
     State.freecamConnection = Services.RunService.RenderStepped:Connect(function(dt)
         if Services.UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then Services.UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
         else Services.UserInputService.MouseBehavior = Enum.MouseBehavior.Default end
@@ -597,10 +629,8 @@ Utils.runExternalScript = function(name, url, optionalPlaceId)
     end)
 end
 
-
 Utils.createOverhead = function(p) end
 Utils.refreshOverheads = function() end
-
 
 Utils.updateFlyVelocity = function()
     local S = State.S
@@ -633,7 +663,6 @@ Utils.flyOff = function()
     if hrp then pcall(function() if hrp:FindFirstChild("VoidFlyBV") then hrp.VoidFlyBV:Destroy() end; if hrp:FindFirstChild("VoidFlyBG") then hrp.VoidFlyBG:Destroy() end end) end
 end
 
-
 Utils.enableGhostMode = function()
     local S = State.S
     local myChar = Services.LP.Character
@@ -643,12 +672,10 @@ Utils.enableGhostMode = function()
 
     S.GhostParkedCFrame = myHRP.CFrame
 
-    -- Anchor real character so user does not move at all
     myHRP.Anchored = true
     myHRP.AssemblyLinearVelocity = Vector3.zero
     myHRP.AssemblyAngularVelocity = Vector3.zero
 
-    -- Create Ghost avatar
     pcall(function()
         myChar.Archivable = true
         local ghost = myChar:Clone()
@@ -691,7 +718,6 @@ Utils.enableGhostMode = function()
             Services.Camera.CameraSubject = ghostHRP
         end
 
-        -- Ghost Movement Loop
         local UIS = Services.UserInputService
         State.ghostStepConn = Services.RunService.RenderStepped:Connect(function(dt)
             if not S.GhostMode or not State.activeGhostModel or not State.activeGhostModel.Parent then
@@ -771,7 +797,6 @@ Utils.disableGhostMode = function()
     S.Fly = false; Utils.flyOff(); S.NoClip = false
 end
 
-
 local visRaycastParams = RaycastParams.new()
 visRaycastParams.FilterType = Enum.RaycastFilterType.Exclude
 visRaycastParams.IgnoreWater = true
@@ -784,7 +809,7 @@ Utils.isPartVisible = function(part, char)
     local destination = part.Position
     local direction = destination - origin
     if direction.Magnitude == 0 then return true end
-    
+
     local filterList = {}
     if Services.LP and Services.LP.Character then
         table.insert(filterList, Services.LP.Character)
@@ -820,7 +845,7 @@ Utils.getAimbotTarget = function()
     local bestTarget = nil
     local closestDist = S.AimbotFOV
     local center = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
-    
+
     for _, p in ipairs(Services.Players:GetPlayers()) do
         if p == Services.LP then continue end
         if S.AimbotTeamCheck and p.Team == Services.LP.Team then continue end
@@ -874,6 +899,30 @@ Utils.toggleNo3DRenderCover = function(enable)
             State.previousQualityLevel = nil
         end
 
+        if State.previousGlobalShadows ~= nil then
+            pcall(function() Services.Lighting.GlobalShadows = State.previousGlobalShadows end)
+            State.previousGlobalShadows = nil
+        end
+
+        if State.disabledLightingFX then
+            for fx, wasEnabled in pairs(State.disabledLightingFX) do
+                pcall(function() if fx and fx.Parent then fx.Enabled = wasEnabled end end)
+            end
+            State.disabledLightingFX = nil
+        end
+
+        if State.previousTerrainWater then
+            local terrain = Services.Workspace:FindFirstChildOfClass("Terrain") or Services.Workspace.Terrain
+            if terrain then
+                pcall(function()
+                    terrain.WaterWaveSize = State.previousTerrainWater.WaveSize or 0.15
+                    terrain.WaterWaveSpeed = State.previousTerrainWater.WaveSpeed or 10
+                    terrain.WaterReflectance = State.previousTerrainWater.Reflectance or 1
+                end)
+            end
+            State.previousTerrainWater = nil
+        end
+
         if State.no3DCoverGui then
             pcall(function() State.no3DCoverGui:Destroy() end)
             State.no3DCoverGui = nil
@@ -901,12 +950,38 @@ Utils.toggleNo3DRenderCover = function(enable)
         end)
     end
 
+    pcall(function()
+        if State.previousGlobalShadows == nil then
+            State.previousGlobalShadows = Services.Lighting.GlobalShadows
+        end
+        Services.Lighting.GlobalShadows = false
+
+        State.disabledLightingFX = {}
+        for _, fx in ipairs(Services.Lighting:GetChildren()) do
+            if fx:IsA("PostEffect") or fx:IsA("BlurEffect") or fx:IsA("BloomEffect") or fx:IsA("ColorCorrectionEffect") or fx:IsA("SunRaysEffect") or fx:IsA("DepthOfFieldEffect") or fx:IsA("Atmosphere") then
+                State.disabledLightingFX[fx] = fx.Enabled
+                fx.Enabled = false
+            end
+        end
+
+        local terrain = Services.Workspace:FindFirstChildOfClass("Terrain") or Services.Workspace.Terrain
+        if terrain and not State.previousTerrainWater then
+            State.previousTerrainWater = {
+                WaveSize = terrain.WaterWaveSize,
+                WaveSpeed = terrain.WaterWaveSpeed,
+                Reflectance = terrain.WaterReflectance
+            }
+            terrain.WaterWaveSize = 0
+            terrain.WaterWaveSpeed = 0
+            terrain.WaterReflectance = 0
+        end
+    end)
+
     if State.no3DCoverGui then
         pcall(function() State.no3DCoverGui:Destroy() end)
         State.no3DCoverGui = nil
     end
 
-    -- If user chose to disable cover, no GUI elements are created at all (pure optimization)
     if S.No3DRenderDisableCover then
         return
     end

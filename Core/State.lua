@@ -44,13 +44,13 @@ State.visRaycastParams.IgnoreWater = true
 
 State.S = {
     WalkSpeed = 16, JumpPower = 50, InfJump = false, BHop = false, BHopAutoStrafe = false,
-    AirWalk = false, NoClip = false, Fly = false, FlySpeed = 60, BlinkDistance = 25,
+    AirWalk = false, AirWalkVerticalSpeed = 10, NoClip = false, Fly = false, FlySpeed = 60, BlinkDistance = 25,
     BlinkDirection = "Camera Look", BlinkKey = Enum.KeyCode.Unknown,
     GhostMode = false, GhostCFrame = nil, GhostDummy = nil,
     ESPBoxes = false, ESPTracers = false, ESPNames = false, ESPHealth = false, ESPDistances = false,
     ESPTeamCheck = false, ESPIgnoreFriends = false, ESPTransparency = 0.8, ESPDistanceColor = false, SkeletonESP = false, Chams = false, ChamsColor = "Team Color", ESPBoxStyle = "Full",
     LineOfSight = false, LineOfSightTeamCheck = false, LineOfSightFriendCheck = false, LineOfSightLength = 30,
-    UltraInstinct = false, UltraInstinctRadius = 12, UltraInstinctAntiClip = false, UltraInstinctSolidGround = false, UltraInstinctTeamCheck = false,
+    UltraInstinct = false, UltraInstinctRadius = 12, UltraInstinctAntiClip = false, UltraInstinctSolidGround = false, UltraInstinctTeamCheck = false, UltraInstinctCooldown = 0, UltraInstinctOnlyApproaching = false,
     OverheadInfo = false, OverheadTeamCheck = false, OverheadMaxDistance = 300,
     AimbotActive = false, AimbotTeamCheck = false, AimbotIgnoreFriends = false, AimbotFOV = 120, AimbotSmooth = 5, AimbotPart = "Head",
     AimbotVisibility = false, AimbotShowFOV = false, SilentAim = false, NoRecoil = false, TouchAura = false,
@@ -65,7 +65,7 @@ State.S = {
     AntiAFK = false, GhostTeleportToEnd = false,
     GodMode = false, KillAura = false, KillAuraRange = 15, AutoClicker = false, AutoClickerDelay = 2, AutoClickerInterval = 0.1, AutoInteract = false,
     AutoInteractRadius = 15, ToolMagnet = false, AutoJump = false, SavedWaypointCF = nil, AntiFling = false,
-    DisabledModules = {}, DisabledModuleStyle = "Greyish", ModuleDisableMode = false,
+    DisabledModules = {}, DisabledModuleStyle = "Invisible", DisableModeWarningShown = false, SaveConfigBetweenTeleports = false, WalkFlingSpeed = 32, WallWalk = false, WallWalkKey = Enum.KeyCode.V, WallWalkShowButton = false, MapXrayTransparency = 50, ESPNameFormat = "Both", CameraMaxZoomEnabled = false, UltraInstinctWalkBackward = false, ChatHideOnModules = true, ModuleBinds = {}, ClickDeleteModifier = "LeftAlt", SprintKey = Enum.KeyCode.Unknown, AutoClickerKey = Enum.KeyCode.Unknown, KillAuraKey = Enum.KeyCode.Unknown, TriggerbotKey = Enum.KeyCode.Unknown, ClickTeleportKey = Enum.KeyCode.Unknown, ClickDeleteKey = Enum.KeyCode.Unknown, FreecamKey = Enum.KeyCode.Unknown, AirSwimKey = Enum.KeyCode.Unknown, ModuleDisableMode = false,
     SkyboxChangerActive = false, SkyboxMode = "All Same", SkyboxAsset = "", SkyboxFPS = 15,
     SkyboxFt = "", SkyboxBk = "", SkyboxLf = "", SkyboxRt = "", SkyboxUp = "", SkyboxDn = "",
     Climb = false, ClimbSpeed = 25, WallRun = false, FlyBypass = false, InstantRespawn = false,
@@ -118,9 +118,9 @@ State.rowPlayers = { SetValue = function(self, val) if State.serverStatsLabels.p
 State.rowAge = { SetValue = function(self, val) if State.serverStatsLabels.age then State.serverStatsLabels.age.Text = tostring(val) end end }
 
 State.spectateStatsLabels = { name = nil, hp = nil, team = nil }
-State.specNameRow = { 
-    SetValue = function(self, val) if State.spectateStatsLabels.name then State.spectateStatsLabels.name.Text = tostring(val) end end, 
-    SetColor = function(self, col) if State.spectateStatsLabels.name then State.spectateStatsLabels.name.TextColor3 = col end end 
+State.specNameRow = {
+    SetValue = function(self, val) if State.spectateStatsLabels.name then State.spectateStatsLabels.name.Text = tostring(val) end end,
+    SetColor = function(self, col) if State.spectateStatsLabels.name then State.spectateStatsLabels.name.TextColor3 = col end end
 }
 State.specHpRow = { SetValue = function(self, val) if State.spectateStatsLabels.hp then State.spectateStatsLabels.hp.Text = tostring(val) end end }
 State.specTeamRow = { SetValue = function(self, val) if State.spectateStatsLabels.team then State.spectateStatsLabels.team.Text = tostring(val) end end }

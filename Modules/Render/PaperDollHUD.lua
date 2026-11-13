@@ -76,7 +76,7 @@ local lastDollScanTime = 0
 local function sanitizeCharacterForDoll(char)
     if not char then return nil end
     makeModelArchivable(char)
-    
+
     dollPartMap = {}
     dollBoneMap = {}
     dollMotorMap = {}
@@ -85,13 +85,13 @@ local function sanitizeCharacterForDoll(char)
     dollTrackedMotors = {}
     dollTrackedDirty = true
     lastDollScanTime = 0
-    
+
     local id = 0
     for _, desc in ipairs(char:GetDescendants()) do
         id = id + 1
         desc:SetAttribute("WasorDollId", id)
     end
-    
+
     local clone = char:Clone()
     if not clone then
         for _, desc in ipairs(char:GetDescendants()) do
@@ -100,7 +100,7 @@ local function sanitizeCharacterForDoll(char)
         return nil
     end
     clone.Name = "PaperDollAvatar"
-    
+
     local cloneMap = {}
     for _, desc in ipairs(clone:GetDescendants()) do
         local cid = desc:GetAttribute("WasorDollId")
@@ -117,7 +117,7 @@ local function sanitizeCharacterForDoll(char)
             desc.CastShadow = false
         end
     end
-    
+
     for _, desc in ipairs(char:GetDescendants()) do
         local cid = desc:GetAttribute("WasorDollId")
         if cid and cloneMap[cid] then
@@ -132,13 +132,13 @@ local function sanitizeCharacterForDoll(char)
         end
         desc:SetAttribute("WasorDollId", nil)
     end
-    
+
     local hrp = clone:FindFirstChild("HumanoidRootPart") or clone:FindFirstChild("Torso") or clone.PrimaryPart
     if hrp then
         clone.PrimaryPart = hrp
         hrp.CFrame = CFrame.new(0, 0, 0)
     end
-    
+
     local hum = clone:FindFirstChildOfClass("Humanoid")
     if hum then
         hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
@@ -147,7 +147,7 @@ local function sanitizeCharacterForDoll(char)
         local anim = hum:FindFirstChildOfClass("Animator")
         if anim then pcall(function() anim:Destroy() end) end
     end
-    
+
     return clone
 end
 
@@ -174,7 +174,7 @@ local function setupDollModel()
     dollTrackedDirty = true
     lastDollScanTime = 0
     if not worldModel then return end
-    
+
     local char = localPlayer.Character
     if char then
         dollCharClone = sanitizeCharacterForDoll(char)
@@ -197,7 +197,7 @@ local function connectCharListeners(char)
     if wsChildConnection then wsChildConnection:Disconnect(); wsChildConnection = nil end
     if camChildConnection then camChildConnection:Disconnect(); camChildConnection = nil end
     if not char then return end
-    
+
     appearanceConnection = localPlayer.CharacterAppearanceLoaded:Connect(function()
         task.wait(0.2)
         dollTrackedDirty = true
@@ -205,8 +205,7 @@ local function connectCharListeners(char)
             setupDollModel()
         end
     end)
-    
-    -- Ensure incoming clientside instances are archivable so :Clone() always succeeds
+
     descendantConnection = char.DescendantAdded:Connect(function(desc)
         pcall(function() desc.Archivable = true end)
         dollTrackedDirty = true
@@ -218,8 +217,7 @@ local function connectCharListeners(char)
             end)
         end
     end)
-    
-    -- Clean up removed parts immediately to prevent ghost meshes
+
     descendantRemovingConnection = char.DescendantRemoving:Connect(function(desc)
         dollTrackedDirty = true
         if desc:IsA("BasePart") then
@@ -254,7 +252,7 @@ local function connectCharListeners(char)
             dollMotorMap[desc] = nil
         end
     end)
-    
+
     toolAddedConnection = char.ChildAdded:Connect(function(child)
         if child:IsA("Tool") then
             dollTrackedDirty = true
@@ -266,7 +264,7 @@ local function connectCharListeners(char)
             end)
         end
     end)
-    
+
     toolRemovedConnection = char.ChildRemoved:Connect(function(child)
         if child:IsA("Tool") then
             dollTrackedDirty = true
@@ -287,7 +285,7 @@ local function connectCharListeners(char)
             end
         end
     end)
-    
+
     pcall(function()
         wsChildConnection = Workspace.ChildAdded:Connect(function()
             dollTrackedDirty = true
@@ -305,19 +303,16 @@ end
 local function getAllRealCharacterParts(realChar)
     local parts = {}
     local seen = {}
-    
+
     if not realChar or not realChar.Parent then return parts end
-    
-    -- 1. All BaseParts inside realChar
+
     for _, desc in ipairs(realChar:GetDescendants()) do
         if desc:IsA("BasePart") and not seen[desc] then
             seen[desc] = true
             table.insert(parts, desc)
         end
     end
-    
-    -- 2. Traverse connected parts for all parts found in realChar
-    -- Using GetConnectedParts(true) gets parts connected via Welds, Motor6Ds, Snaps, WeldConstraints
+
     local i = 1
     while i <= #parts do
         local currentPart = parts[i]
@@ -332,8 +327,7 @@ local function getAllRealCharacterParts(realChar)
         end)
         i = i + 1
     end
-    
-    -- 3. Any welds or joints inside realChar pointing to external parts
+
     for _, desc in ipairs(realChar:GetDescendants()) do
         if desc:IsA("JointInstance") or desc:IsA("WeldConstraint") then
             local p0, p1 = desc.Part0, desc.Part1
@@ -347,21 +341,20 @@ local function getAllRealCharacterParts(realChar)
             end
         end
     end
-    
-    -- 4. Check Workspace, Camera, and Player for external morph models/folders
+
     local charName = realChar.Name:lower()
     local playerName = localPlayer.Name:lower()
     local playerDisplay = localPlayer.DisplayName:lower()
     local hrp = realChar:FindFirstChild("HumanoidRootPart") or realChar:FindFirstChild("Torso") or realChar.PrimaryPart
-    
+
     local function checkContainer(container)
         if not container then return end
         for _, child in ipairs(container:GetChildren()) do
             if (child:IsA("Model") or child:IsA("Folder")) and child ~= realChar then
                 if not Players:GetPlayerFromCharacter(child) then
                     local cName = child.Name:lower()
-                    local isMatch = cName:find(charName, 1, true) 
-                        or cName:find(playerName, 1, true) 
+                    local isMatch = cName:find(charName, 1, true)
+                        or cName:find(playerName, 1, true)
                         or cName:find(playerDisplay, 1, true)
                         or cName:find("morph", 1, true)
                         or cName:find("custom", 1, true)
@@ -373,7 +366,7 @@ local function getAllRealCharacterParts(realChar)
                         or cName:find("tail", 1, true)
                         or cName:find("rig", 1, true)
                         or cName:find("avatar", 1, true)
-                    
+
                     if isMatch then
                         for _, p in ipairs(child:GetDescendants()) do
                             if p:IsA("BasePart") and not seen[p] and not p.Anchored and not p:IsA("Terrain") and p.Name ~= "Baseplate" then
@@ -393,8 +386,8 @@ local function getAllRealCharacterParts(realChar)
                 end
             elseif child:IsA("BasePart") and child ~= realChar and not seen[child] and not child.Anchored and not child:IsA("Terrain") and child.Name ~= "Baseplate" then
                 local cName = child.Name:lower()
-                local isMatch = cName:find(charName, 1, true) 
-                    or cName:find(playerName, 1, true) 
+                local isMatch = cName:find(charName, 1, true)
+                    or cName:find(playerName, 1, true)
                     or cName:find(playerDisplay, 1, true)
                     or cName:find("morph", 1, true)
                     or cName:find("custom", 1, true)
@@ -420,11 +413,11 @@ local function getAllRealCharacterParts(realChar)
             end
         end
     end
-    
+
     pcall(function() checkContainer(Workspace) end)
     pcall(function() checkContainer(Workspace.CurrentCamera) end)
     pcall(function() checkContainer(localPlayer) end)
-    
+
     return parts
 end
 
@@ -434,21 +427,19 @@ local function getOrCreateMatchingPartInClone(realPart, cloneChar)
     if existing and existing.Parent ~= nil then
         return existing
     end
-    
-    -- Ensure realPart and all descendants are archivable so :Clone() succeeds
+
     pcall(function()
         realPart.Archivable = true
         for _, desc in ipairs(realPart:GetDescendants()) do
             desc.Archivable = true
         end
     end)
-    
+
     local clonePart = nil
     pcall(function()
         clonePart = realPart:Clone()
     end)
-    
-    -- Fallback: If :Clone() failed, construct part manually so custom meshes never fail!
+
     if not clonePart then
         pcall(function()
             if realPart:IsA("MeshPart") then
@@ -471,7 +462,7 @@ local function getOrCreateMatchingPartInClone(realPart, cloneChar)
             clonePart.Color = realPart.Color
             clonePart.Material = realPart.Material
             clonePart.Reflectance = realPart.Reflectance
-            
+
             for _, child in ipairs(realPart:GetChildren()) do
                 if child:IsA("SpecialMesh") then
                     pcall(function()
@@ -498,18 +489,17 @@ local function getOrCreateMatchingPartInClone(realPart, cloneChar)
             end
         end)
     end
-    
+
     if not clonePart then
         return nil
     end
-    
-    -- Sanitize cloned part and child objects
+
     clonePart.Anchored = true
     clonePart.CanCollide = false
     clonePart.CanTouch = false
     clonePart.CanQuery = false
     clonePart.CastShadow = false
-    
+
     for _, desc in ipairs(clonePart:GetDescendants()) do
         if desc:IsA("LocalScript") or desc:IsA("Script") or desc:IsA("Sound") or desc:IsA("BillboardGui") or desc:IsA("Highlight") then
             pcall(function() desc:Destroy() end)
@@ -535,8 +525,7 @@ local function getOrCreateMatchingPartInClone(realPart, cloneChar)
             end
         end
     end
-    
-    -- Resolve matching container hierarchy in cloneChar
+
     local parent = realPart.Parent
     if parent == localPlayer.Character then
         clonePart.Parent = cloneChar
@@ -575,15 +564,14 @@ local function getOrCreateMatchingPartInClone(realPart, cloneChar)
     else
         clonePart.Parent = cloneChar
     end
-    
+
     dollPartMap[realPart] = clonePart
     return clonePart
 end
 
 local function syncClothingAndColors(realChar, cloneChar)
     if not realChar or not cloneChar then return end
-    
-    -- 1. Shirt
+
     local realShirt = realChar:FindFirstChildOfClass("Shirt")
     local cloneShirt = cloneChar:FindFirstChildOfClass("Shirt")
     if realShirt then
@@ -599,8 +587,7 @@ local function syncClothingAndColors(realChar, cloneChar)
     elseif cloneShirt then
         pcall(function() cloneShirt:Destroy() end)
     end
-    
-    -- 2. Pants
+
     local realPants = realChar:FindFirstChildOfClass("Pants")
     local clonePants = cloneChar:FindFirstChildOfClass("Pants")
     if realPants then
@@ -616,8 +603,7 @@ local function syncClothingAndColors(realChar, cloneChar)
     elseif clonePants then
         pcall(function() clonePants:Destroy() end)
     end
-    
-    -- 3. ShirtGraphic (T-Shirt)
+
     local realGraphic = realChar:FindFirstChildOfClass("ShirtGraphic")
     local cloneGraphic = cloneChar:FindFirstChildOfClass("ShirtGraphic")
     if realGraphic then
@@ -633,8 +619,7 @@ local function syncClothingAndColors(realChar, cloneChar)
     elseif cloneGraphic then
         pcall(function() cloneGraphic:Destroy() end)
     end
-    
-    -- 4. BodyColors
+
     local realBC = realChar:FindFirstChildOfClass("BodyColors")
     local cloneBC = cloneChar:FindFirstChildOfClass("BodyColors")
     if realBC then
@@ -673,8 +658,7 @@ local faceControlProperties = {
 
 local function refreshDollTrackedInstances(realChar, cloneChar)
     if not realChar or not cloneChar then return end
-    
-    -- 0. Prune stale or destroyed parts from dollPartMap
+
     for realPart, clonePart in pairs(dollPartMap) do
         if not realPart or not realPart.Parent or not realPart:IsDescendantOf(game) then
             dollPartMap[realPart] = nil
@@ -683,17 +667,16 @@ local function refreshDollTrackedInstances(realChar, cloneChar)
             end
         end
     end
-    
-    -- Prune empty accessories, tools, or folders in cloneChar
+
     for _, child in ipairs(cloneChar:GetChildren()) do
         if (child:IsA("Accessory") or child:IsA("Tool") or child:IsA("Folder")) and #child:GetChildren() == 0 then
             pcall(function() child:Destroy() end)
         end
     end
-    
+
     local allParts = getAllRealCharacterParts(realChar)
     dollTrackedParts = {}
-    
+
     for _, realDesc in ipairs(allParts) do
         if realDesc:IsA("BasePart") then
             local cloneDesc = dollPartMap[realDesc] or getOrCreateMatchingPartInClone(realDesc, cloneChar)
@@ -706,13 +689,13 @@ local function refreshDollTrackedInstances(realChar, cloneChar)
                         isHeadOrHair = true
                     end
                 end
-                
+
                 local isBackPhysicsItem = (not isHeadOrHair) and (
-                    nameLower:find("cape") ~= nil or 
-                    nameLower:find("tail") ~= nil or 
+                    nameLower:find("cape") ~= nil or
+                    nameLower:find("tail") ~= nil or
                     nameLower:find("wing") ~= nil
                 )
-                
+
                 local realMesh = realDesc:FindFirstChildOfClass("SpecialMesh")
                 local cloneMesh = cloneDesc:FindFirstChildOfClass("SpecialMesh")
                 if realMesh and not cloneMesh then
@@ -731,8 +714,7 @@ local function refreshDollTrackedInstances(realChar, cloneChar)
                         if newMesh then newMesh.Parent = cloneDesc; cloneMesh = newMesh end
                     end)
                 end
-                
-                -- SurfaceAppearance synchronization
+
                 local realSA = realDesc:FindFirstChildOfClass("SurfaceAppearance")
                 local cloneSA = cloneDesc:FindFirstChildOfClass("SurfaceAppearance")
                 if realSA and not cloneSA then
@@ -744,8 +726,7 @@ local function refreshDollTrackedInstances(realChar, cloneChar)
                 elseif not realSA and cloneSA then
                     pcall(function() cloneSA:Destroy() end)
                 end
-                
-                -- Body decals and textures
+
                 for _, d in ipairs(realDesc:GetChildren()) do
                     if (d:IsA("Decal") or d:IsA("Texture")) and d.Name ~= "face" then
                         local cd = cloneDesc:FindFirstChild(d.Name)
@@ -758,7 +739,7 @@ local function refreshDollTrackedInstances(realChar, cloneChar)
                         end
                     end
                 end
-                
+
                 table.insert(dollTrackedParts, {
                     real = realDesc,
                     clone = cloneDesc,
@@ -770,8 +751,7 @@ local function refreshDollTrackedInstances(realChar, cloneChar)
             end
         end
     end
-    
-    -- Cache Bones once without FindFirstChild(..., true) inside the render loop
+
     dollTrackedBones = {}
     local seenBones = {}
     local function addTrackedBone(b)
@@ -792,8 +772,7 @@ local function refreshDollTrackedInstances(realChar, cloneChar)
             if desc:IsA("Bone") then addTrackedBone(desc) end
         end
     end
-    
-    -- Cache Motors once
+
     dollTrackedMotors = {}
     local seenMotors = {}
     local function addTrackedMotor(m)
@@ -814,8 +793,7 @@ local function refreshDollTrackedInstances(realChar, cloneChar)
             if desc:IsA("Motor6D") then addTrackedMotor(desc) end
         end
     end
-    
-    -- CharacterMesh synchronization
+
     for _, realCM in ipairs(realChar:GetChildren()) do
         if realCM:IsA("CharacterMesh") then
             local cloneCM = cloneChar:FindFirstChild(realCM.Name)
@@ -840,7 +818,7 @@ local function refreshDollTrackedInstances(realChar, cloneChar)
             end
         end
     end
-    
+
     dollTrackedDirty = false
 end
 
@@ -849,17 +827,15 @@ local function syncDollPose(realChar, cloneChar, baseOffsetCF, velocitySwayCF)
     if not realHRP or not cloneChar then return end
     baseOffsetCF = baseOffsetCF or CFrame.identity
     velocitySwayCF = velocitySwayCF or CFrame.identity
-    
+
     local realRootCF = realHRP.CFrame
     local now = os.clock()
-    
-    -- Refresh tracked instances only when hierarchy changes or throttled check (1.0s)
+
     if dollTrackedDirty or (now - lastDollScanTime > 1.0) then
         refreshDollTrackedInstances(realChar, cloneChar)
         lastDollScanTime = now
     end
-    
-    -- 1. Synchronize all BaseParts (FAST: directly from cached table, zero FindFirstChild / GetDescendants)
+
     for i = 1, #dollTrackedParts do
         local item = dollTrackedParts[i]
         local realDesc, cloneDesc = item.real, item.clone
@@ -870,18 +846,18 @@ local function syncDollPose(realChar, cloneChar, baseOffsetCF, velocitySwayCF)
             else
                 cloneDesc.CFrame = baseOffsetCF * relCF
             end
-            
+
             local targetTransparency = realDesc.Transparency
             if item.isHRP or realDesc.Name == "HumanoidRootPart" or (realDesc.Name:lower():find("root") and targetTransparency >= 0.95) then
                 targetTransparency = 1
             end
-            
+
             if cloneDesc.Transparency ~= targetTransparency then cloneDesc.Transparency = targetTransparency end
             if cloneDesc.Color ~= realDesc.Color then cloneDesc.Color = realDesc.Color end
             if cloneDesc.Material ~= realDesc.Material then cloneDesc.Material = realDesc.Material end
             if cloneDesc.Reflectance ~= realDesc.Reflectance then cloneDesc.Reflectance = realDesc.Reflectance end
             if cloneDesc.Size ~= realDesc.Size then cloneDesc.Size = realDesc.Size end
-            
+
             if cloneDesc:IsA("MeshPart") and realDesc:IsA("MeshPart") then
                 if cloneDesc.TextureID ~= realDesc.TextureID then
                     cloneDesc.TextureID = realDesc.TextureID
@@ -903,20 +879,17 @@ local function syncDollPose(realChar, cloneChar, baseOffsetCF, velocitySwayCF)
             end
         end
     end
-    
-    -- 2. Synchronize Skinned Mesh Bones (FAST: direct array iteration!)
+
     for i = 1, #dollTrackedBones do
         local b = dollTrackedBones[i]
         b.clone.Transform = b.real.Transform
     end
-    
-    -- 3. Synchronize Motor6D Keyframe Transforms (FAST: direct array iteration!)
+
     for i = 1, #dollTrackedMotors do
         local m = dollTrackedMotors[i]
         m.clone.Transform = m.real.Transform
     end
-    
-    -- 4. Synchronize Facial Expressions & Face Decals
+
     local realHead = realChar:FindFirstChild("Head")
     local cloneHead = cloneChar:FindFirstChild("Head")
     if realHead and cloneHead then
@@ -929,10 +902,10 @@ local function syncDollPose(realChar, cloneChar, baseOffsetCF, velocitySwayCF)
                 end)
             end
         end
-        
+
         local realFace = realHead:FindFirstChild("face") or realHead:FindFirstChildOfClass("Decal")
         local cloneFace = cloneHead:FindFirstChild("face") or cloneHead:FindFirstChildOfClass("Decal")
-        
+
         if realFace and cloneFace then
             if cloneFace.Texture ~= realFace.Texture then cloneFace.Texture = realFace.Texture end
             if cloneFace.Transparency ~= realFace.Transparency then cloneFace.Transparency = realFace.Transparency end
@@ -940,15 +913,14 @@ local function syncDollPose(realChar, cloneChar, baseOffsetCF, velocitySwayCF)
         elseif cloneFace and not realFace then
             cloneFace.Transparency = 1
         end
-        
+
         if realFC or realHead:FindFirstChildOfClass("SurfaceAppearance") then
             if not realFace or realFace.Transparency >= 0.9 or realFace.Texture == "" then
                 if cloneFace then cloneFace.Transparency = 1 end
             end
         end
     end
-    
-    -- 5. Synchronize Clothing & Body Colors live
+
     syncClothingAndColors(realChar, cloneChar)
 end
 
@@ -957,7 +929,7 @@ local viewModes = {"Front", "Back", "Follow Camera", "Follow Movement", "Spin 36
 local function initPaperDollHUD()
     if dollInitialized and hudFrame and hudFrame.Parent then return end
     dollInitialized = true
-    
+
     local existingGui = getGuiParent():FindFirstChild("WASOR_PaperDollHUD")
     if existingGui then
         pcall(function() existingGui:Destroy() end)
@@ -966,18 +938,17 @@ local function initPaperDollHUD()
         pcall(function() hudFrame:Destroy() end)
         hudFrame = nil
     end
-    
+
     local parentGui = Instance.new("ScreenGui")
     parentGui.Name = "WASOR_PaperDollHUD"
     parentGui.ResetOnSpawn = false
     parentGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     parentGui.Parent = getGuiParent()
     hudScreenGui = parentGui
-    
+
     local baseW, baseH = 120, 160
     local scale = S.PaperDollScale or 1.0
-    
-    -- Frameless Floating Container (No Background)
+
     hudFrame = Instance.new("Frame")
     hudFrame.Name = "PaperDollContainer"
     hudFrame.Size = UDim2.new(0, math.round(baseW * scale), 0, math.round(baseH * scale))
@@ -987,8 +958,7 @@ local function initPaperDollHUD()
     hudFrame.ClipsDescendants = false
     hudFrame.Visible = false
     hudFrame.Parent = hudScreenGui
-    
-    -- Viewport Frame for Player Model
+
     viewport = Instance.new("ViewportFrame")
     viewport.Size = UDim2.new(1, 0, 1, 0)
     viewport.BackgroundTransparency = 1
@@ -998,16 +968,15 @@ local function initPaperDollHUD()
     viewport.Ambient = Color3.fromRGB(200, 200, 200)
     viewport.LightDirection = Vector3.new(-1, -1, -1)
     viewport.Parent = hudFrame
-    
+
     worldModel = Instance.new("WorldModel")
     worldModel.Parent = viewport
-    
+
     dollCamera = Instance.new("Camera")
     dollCamera.FieldOfView = 42
     viewport.CurrentCamera = dollCamera
     dollCamera.Parent = worldModel
-    
-    -- Sleek, Translucent Quick-View Switch Button
+
     viewToggleBtn = Instance.new("TextButton")
     viewToggleBtn.Name = "ViewToggleBtn"
     viewToggleBtn.Size = UDim2.new(0, 68, 0, 18)
@@ -1022,7 +991,7 @@ local function initPaperDollHUD()
     viewToggleBtn.Text = "⟲ " .. (S.PaperDollViewMode or "Front")
     viewToggleBtn.ZIndex = 15
     viewToggleBtn.Parent = hudFrame
-    
+
     viewToggleBtn.MouseEnter:Connect(function()
         viewToggleBtn.BackgroundTransparency = 0.15
         viewToggleBtn.BorderColor3 = Color3.fromRGB(0, 122, 204)
@@ -1031,7 +1000,7 @@ local function initPaperDollHUD()
         viewToggleBtn.BackgroundTransparency = 0.4
         viewToggleBtn.BorderColor3 = Color3.fromRGB(55, 55, 60)
     end)
-    
+
     viewToggleBtn.MouseButton1Click:Connect(function()
         local cur = table.find(viewModes, S.PaperDollViewMode or "Front") or 1
         local nxt = (cur % #viewModes) + 1
@@ -1039,8 +1008,7 @@ local function initPaperDollHUD()
         viewToggleBtn.Text = "⟲ " .. S.PaperDollViewMode
         saveConfig()
     end)
-    
-    -- Dragging Handler for HUD positioning
+
     viewport.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingHUD = true
@@ -1062,7 +1030,7 @@ local function initPaperDollHUD()
             hudFrame.Position = UDim2.new(frameStartPos.X.Scale, frameStartPos.X.Offset + delta.X, frameStartPos.Y.Scale, frameStartPos.Y.Offset + delta.Y)
         end
     end)
-    
+
     setupDollModel()
     if localPlayer.Character then
         connectCharListeners(localPlayer.Character)
@@ -1073,19 +1041,19 @@ local spinYaw = 0
 
 local function updateDollStep(dt)
     if not hudFrame or not hudFrame.Visible or not worldModel then return end
-    
+
     local realChar = localPlayer.Character
     if not realChar then return end
-    
+
     local realHRP = realChar:FindFirstChild("HumanoidRootPart") or realChar:FindFirstChild("Torso") or realChar.PrimaryPart
     local realHum = realChar and realChar:FindFirstChildOfClass("Humanoid")
     if not realHRP then return end
-    
+
     if not dollCharClone or not dollCharClone.Parent then
         setupDollModel()
         return
     end
-    
+
     local currentVelocity = realHRP.AssemblyLinearVelocity
     local speed = currentVelocity.Magnitude
     local state = realHum and realHum:GetState()
@@ -1093,10 +1061,9 @@ local function updateDollStep(dt)
     local isJumping = (state == Enum.HumanoidStateType.Jumping)
     local isFalling = (state == Enum.HumanoidStateType.Freefall)
     local isSwimming = (state == Enum.HumanoidStateType.Swimming)
-    
+
     isMoving = (speed > 1.5) or isJumping or isFalling or isSwimming
-    
-    -- Fade in/out if "Only on Movement" is enabled
+
     if S.PaperDollOnlyMoving then
         local targetAlpha = isMoving and 1.0 or 0.0
         currentFadeAlpha = currentFadeAlpha + (targetAlpha - currentFadeAlpha) * math.clamp(dt * 8, 0, 1)
@@ -1114,14 +1081,13 @@ local function updateDollStep(dt)
         viewport.Visible = true
         if viewToggleBtn then viewToggleBtn.Visible = true end
     end
-    
+
     if isMoving then
         animTime = animTime + dt * (math.clamp(speed, 6, 25) / 10)
     else
         animTime = animTime + dt * 0.8
     end
-    
-    -- Subtle walking bob and tilt
+
     local bobOffset = 0
     local baseTilt = CFrame.identity
     if isMoving then
@@ -1129,33 +1095,30 @@ local function updateDollStep(dt)
     else
         bobOffset = math.sin(animTime * 2) * 0.03
     end
-    
+
     if isSwimming then
         baseTilt = CFrame.Angles(math.rad(-60), 0, 0)
     elseif isSneaking then
         bobOffset = bobOffset - 0.2
         baseTilt = CFrame.Angles(math.rad(10), 0, 0)
     end
-    
+
     local baseOffsetCF = CFrame.new(0, bobOffset, 0) * baseTilt
-    
-    -- Dynamic Physical Inertia & Mesh Physics (Capes, Hair, Tails, Wings sway with velocity)
+
     local localVel = realHRP.CFrame:VectorToObjectSpace(currentVelocity)
     local pitchSway = math.clamp(-localVel.Z * 0.015, -math.rad(25), math.rad(25))
     local rollSway = math.clamp(-localVel.X * 0.015, -math.rad(15), math.rad(15))
     local velocitySwayCF = CFrame.Angles(pitchSway, 0, rollSway)
-    
-    -- Sync 100% of character parts, meshes, bones, motors, and dynamic physics in real-time
+
     syncDollPose(realChar, dollCharClone, baseOffsetCF, velocitySwayCF)
-    
-    -- Camera Orbit & View Mode (Correct Front/Back Orientations)
+
     local mode = S.PaperDollViewMode or "Front"
     local yawAngle = math.pi
-    
+
     if mode == "Front" then
-        yawAngle = math.pi -- Camera in front of avatar (looking at face & chest)
+        yawAngle = math.pi
     elseif mode == "Back" then
-        yawAngle = 0 -- Camera behind avatar (looking at back of head & spine)
+        yawAngle = 0
     elseif mode == "Spin 360" then
         spinYaw = (spinYaw + dt * 1.5) % (math.pi * 2)
         yawAngle = spinYaw
@@ -1174,7 +1137,7 @@ local function updateDollStep(dt)
             yawAngle = math.pi
         end
     end
-    
+
     local dist = 7.2
     local camHeight = 0.0
     local camX = math.sin(yawAngle) * dist
@@ -1254,7 +1217,6 @@ end, function(drawer)
     end)
 end, false)
 
--- Alias for backwards compatibility
 if UI.moduleButtons and UI.moduleButtons["Paper DollView"] then
     UI.moduleButtons["Minecraft Paper Doll"] = UI.moduleButtons["Paper DollView"]
 end
@@ -1267,4 +1229,3 @@ if S.PaperDollActive then
         end
     end)
 end
-

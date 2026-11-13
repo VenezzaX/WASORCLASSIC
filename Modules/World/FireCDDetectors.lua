@@ -15,7 +15,7 @@ registerModule("World", "Fire CD Detectors", 580, 50, false, false, function()
     local myHRP = Utils.getHRP()
     local filter = (S.FireCDFilter or ""):lower()
     local maxDist = S.FireCDDistance or 500
-    
+
     for _, obj in ipairs(workspace:GetDescendants()) do
         if obj:IsA("ClickDetector") then
             local matches = (filter == "") or obj.Name:lower():find(filter, 1, true) or (obj.Parent and obj.Parent.Name:lower():find(filter, 1, true))

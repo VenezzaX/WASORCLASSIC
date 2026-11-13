@@ -15,7 +15,7 @@ registerModule("World", "Fire All Prompts", 580, 50, false, false, function()
     local myHRP = Utils.getHRP()
     local filter = (S.FirePromptsFilter or ""):lower()
     local maxDist = S.FirePromptsDistance or 500
-    
+
     for _, p in ipairs(workspace:GetDescendants()) do
         if p:IsA("ProximityPrompt") then
             local matches = (filter == "") or p.Name:lower():find(filter, 1, true) or (p.Parent and p.Parent.Name:lower():find(filter, 1, true))

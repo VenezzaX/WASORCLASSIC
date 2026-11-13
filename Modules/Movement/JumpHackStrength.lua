@@ -13,7 +13,20 @@ local addKeybindOption = UI.addKeybindOption
 
 local saveConfig = VH.Config.saveConfig
 
-registerModule("Movement", "Jump Force", 300, 50, true, S.ForceJumpPower, function(v) S.ForceJumpPower = v; local hum = getHum(); if hum then if v then hum.UseJumpPower = true; hum.JumpPower = S.JumpPower else hum.UseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or hum.UseJumpPower; hum.JumpPower = State.gameDefaultJumpPower or hum.JumpPower or 50 end end; saveConfig() end, function(drawer)
+registerModule("Movement", "Jump Power", 300, 50, true, S.ForceJumpPower, function(v)
+    S.ForceJumpPower = v
+    local hum = getHum()
+    if hum then
+        if v then
+            hum.UseJumpPower = true
+            hum.JumpPower = S.JumpPower
+        else
+            hum.UseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or hum.UseJumpPower
+            hum.JumpPower = State.gameDefaultJumpPower or hum.JumpPower or 50
+        end
+    end
+    saveConfig()
+end, function(drawer)
     if State.updateGameDefaults then State.updateGameDefaults() end
     local hum = getHum()
     local baseJump = math.floor(State.gameDefaultJumpPower or (hum and hum.JumpPower) or 50)
@@ -24,7 +37,15 @@ registerModule("Movement", "Jump Force", 300, 50, true, S.ForceJumpPower, functi
         S.JumpPower = baseJump
     end
 
-    local jumpSlider = addSliderOption(drawer, "JumpPower Strength", minJump, maxJump, S.JumpPower or baseJump, function(v) S.JumpPower = v; saveConfig(); local hum = getHum(); if hum and S.ForceJumpPower then hum.UseJumpPower = true; hum.JumpPower = v end end, baseJump)
+    local jumpSlider = addSliderOption(drawer, "JumpPower Strength", minJump, maxJump, S.JumpPower or baseJump, function(v)
+        S.JumpPower = v
+        saveConfig()
+        local h = getHum()
+        if h and S.ForceJumpPower then
+            h.UseJumpPower = true
+            h.JumpPower = v
+        end
+    end, baseJump)
 
     State.onGameJumpChanged = function(newJump)
         if not S.ForceJumpPower then
@@ -38,6 +59,22 @@ registerModule("Movement", "Jump Force", 300, 50, true, S.ForceJumpPower, functi
         end
     end
 
-    addToggleOption(drawer, "Always Enforce JumpPower", S.ForceJumpPower, function(v) S.ForceJumpPower = v; saveConfig(); local hum = getHum(); if hum then if v then hum.UseJumpPower = true; hum.JumpPower = S.JumpPower else hum.UseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or hum.UseJumpPower; hum.JumpPower = State.gameDefaultJumpPower or hum.JumpPower or 50 end end end)
-    addKeybindOption(drawer, "Jump Strength Bind", S.JumpStrengthKey, function(k) S.JumpStrengthKey = k; saveConfig() end)
+    addToggleOption(drawer, "Always Enforce JumpPower", S.ForceJumpPower, function(v)
+        S.ForceJumpPower = v
+        saveConfig()
+        local h = getHum()
+        if h then
+            if v then
+                h.UseJumpPower = true
+                h.JumpPower = S.JumpPower
+            else
+                h.UseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or h.UseJumpPower
+                h.JumpPower = State.gameDefaultJumpPower or h.JumpPower or 50
+            end
+        end
+    end)
+    addKeybindOption(drawer, "Jump Strength Bind", S.JumpStrengthKey, function(k)
+        S.JumpStrengthKey = k
+        saveConfig()
+    end)
 end, false)

@@ -37,7 +37,7 @@ if ESPSync then
             tracerDropdownObj.Set(val or "Bottom")
         end
     end)
-    
+
     ESPSync:Register("ESPTracers", function(val, source)
         if source ~= "ESPTracerLines" and UI.moduleButtons and UI.moduleButtons["ESP Tracer Lines"] and UI.moduleButtons["ESP Tracer Lines"].SetActive then
             UI.moduleButtons["ESP Tracer Lines"].SetActive(val)

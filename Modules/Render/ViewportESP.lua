@@ -63,7 +63,6 @@ local function getSafeContainer()
     return (Services.LP and Services.LP:FindFirstChild("PlayerGui")) or localPlayer:WaitForChild("PlayerGui")
 end
 
--- Sanitize instances: Anchor every single physical part so accessories never fall, droop, or detach
 local function sanitizeInstance(instance)
     if not instance then return end
     if instance:IsA("BasePart") then
@@ -87,7 +86,6 @@ local function sanitizeInstance(instance)
     end
 end
 
--- Sync classic clothing and BodyColors directly
 local function syncClothing(origChar, clnModel)
     if not origChar or not clnModel then return end
 
@@ -124,7 +122,6 @@ local function syncClothing(origChar, clnModel)
     end
 end
 
--- Resolve matching instance by relative path
 local function getMatchingCloneInstance(origDescendant, origChar, clnModel)
     local path = {}
     local cur = origDescendant
@@ -141,7 +138,6 @@ local function getMatchingCloneInstance(origDescendant, origChar, clnModel)
     return target
 end
 
--- Rebuild complete part-to-part synchronization map
 local function rebuildSyncMap(data)
     local syncList = {}
     local origChar = data.OrigCharacter
@@ -150,7 +146,6 @@ local function rebuildSyncMap(data)
 
     syncClothing(origChar, clnModel)
 
-    -- Remove any accessories or tools in the clone that no longer exist in the character
     for _, clnChild in ipairs(clnModel:GetChildren()) do
         if clnChild:IsA("Accessory") or clnChild:IsA("Tool") then
             if not origChar:FindFirstChild(clnChild.Name) then
@@ -159,7 +154,6 @@ local function rebuildSyncMap(data)
         end
     end
 
-    -- Map all BaseParts directly by hierarchical tree path
     for _, origDesc in ipairs(origChar:GetDescendants()) do
         if origDesc:IsA("BasePart") then
             local clnPart = getMatchingCloneInstance(origDesc, origChar, clnModel)
@@ -265,13 +259,11 @@ local function setupCharacter(player, character)
 
         rebuildSyncMap(data)
 
-        -- Wipe instantly on death
         local diedConn = origHumanoid.Died:Connect(function()
             cleanupCharacter(player)
         end)
         table.insert(data.Connections, diedConn)
 
-        -- Wipe instantly on teleport / despawn
         local ancestryConn = character.AncestryChanged:Connect(function(_, parent)
             if not parent or not character:IsDescendantOf(Workspace) then
                 cleanupCharacter(player)
@@ -279,7 +271,6 @@ local function setupCharacter(player, character)
         end)
         table.insert(data.Connections, ancestryConn)
 
-        -- Re-clone added tools and accessories
         local descAddedConn = character.DescendantAdded:Connect(function(desc)
             if desc:IsA("Accessory") or desc:IsA("Tool") or desc:IsA("Shirt") or desc:IsA("Pants") or desc:IsA("ShirtGraphic") or desc:IsA("BodyColors") or desc:IsA("SurfaceAppearance") or desc:IsA("FaceControls") then
                 task.defer(function()
@@ -397,14 +388,14 @@ local function onRenderStep()
 
         if not isTeammate
             and player:IsDescendantOf(Players)
-            and origChar 
-            and origChar.Parent 
-            and origChar:IsDescendantOf(Workspace) 
-            and origHum 
-            and origHum.Health > 0 
-            and clnModel 
+            and origChar
+            and origChar.Parent
+            and origChar:IsDescendantOf(Workspace)
+            and origHum
+            and origHum.Health > 0
+            and clnModel
             and clnModel.Parent then
-            
+
             activeCloneModels[clnModel] = true
 
             local syncList = data.SyncList
@@ -423,7 +414,6 @@ local function onRenderStep()
         end
     end
 
-    -- Destroy any orphan models that lost their player association
     if worldModel then
         for _, model in ipairs(worldModel:GetChildren()) do
             if not activeCloneModels[model] then
@@ -521,7 +511,6 @@ local function startViewportESP()
     notify("Viewport ESP enabled (Syncing rigs)", Color3.fromRGB(50, 195, 75))
 end
 
--- Keybind listener (defaults to KeyCode.P)
 local inputConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     local triggerKey = S.ViewportESPKey or Enum.KeyCode.P

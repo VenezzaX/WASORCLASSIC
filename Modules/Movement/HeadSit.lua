@@ -88,7 +88,6 @@ local function startHeadSit()
         end)
     end
 
-    -- Pre-simulation collision nullifier (Prevents physics solver from flinging upon part contact)
     headSitSteppedConn = RunService.Stepped:Connect(function()
         if not S.HeadSitActive or not State.uiRunning then
             stopHeadSit()
@@ -107,7 +106,6 @@ local function startHeadSit()
         end
     end)
 
-    -- Post-simulation position lock
     headSitRenderConn = RunService.RenderStepped:Connect(function()
         if not S.HeadSitActive or not State.uiRunning then
             stopHeadSit()

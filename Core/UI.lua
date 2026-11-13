@@ -43,7 +43,18 @@ UI.themeColors = {
     ["Studio Classic"] = StudioTheme.blue
 }
 
+local patchedModules = {
+    ["god mode"] = true,
+    ["no recoil"] = true,
+    ["silent aim"] = true,
+    ["instant respawn"] = true
+}
+
 local activeTab = "Modules"
+local chatPanel = nil
+local chatContent = nil
+local bindsPanel = nil
+local bindsContent = nil
 local menuBlur = nil
 local screenGui = nil
 local mainUIContainer = nil
@@ -188,8 +199,14 @@ UI.updateModuleVisual = function(name)
     else
         container.Visible = true
         local isAct = itemObj and itemObj.IsActive and itemObj.IsActive()
-        statusStripe.BackgroundColor3 = isAct and StudioTheme.green or StudioTheme.borderSubtle
-        label.TextColor3 = isAct and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted
+        local isPatched = patchedModules[name:lower()]
+        if isPatched then
+            statusStripe.BackgroundColor3 = StudioTheme.red
+            label.TextColor3 = StudioTheme.red
+        else
+            statusStripe.BackgroundColor3 = isAct and StudioTheme.green or StudioTheme.borderSubtle
+            label.TextColor3 = isAct and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted
+        end
         label.Text = (isSelectMode and "[ACTIVE] " or "") .. name
         if gear then gear.Visible = true end
     end
@@ -239,9 +256,9 @@ UI.showToast = function(message, color)
     local S = State.S
     if not S.ToastEnabled then return end
     if not toastContainer then return end
-    
+
     local toastColor = color or StudioTheme.blue
-    
+
     local existing = nil
     for _, t in ipairs(activeToasts) do
         if t.message == message then
@@ -249,25 +266,25 @@ UI.showToast = function(message, color)
             break
         end
     end
-    
+
     if existing then
         existing.count = existing.count + 1
         existing.label.Text = message .. " (x" .. existing.count .. ")"
         existing.createdTime = tick()
-        
+
         if existing.tween then
             existing.tween:Cancel()
         end
         existing.progressBar.Size = UDim2.new(1, -2, 0, 2)
-        
+
         local tweenInfo = TweenInfo.new(3.5, Enum.EasingStyle.Linear)
         existing.tween = Services.TweenService:Create(existing.progressBar, tweenInfo, {Size = UDim2.new(0, 0, 0, 2)})
         existing.tween:Play()
-        
+
         if existing.destroyThread then
             task.cancel(existing.destroyThread)
         end
-        
+
         existing.destroyThread = task.delay(3.5, function()
             for i, t in ipairs(activeToasts) do
                 if t == existing then
@@ -279,7 +296,7 @@ UI.showToast = function(message, color)
         end)
         return
     end
-    
+
     local toast = Instance.new("Frame")
     toast.Size = UDim2.new(1, 0, 0, 36)
     toast.BackgroundColor3 = StudioTheme.windowBg
@@ -288,14 +305,14 @@ UI.showToast = function(message, color)
     toast.ClipsDescendants = true
     toast.Parent = toastContainer
     toast:SetAttribute("CreatedTime", tick())
-    
+
     local stripe = Instance.new("Frame")
     stripe.Size = UDim2.new(0, 3, 1, 0)
     stripe.Position = UDim2.new(0, 0, 0, 0)
     stripe.BackgroundColor3 = toastColor
     stripe.BorderSizePixel = 0
     stripe.Parent = toast
-    
+
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, -12, 1, -4)
     lbl.Position = UDim2.new(0, 8, 0, 0)
@@ -307,18 +324,18 @@ UI.showToast = function(message, color)
     lbl.TextWrapped = true
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = toast
-    
+
     local progressBar = Instance.new("Frame")
     progressBar.Size = UDim2.new(1, -2, 0, 2)
     progressBar.Position = UDim2.new(0, 1, 1, -3)
     progressBar.BackgroundColor3 = toastColor
     progressBar.BorderSizePixel = 0
     progressBar.Parent = toast
-    
+
     local tweenInfo = TweenInfo.new(3.5, Enum.EasingStyle.Linear)
     local pTween = Services.TweenService:Create(progressBar, tweenInfo, {Size = UDim2.new(0, 0, 0, 2)})
     pTween:Play()
-    
+
     local toastData = {
         message = message,
         count = 1,
@@ -330,7 +347,7 @@ UI.showToast = function(message, color)
         createdTime = tick()
     }
     table.insert(activeToasts, toastData)
-    
+
     toastData.destroyThread = task.delay(3.5, function()
         for i, t in ipairs(activeToasts) do
             if t == toastData then
@@ -388,7 +405,7 @@ UI.updateHUDArrayList = function()
         hudArrayListFrame.Visible = false
         return
     end
-    
+
     local activeMods = {}
     for modName, item in pairs(UI.moduleButtons) do
         if item.IsActive and item.IsActive() then
@@ -396,7 +413,7 @@ UI.updateHUDArrayList = function()
         end
     end
     table.sort(activeMods, function(a, b) return #a > #b end)
-    
+
     if #activeMods == 0 then
         hudArrayListFrame.Visible = false
     else
@@ -476,7 +493,7 @@ local function makeDraggable(frame, handle, onDragEnd)
     local dragging = false
     local dragStart = Vector3.zero
     local startPos = UDim2.new()
-    
+
     local function getScale()
         if State.S and State.S.UIScale then
             return State.S.UIScale
@@ -494,10 +511,10 @@ local function makeDraggable(frame, handle, onDragEnd)
             dragStart = input.Position
             startPos = frame.Position
             local scaleFactor = getScale()
-            
+
             if dragConn then dragConn:Disconnect(); dragConn = nil end
             if endConn then endConn:Disconnect(); endConn = nil end
-            
+
             dragConn = Services.UserInputService.InputChanged:Connect(function(moveInput)
                 if dragging and (moveInput.UserInputType == Enum.UserInputType.MouseMovement or moveInput.UserInputType == Enum.UserInputType.Touch) then
                     local delta = moveInput.Position - dragStart
@@ -506,7 +523,7 @@ local function makeDraggable(frame, handle, onDragEnd)
                     frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + dx, startPos.Y.Scale, startPos.Y.Offset + dy)
                 end
             end)
-            
+
             endConn = Services.UserInputService.InputEnded:Connect(function(endInput)
                 if endInput.UserInputType == Enum.UserInputType.MouseButton1 or endInput.UserInputType == Enum.UserInputType.Touch then
                     dragging = false
@@ -523,7 +540,7 @@ local function makeResizable(frame, handle)
     local resizing = false
     local resizeStart = Vector3.zero
     local startSize = UDim2.new()
-    
+
     local function getScale()
         if State.S and State.S.UIScale then
             return State.S.UIScale
@@ -541,24 +558,27 @@ local function makeResizable(frame, handle)
             resizeStart = input.Position
             startSize = frame.Size
             local scaleFactor = getScale()
-            
+
             if moveConn then moveConn:Disconnect(); moveConn = nil end
             if endConn then endConn:Disconnect(); endConn = nil end
-            
+
             moveConn = Services.UserInputService.InputChanged:Connect(function(moveInput)
                 if resizing and (moveInput.UserInputType == Enum.UserInputType.MouseMovement or moveInput.UserInputType == Enum.UserInputType.Touch) then
                     local delta = moveInput.Position - resizeStart
                     local dx = delta.X / scaleFactor
                     local dy = delta.Y / scaleFactor
-                    local newWidth = math.max(160, startSize.X.Offset + dx)
-                    local newHeight = math.max(60, startSize.Y.Offset + dy)
+                    local minW = frame:GetAttribute("MinResizeW") or 140
+                    local minH = frame:GetAttribute("MinResizeH") or 60
+                    local newWidth = math.max(minW, startSize.X.Offset + dx)
+                    local newHeight = math.max(minH, startSize.Y.Offset + dy)
                     frame.Size = UDim2.new(0, newWidth, 0, newHeight)
                 end
             end)
-            
+
             endConn = Services.UserInputService.InputEnded:Connect(function(endInput)
                 if endInput.UserInputType == Enum.UserInputType.MouseButton1 or endInput.UserInputType == Enum.UserInputType.Touch then
                     resizing = false
+                    frame:SetAttribute("UserResized", true)
                     if moveConn then moveConn:Disconnect(); moveConn = nil end
                     if endConn then endConn:Disconnect(); endConn = nil end
                 end
@@ -568,7 +588,7 @@ local function makeResizable(frame, handle)
 end
 
 local function adjustWindowSizeToContent(winFrame, contentFrame)
-    if winFrame == settingsPanel then return end
+    if winFrame == settingsPanel or winFrame == chatPanel or winFrame:GetAttribute("UserResized") == true then return end
     local totalContentHeight, count = 0, 0
     for _, child in ipairs(contentFrame:GetChildren()) do
         if child:IsA("Frame") and child.Name ~= "resizeHandle" then
@@ -611,7 +631,7 @@ UI.addToggleOption = function(parent, name, defaultVal, callback)
     row.BorderSizePixel = 1
     row.BorderColor3 = StudioTheme.border
     row.Parent = parent
-    
+
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -54, 1, 0)
     label.Position = UDim2.new(0, 6, 0, 0)
@@ -622,22 +642,22 @@ UI.addToggleOption = function(parent, name, defaultVal, callback)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Text = name
     label.Parent = row
-    
+
     local btn = makeStudioButton(row, defaultVal and "ON" or "OFF", 42, 18, defaultVal and StudioTheme.green or StudioTheme.btnBg, defaultVal and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted, Enum.Font.SourceSansBold, 11)
     btn.Position = UDim2.new(1, -48, 0.5, -9)
-    
+
     local active = defaultVal
     local function updateToggle()
         btn.Text = active and "ON" or "OFF"
         setButtonState(btn, active and StudioTheme.green or StudioTheme.btnBg, active and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted)
     end
-    
+
     btn.Activated:Connect(function()
         active = not active
         updateToggle()
         if callback then callback(active) end
     end)
-    
+
     return { Set = function(val) active = val; updateToggle() end }
 end
 
@@ -648,7 +668,7 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defa
     row.BorderSizePixel = 1
     row.BorderColor3 = StudioTheme.border
     row.Parent = parent
-    
+
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.68, -4, 0, 16)
     label.Position = UDim2.new(0, 6, 0, 3)
@@ -659,7 +679,7 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defa
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Text = name
     label.Parent = row
-    
+
     local valLabel = Instance.new("TextLabel")
     valLabel.Size = UDim2.new(0.32, -8, 0, 16)
     valLabel.Position = UDim2.new(0.68, 0, 0, 3)
@@ -670,7 +690,7 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defa
     valLabel.TextXAlignment = Enum.TextXAlignment.Right
     valLabel.Text = formatVal(defaultVal)
     valLabel.Parent = row
-    
+
     local slideBg = Instance.new("Frame")
     slideBg.Size = UDim2.new(1, -12, 0, 8)
     slideBg.Position = UDim2.new(0, 6, 0, 22)
@@ -678,14 +698,14 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defa
     slideBg.BorderSizePixel = 1
     slideBg.BorderColor3 = StudioTheme.border
     slideBg.Parent = row
-    
+
     local startPct = math.clamp((defaultVal - min) / (max - min), 0, 1)
     local slideFill = Instance.new("Frame")
     slideFill.Size = UDim2.new(startPct, 0, 1, 0)
     slideFill.BackgroundColor3 = StudioTheme.blue
     slideFill.BorderSizePixel = 0
     slideFill.Parent = slideBg
-    
+
     local dotMarker = nil
     if defaultDotVal and defaultDotVal >= min and defaultDotVal <= max then
         local dotPct = math.clamp((defaultDotVal - min) / (max - min), 0, 1)
@@ -704,7 +724,7 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defa
     slideBtn.BackgroundTransparency = 1
     slideBtn.Text = ""
     slideBtn.Parent = slideBg
-    
+
     local function updateSlider(input)
         local sizeX = slideBg.AbsoluteSize.X
         if sizeX <= 0 then sizeX = 140 end
@@ -715,7 +735,7 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defa
         valLabel.Text = tostring(val)
         if callback then callback(val) end
     end
-    
+
     local dragging = false
     slideBtn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -734,7 +754,7 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defa
         end
     end)
     table.insert(State.S.Connections, moveCon)
-    
+
     return {
         Set = function(val)
             local pct = math.clamp((val - min) / (max - min), 0, 1)
@@ -768,7 +788,7 @@ UI.addDropdownOption = function(parent, name, optionsList, defaultValIndex, call
     row.BorderColor3 = StudioTheme.border
     row.ClipsDescendants = false
     row.Parent = parent
-    
+
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -12, 0, 14)
     label.Position = UDim2.new(0, 6, 0, 3)
@@ -779,21 +799,21 @@ UI.addDropdownOption = function(parent, name, optionsList, defaultValIndex, call
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Text = name
     label.Parent = row
-    
+
     local currentOpt = optionsList[defaultValIndex] or optionsList[1] or "(none)"
-    
+
     local dropBtn = makeStudioButton(row, "  " .. currentOpt .. "  v", UDim2.new(1, -12, 0, 20), 20, StudioTheme.btnBg, StudioTheme.text, Enum.Font.SourceSansSemibold, 11)
     dropBtn.Position = UDim2.new(0, 6, 0, 18)
     dropBtn.TextXAlignment = Enum.TextXAlignment.Left
     dropBtn.ClipsDescendants = false
-    
+
     local open = false
     local listContainer = nil
-    
+
     local function toggleDropdown()
         open = not open
         dropBtn.Text = "  " .. currentOpt .. (open and "  ^" or "  v")
-        
+
         if open then
             listContainer = Instance.new("Frame")
             listContainer.Name = "DropdownList"
@@ -805,12 +825,12 @@ UI.addDropdownOption = function(parent, name, optionsList, defaultValIndex, call
             listContainer.ZIndex = 25
             listContainer.ClipsDescendants = false
             listContainer.Parent = row
-            
+
             local layout = Instance.new("UIListLayout")
             layout.Padding = UDim.new(0, 0)
             layout.SortOrder = Enum.SortOrder.LayoutOrder
             layout.Parent = listContainer
-            
+
             for i, opt in ipairs(optionsList) do
                 local isSelected = (opt == currentOpt)
                 local itemBg = isSelected and StudioTheme.categoryBg or StudioTheme.insetBg
@@ -820,7 +840,7 @@ UI.addDropdownOption = function(parent, name, optionsList, defaultValIndex, call
                 itemBtn.ZIndex = 26
                 itemBtn.LayoutOrder = i
                 itemBtn.ClipsDescendants = false
-                
+
                 itemBtn.MouseEnter:Connect(function()
                     if opt ~= currentOpt then
                         itemBtn.BackgroundColor3 = StudioTheme.btnHover
@@ -833,7 +853,7 @@ UI.addDropdownOption = function(parent, name, optionsList, defaultValIndex, call
                         itemBtn.BackgroundColor3 = StudioTheme.categoryBg
                     end
                 end)
-                
+
                 itemBtn.Activated:Connect(function()
                     currentOpt = opt
                     dropBtn.Text = "  " .. opt .. "  v"
@@ -841,7 +861,7 @@ UI.addDropdownOption = function(parent, name, optionsList, defaultValIndex, call
                     toggleDropdown()
                 end)
             end
-            
+
             row.Size = UDim2.new(1, 0, 0, 42 + #optionsList * 20 + 2)
         else
             if listContainer then
@@ -850,15 +870,15 @@ UI.addDropdownOption = function(parent, name, optionsList, defaultValIndex, call
             end
             row.Size = UDim2.new(1, 0, 0, 42)
         end
-        
+
         local winFrame, contentFrame = findAncestorFloatingWindow(parent)
         if winFrame and contentFrame then
             adjustWindowSizeToContent(winFrame, contentFrame)
         end
     end
-    
+
     dropBtn.Activated:Connect(toggleDropdown)
-    
+
     return {
         Set = function(valText)
             currentOpt = valText
@@ -882,7 +902,7 @@ UI.addKeybindOption = function(parent, name, defaultKey, callback)
     row.BorderSizePixel = 1
     row.BorderColor3 = StudioTheme.border
     row.Parent = parent
-    
+
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -90, 1, 0)
     label.Position = UDim2.new(0, 6, 0, 0)
@@ -893,14 +913,14 @@ UI.addKeybindOption = function(parent, name, defaultKey, callback)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Text = name
     label.Parent = row
-    
+
     local keyName = (defaultKey and defaultKey ~= Enum.KeyCode.Unknown) and defaultKey.Name or "[ None ]"
     local bindBtn = makeStudioButton(row, keyName, 80, 18, StudioTheme.btnBg, StudioTheme.text, Enum.Font.Code, 11)
     bindBtn.Position = UDim2.new(1, -84, 0.5, -9)
-    
+
     local currentKey = defaultKey
     local listening = false
-    
+
     local optObj = {
         GetKey = function() return currentKey end,
         SetKey = function(key)
@@ -914,13 +934,13 @@ UI.addKeybindOption = function(parent, name, defaultKey, callback)
         Callback = callback
     }
     keybindRegistry[name] = optObj
-    
+
     bindBtn.Activated:Connect(function()
         listening = true
         bindBtn.Text = "[ ... ]"
         bindBtn.TextColor3 = StudioTheme.yellow
     end)
-    
+
     local con = Services.UserInputService.InputBegan:Connect(function(input)
         if listening then
             if input.UserInputType == Enum.UserInputType.Keyboard then
@@ -944,13 +964,33 @@ UI.addKeybindOption = function(parent, name, defaultKey, callback)
                 bindBtn.Text = (key and key ~= Enum.KeyCode.Unknown) and key.Name or "[ None ]"
                 bindBtn.TextColor3 = StudioTheme.text
                 if key ~= Enum.KeyCode.Unknown then
+                    local isBound, boundTo = false, nil
                     for otherName, otherBind in pairs(keybindRegistry) do
-                        if otherName ~= name and otherBind.GetKey() == key then
-                            otherBind.SetKey(Enum.KeyCode.Unknown)
-                            if otherBind.Callback then otherBind.Callback(Enum.KeyCode.Unknown) end
+                        if otherName ~= name and otherBind.GetKey and otherBind.GetKey() == key then
+                            isBound, boundTo = true, otherName
+                            break
                         end
                     end
+                    if not isBound and State.S.ModuleBinds then
+                        for modName, bKey in pairs(State.S.ModuleBinds) do
+                            if modName ~= name and bKey == key.Name then
+                                isBound, boundTo = true, modName
+                                break
+                            end
+                        end
+                    end
+                    if isBound then
+                        listening = false
+                        bindBtn.Text = (currentKey and currentKey ~= Enum.KeyCode.Unknown) and currentKey.Name or "[ None ]"
+                        bindBtn.TextColor3 = StudioTheme.text
+                        UI.showToast("Key [" .. key.Name .. "] already bound to: " .. tostring(boundTo) .. "! Choose another key or unbind.", StudioTheme.red)
+                        return
+                    end
                 end
+                listening = false
+                currentKey = key
+                bindBtn.Text = (key and key ~= Enum.KeyCode.Unknown) and key.Name or "[ None ]"
+                bindBtn.TextColor3 = StudioTheme.text
                 if callback then callback(key) end
             elseif input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 then
                 task.wait(0.05)
@@ -973,7 +1013,7 @@ UI.addTextboxOption = function(parent, name, placeholder, callback)
     row.BorderSizePixel = 1
     row.BorderColor3 = StudioTheme.border
     row.Parent = parent
-    
+
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -12, 0, 14)
     label.Position = UDim2.new(0, 6, 0, 3)
@@ -984,13 +1024,13 @@ UI.addTextboxOption = function(parent, name, placeholder, callback)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Text = name
     label.Parent = row
-    
+
     local box = makeStudioTextBox(row, "", UDim2.new(1, -12, 0, 18), 18, placeholder, false)
     box.Position = UDim2.new(0, 6, 0, 18)
     box.FocusLost:Connect(function()
         if callback then callback(box.Text) end
     end)
-    
+
     return { Set = function(valText) box.Text = valText end }
 end
 
@@ -1001,7 +1041,7 @@ UI.addButtonOption = function(parent, name, callback)
     row.BorderSizePixel = 1
     row.BorderColor3 = StudioTheme.border
     row.Parent = parent
-    
+
     local btn = makeStudioButton(row, name, UDim2.new(1, -12, 0, 20), 20, StudioTheme.btnBg, StudioTheme.text, Enum.Font.SourceSansSemibold, 12)
     btn.Position = UDim2.new(0, 6, 0.5, -10)
     btn.Activated:Connect(function()
@@ -1017,7 +1057,7 @@ UI.addSectionHeader = function(parent, title)
     row.BorderSizePixel = 1
     row.BorderColor3 = StudioTheme.border
     row.Parent = parent
-    
+
     local text = Instance.new("TextLabel")
     text.Size = UDim2.new(1, -12, 1, 0)
     text.Position = UDim2.new(0, 6, 0, 0)
@@ -1037,7 +1077,7 @@ UI.addInfoRowOption = function(parent, name, initialValue)
     row.BorderSizePixel = 1
     row.BorderColor3 = StudioTheme.border
     row.Parent = parent
-    
+
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.55, -6, 1, 0)
     label.Position = UDim2.new(0, 6, 0, 0)
@@ -1048,7 +1088,7 @@ UI.addInfoRowOption = function(parent, name, initialValue)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Text = name
     label.Parent = row
-    
+
     local valLabel = Instance.new("TextLabel")
     valLabel.Size = UDim2.new(0.45, -6, 1, 0)
     valLabel.Position = UDim2.new(0.55, 0, 0, 0)
@@ -1059,7 +1099,7 @@ UI.addInfoRowOption = function(parent, name, initialValue)
     valLabel.TextXAlignment = Enum.TextXAlignment.Right
     valLabel.Text = tostring(initialValue or "")
     valLabel.Parent = row
-    
+
     return {
         Label = valLabel,
         SetValue = function(self, val) valLabel.Text = tostring(val) end,
@@ -1085,7 +1125,7 @@ UI.addScrollFeedOption = function(parent, height)
     row.BorderSizePixel = 1
     row.BorderColor3 = StudioTheme.border
     row.Parent = parent
-    
+
     local scroll = Instance.new("ScrollingFrame")
     scroll.Size = UDim2.new(1, -4, 1, -4)
     scroll.Position = UDim2.new(0, 2, 0, 2)
@@ -1096,11 +1136,11 @@ UI.addScrollFeedOption = function(parent, height)
     scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
     scroll.Parent = row
-    
+
     local layout = Instance.new("UIListLayout")
     layout.Padding = UDim.new(0, 1)
     layout.Parent = scroll
-    
+
     local entriesMap, entryCount = {}, 0
     return {
         Clear = function()
@@ -1120,7 +1160,7 @@ UI.addScrollFeedOption = function(parent, height)
             end
             entryCount = entryCount + 1
             local currentOrder = entryCount
-            
+
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(1, 0, 0, 15)
             label.BackgroundTransparency = 1
@@ -1146,7 +1186,7 @@ UI.getOrCreateWindow = function(catName, defaultX, defaultY)
     local x = catPositions[catName] or defaultX or 20
     local y = defaultY or 75
     if not defaultY or defaultY == 50 then y = 75 end
-    
+
     local win = Instance.new("Frame")
     win.Name = "StudioWindow_" .. catName
     win.Size = UDim2.new(0, 210, 0, 24)
@@ -1157,7 +1197,7 @@ UI.getOrCreateWindow = function(catName, defaultX, defaultY)
     win.BorderColor3 = StudioTheme.border
     win.ClipsDescendants = true
     win.Parent = mainUIContainer
-    
+
     local header = Instance.new("TextButton")
     header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, 24)
@@ -1168,7 +1208,7 @@ UI.getOrCreateWindow = function(catName, defaultX, defaultY)
     header.Text = ""
     header.ZIndex = 2
     header.Parent = win
-    
+
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -28, 1, 0)
     titleLbl.Position = UDim2.new(0, 8, 0, 0)
@@ -1180,7 +1220,7 @@ UI.getOrCreateWindow = function(catName, defaultX, defaultY)
     titleLbl.Text = catName
     titleLbl.ZIndex = 3
     titleLbl.Parent = header
-    
+
     local collapseBtn = Instance.new("TextLabel")
     collapseBtn.Size = UDim2.new(0, 20, 1, 0)
     collapseBtn.Position = UDim2.new(1, -22, 0, 0)
@@ -1191,7 +1231,7 @@ UI.getOrCreateWindow = function(catName, defaultX, defaultY)
     collapseBtn.Text = "v"
     collapseBtn.ZIndex = 3
     collapseBtn.Parent = header
-    
+
     local list = Instance.new("Frame")
     list.Size = UDim2.new(1, 0, 0, 0)
     list.AutomaticSize = Enum.AutomaticSize.Y
@@ -1199,18 +1239,18 @@ UI.getOrCreateWindow = function(catName, defaultX, defaultY)
     list.BackgroundTransparency = 1
     list.BorderSizePixel = 0
     list.Parent = win
-    
+
     local listPadding = Instance.new("UIPadding")
     listPadding.PaddingTop = UDim.new(0, 2)
     listPadding.PaddingBottom = UDim.new(0, 2)
     listPadding.PaddingLeft = UDim.new(0, 2)
     listPadding.PaddingRight = UDim.new(0, 2)
     listPadding.Parent = list
-    
+
     local listLayout = Instance.new("UIListLayout")
     listLayout.Padding = UDim.new(0, 2)
     listLayout.Parent = list
-    
+
     makeDraggable(win, header)
     local collapsed = false
     local function toggleCollapse()
@@ -1228,7 +1268,7 @@ UI.getOrCreateWindow = function(catName, defaultX, defaultY)
         if UI.windows[catName] then UI.windows[catName].Collapsed = collapsed end
     end
     header.Activated:Connect(toggleCollapse)
-    
+
     UI.windows[catName] = {
         Frame = win,
         Header = header,
@@ -1243,7 +1283,7 @@ end
 UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
     local winWidth = math.max(width or 210, 210)
     local winHeight = math.max(height or 220, 180)
-    
+
     local win = Instance.new("Frame")
     win.Size = UDim2.new(0, winWidth, 0, winHeight)
     win.Position = UDim2.new(0, defaultX, 0, defaultY)
@@ -1254,7 +1294,7 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
     win.Visible = false
     win.ZIndex = 15
     win.Parent = mainUIContainer
-    
+
     local header = Instance.new("TextButton")
     header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, 24)
@@ -1265,7 +1305,7 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
     header.Text = ""
     header.ZIndex = 16
     header.Parent = win
-    
+
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -48, 1, 0)
     titleLbl.Position = UDim2.new(0, 8, 0, 0)
@@ -1277,10 +1317,10 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
     titleLbl.Text = title
     titleLbl.ZIndex = 17
     titleLbl.Parent = header
-    
+
     local collapsed = false
     local baseHeight = winHeight
-    
+
     local collapseBtn = Instance.new("TextButton")
     collapseBtn.Size = UDim2.new(0, 22, 1, 0)
     collapseBtn.Position = UDim2.new(1, -46, 0, 0)
@@ -1292,7 +1332,7 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
     collapseBtn.Text = "-"
     collapseBtn.ZIndex = 17
     collapseBtn.Parent = header
-    
+
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 24, 1, 0)
     closeBtn.Position = UDim2.new(1, -24, 0, 0)
@@ -1304,14 +1344,14 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
     closeBtn.Text = "X"
     closeBtn.ZIndex = 17
     closeBtn.Parent = header
-    
+
     closeBtn.MouseEnter:Connect(function() closeBtn.BackgroundColor3 = StudioTheme.red; closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255) end)
     closeBtn.MouseLeave:Connect(function() closeBtn.BackgroundColor3 = StudioTheme.headerBg; closeBtn.TextColor3 = StudioTheme.textMuted end)
     closeBtn.Activated:Connect(function()
         win.Visible = false
         win:SetAttribute("UserOpen", false)
     end)
-    
+
     local content = Instance.new("ScrollingFrame")
     content.Name = "content"
     content.Size = UDim2.new(1, 0, 1, -24)
@@ -1324,18 +1364,18 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
     content.AutomaticCanvasSize = Enum.AutomaticSize.Y
     content.ZIndex = 16
     content.Parent = win
-    
+
     local listLayout = Instance.new("UIListLayout")
     listLayout.Padding = UDim.new(0, 3)
     listLayout.Parent = content
-    
+
     local padding = Instance.new("UIPadding")
     padding.PaddingTop = UDim.new(0, 4)
     padding.PaddingBottom = UDim.new(0, 4)
     padding.PaddingLeft = UDim.new(0, 4)
     padding.PaddingRight = UDim.new(0, 4)
     padding.Parent = content
-    
+
     local resizeHandle = Instance.new("Frame")
     resizeHandle.Name = "resizeHandle"
     resizeHandle.Size = UDim2.new(0, 8, 0, 8)
@@ -1345,7 +1385,7 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
     resizeHandle.ZIndex = 20
     resizeHandle.Parent = win
     makeResizable(win, resizeHandle)
-    
+
     collapseBtn.Activated:Connect(function()
         collapsed = not collapsed
         content.Visible = not collapsed
@@ -1359,18 +1399,18 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
             collapseBtn.Text = "-"
         end
     end)
-    
+
     makeDraggable(win, header)
     table.insert(UI.floatingWindows, win)
     win:SetAttribute("BaseWidth", winWidth)
     win:SetAttribute("BaseHeight", winHeight)
-    
+
     return win, content
 end
 
 UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaultState, callback, populateOptionsFunc, useSeparateWindow, winWidth, winHeight)
     local win = UI.getOrCreateWindow(catName, defaultX, defaultY)
-    
+
     local container = Instance.new("Frame")
     container.Name = "Mod_" .. name
     container.Size = UDim2.new(1, 0, 0, 24)
@@ -1380,7 +1420,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     container.BorderColor3 = StudioTheme.border
     container.ClipsDescendants = true
     container.Parent = win.List
-    
+
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 24)
     btn.BackgroundColor3 = StudioTheme.panelBg
@@ -1388,16 +1428,16 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     btn.AutoButtonColor = false
     btn.Text = ""
     btn.Parent = container
-    
+
     local active = defaultState
-    
+
     local statusStripe = Instance.new("Frame")
     statusStripe.Size = UDim2.new(0, 3, 1, 0)
     statusStripe.Position = UDim2.new(0, 0, 0, 0)
     statusStripe.BackgroundColor3 = (isToggle and active) and StudioTheme.green or StudioTheme.borderSubtle
     statusStripe.BorderSizePixel = 0
     statusStripe.Parent = btn
-    
+
     local modTextLabel = Instance.new("TextLabel")
     modTextLabel.Name = "ModTextLabel"
     modTextLabel.Size = UDim2.new(1, -34, 1, 0)
@@ -1409,24 +1449,30 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     modTextLabel.TextXAlignment = Enum.TextXAlignment.Left
     modTextLabel.Text = name
     modTextLabel.Parent = btn
-    
+
     UI.moduleCategories[name] = catName
     UI.moduleContainers[name] = container
     UI.moduleStatusStripes[name] = statusStripe
     UI.moduleLabels[name] = modTextLabel
     UI.moduleButtonsRaw[name] = btn
-    
+
     local function updateVisuals()
         local isAct = isToggle and active
-        statusStripe.BackgroundColor3 = isAct and StudioTheme.green or StudioTheme.borderSubtle
-        modTextLabel.TextColor3 = isAct and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted
+        local isPatched = patchedModules[name:lower()]
+        if isPatched then
+            statusStripe.BackgroundColor3 = StudioTheme.red
+            modTextLabel.TextColor3 = StudioTheme.red
+        else
+            statusStripe.BackgroundColor3 = isAct and StudioTheme.green or StudioTheme.borderSubtle
+            modTextLabel.TextColor3 = isAct and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted
+        end
         task.defer(UI.updateHUDArrayList)
     end
-    
+
     local drawer = nil
     local floatingWin = nil
     local gear = nil
-    
+
     local function updateBg()
         local isOpened = (useSeparateWindow and floatingWin and floatingWin.Visible) or (drawer and drawer.Visible)
         if isOpened then
@@ -1437,14 +1483,14 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
             container.BackgroundColor3 = StudioTheme.panelBg
         end
     end
-    
+
     btn.MouseEnter:Connect(function()
         btn.BackgroundColor3 = StudioTheme.btnHover
     end)
     btn.MouseLeave:Connect(function()
         updateBg()
     end)
-    
+
     local function toggleMenu()
         if useSeparateWindow then
             if not floatingWin then
@@ -1469,25 +1515,25 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
                 drawer.BorderColor3 = StudioTheme.border
                 drawer.Visible = false
                 drawer.Parent = container
-                
+
                 local layout = Instance.new("UIListLayout")
                 layout.Padding = UDim.new(0, 2)
                 layout.Parent = drawer
-                
+
                 local pad = Instance.new("UIPadding")
                 pad.PaddingTop = UDim.new(0, 4)
                 pad.PaddingBottom = UDim.new(0, 4)
                 pad.PaddingLeft = UDim.new(0, 4)
                 pad.PaddingRight = UDim.new(0, 4)
                 pad.Parent = drawer
-                
+
                 if populateOptionsFunc then populateOptionsFunc(drawer) end
             end
             drawer.Visible = not drawer.Visible
             updateBg()
         end
     end
-    
+
     if populateOptionsFunc then
         gear = Instance.new("TextButton")
         gear.Size = UDim2.new(0, 22, 0, 18)
@@ -1500,13 +1546,13 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         gear.TextColor3 = StudioTheme.textMuted
         gear.Text = "//"
         gear.Parent = btn
-        
+
         gear.MouseEnter:Connect(function() gear.BackgroundColor3 = StudioTheme.blue; gear.TextColor3 = Color3.fromRGB(255, 255, 255) end)
         gear.MouseLeave:Connect(function() gear.BackgroundColor3 = StudioTheme.btnBg; gear.TextColor3 = StudioTheme.textMuted end)
         gear.Activated:Connect(toggleMenu)
         UI.moduleGears[name] = gear
     end
-    
+
     btn.Activated:Connect(function()
         if State.S.ModuleDisableMode then
             if catName == "Misc" then
@@ -1518,12 +1564,12 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
             UI.showToast((nowDisabled and "Disabled module: " or "Re-enabled module: ") .. name, nowDisabled and StudioTheme.orange or StudioTheme.green)
             return
         end
-        
+
         if UI.isModuleDisabled(name) then
             UI.showToast("'" .. name .. "' is disabled in Module Manager", StudioTheme.textMuted)
             return
         end
-        
+
         if isToggle then
             active = not active
             updateVisuals()
@@ -1532,7 +1578,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
             if callback then callback() end
         end
     end)
-    
+
     local itemObj = {
         Button = btn,
         TextLabel = modTextLabel,
@@ -1568,8 +1614,16 @@ local function selectTab(tabName)
         end
     end
     UI.updateMenuBlur()
+    if settingsPanel then settingsPanel.Visible = false end
+    if bindsPanel then bindsPanel.Visible = false end
     if tabName == "Modules" then
-        if settingsPanel then settingsPanel.Visible = false end
+        if chatPanel then
+            if State.S.ChatHideOnModules ~= false then
+                chatPanel.Visible = false
+            else
+                chatPanel.Visible = true
+            end
+        end
         local query = (searchBox and searchBox.Text or ""):lower()
         for _, win in pairs(UI.windows) do
             local hasVisibleModule = false
@@ -1593,9 +1647,28 @@ local function selectTab(tabName)
     elseif tabName == "Settings" then
         for _, win in pairs(UI.windows) do win.Frame.Visible = false end
         for _, win in ipairs(UI.floatingWindows) do win.Visible = false end
+        if chatPanel then chatPanel.Visible = false end
         if settingsPanel then
             settingsPanel.Visible = true
             adjustWindowSizeToContent(settingsPanel, settingsContent)
+        end
+    elseif tabName == "(Chat)" or tabName == "Chat" then
+        for _, win in pairs(UI.windows) do win.Frame.Visible = false end
+        for _, win in ipairs(UI.floatingWindows) do win.Visible = false end
+        if chatPanel then
+            chatPanel.Visible = true
+            if not chatPanel:GetAttribute("UserResized") then
+                adjustWindowSizeToContent(chatPanel, chatContent)
+            end
+            if UI.refreshChatPanelUsers then pcall(UI.refreshChatPanelUsers) end
+        end
+    elseif tabName == "Binds" then
+        for _, win in pairs(UI.windows) do win.Frame.Visible = false end
+        for _, win in ipairs(UI.floatingWindows) do win.Visible = false end
+        if chatPanel then chatPanel.Visible = false end
+        if bindsPanel then
+            bindsPanel.Visible = true
+            adjustWindowSizeToContent(bindsPanel, bindsContent)
         end
     end
 end
@@ -1618,7 +1691,7 @@ local function createPanel(title, width, height)
     win.ClipsDescendants = true
     win.Visible = false
     win.Parent = mainUIContainer
-    
+
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, 24)
@@ -1626,7 +1699,7 @@ local function createPanel(title, width, height)
     header.BorderSizePixel = 1
     header.BorderColor3 = StudioTheme.border
     header.Parent = win
-    
+
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -32, 1, 0)
     titleLbl.Position = UDim2.new(0, 8, 0, 0)
@@ -1637,7 +1710,7 @@ local function createPanel(title, width, height)
     titleLbl.TextXAlignment = Enum.TextXAlignment.Left
     titleLbl.Text = title
     titleLbl.Parent = header
-    
+
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 24, 1, 0)
     closeBtn.Position = UDim2.new(1, -24, 0, 0)
@@ -1648,14 +1721,14 @@ local function createPanel(title, width, height)
     closeBtn.TextColor3 = StudioTheme.textMuted
     closeBtn.Text = "X"
     closeBtn.Parent = header
-    
+
     closeBtn.MouseEnter:Connect(function() closeBtn.BackgroundColor3 = StudioTheme.red; closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255) end)
     closeBtn.MouseLeave:Connect(function() closeBtn.BackgroundColor3 = StudioTheme.headerBg; closeBtn.TextColor3 = StudioTheme.textMuted end)
     closeBtn.Activated:Connect(function()
         win.Visible = false
         selectTab("Modules")
     end)
-    
+
     local content = Instance.new("ScrollingFrame")
     content.Name = "content"
     content.Size = UDim2.new(1, 0, 1, -24)
@@ -1667,25 +1740,35 @@ local function createPanel(title, width, height)
     content.CanvasSize = UDim2.new(0, 0, 0, 0)
     content.AutomaticCanvasSize = Enum.AutomaticSize.Y
     content.Parent = win
-    
+
     local listLayout = Instance.new("UIListLayout")
     listLayout.Padding = UDim.new(0, 4)
     listLayout.Parent = content
-    
+
     local padding = Instance.new("UIPadding")
     padding.PaddingTop = UDim.new(0, 6)
     padding.PaddingBottom = UDim.new(0, 6)
     padding.PaddingLeft = UDim.new(0, 6)
     padding.PaddingRight = UDim.new(0, 6)
     padding.Parent = content
-    
+
+    local resizeHandle = Instance.new("Frame")
+    resizeHandle.Name = "resizeHandle"
+    resizeHandle.Size = UDim2.new(0, 8, 0, 8)
+    resizeHandle.Position = UDim2.new(1, -8, 1, -8)
+    resizeHandle.BackgroundColor3 = StudioTheme.blue
+    resizeHandle.BackgroundTransparency = 0.4
+    resizeHandle.BorderSizePixel = 0
+    resizeHandle.ZIndex = 12
+    resizeHandle.Parent = win
+    makeResizable(win, resizeHandle)
     makeDraggable(win, header)
     return win, content
 end
 
 UI.InitializeUI = function()
     local S = State.S
-    
+
     pcall(function()
         if _G.WASOR_ScreenGui and _G.WASOR_ScreenGui.Parent then
             pcall(function() _G.WASOR_ScreenGui:Destroy() end)
@@ -1710,7 +1793,7 @@ UI.InitializeUI = function()
     activeToasts = {}
 
     local targetParent = getGuiParent()
-    
+
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "MeteorRobloxGUI"
     screenGui.ResetOnSpawn = false
@@ -1718,7 +1801,7 @@ UI.InitializeUI = function()
     screenGui.DisplayOrder = 999999
     screenGui.Parent = targetParent
     _G.WASOR_ScreenGui = screenGui
-    
+
     mainUIContainer = Instance.new("Frame")
     mainUIContainer.Name = "MainUIContainer"
     mainUIContainer.Size = UDim2.new(1, 0, 1, 0)
@@ -1726,9 +1809,9 @@ UI.InitializeUI = function()
     mainUIContainer.BorderSizePixel = 0
     mainUIContainer.Visible = true
     mainUIContainer.Parent = screenGui
-    
+
     task.spawn(startToastCleanupWatcher)
-    
+
     menuBlur = Services.Lighting:FindFirstChild("WeAreSkiddingBlur")
     if not menuBlur then
         menuBlur = Instance.new("BlurEffect")
@@ -1737,7 +1820,7 @@ UI.InitializeUI = function()
         menuBlur.Enabled = false
         menuBlur.Parent = Services.Lighting
     end
-    
+
     hudArrayListFrame = Instance.new("Frame")
     hudArrayListFrame.Size = UDim2.new(0, 150, 0, 0)
     hudArrayListFrame.AutomaticSize = Enum.AutomaticSize.Y
@@ -1747,33 +1830,33 @@ UI.InitializeUI = function()
     hudArrayListFrame.BorderColor3 = StudioTheme.border
     hudArrayListFrame.Visible = false
     hudArrayListFrame.Parent = screenGui
-    
+
     local arrayLayout = Instance.new("UIListLayout")
     arrayLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     arrayLayout.VerticalAlignment = Enum.VerticalAlignment.Top
     arrayLayout.Padding = UDim.new(0, 2)
     arrayLayout.Parent = hudArrayListFrame
-    
+
     local hudPadding = Instance.new("UIPadding")
     hudPadding.PaddingTop = UDim.new(0, 4)
     hudPadding.PaddingBottom = UDim.new(0, 4)
     hudPadding.PaddingLeft = UDim.new(0, 4)
     hudPadding.PaddingRight = UDim.new(0, 4)
     hudPadding.Parent = hudArrayListFrame
-    
+
     makeDraggable(hudArrayListFrame, hudArrayListFrame, function(pos)
         S.HUDArrayListX = pos.X.Offset
         S.HUDArrayListY = pos.Y.Offset
         VH.Config.saveConfig()
     end)
-    
+
     task.spawn(function()
         while State.uiRunning do
             task.wait(0.25)
             pcall(UI.updateHUDArrayList)
         end
     end)
-    
+
     topBar = Instance.new("Frame")
     topBar.Name = "StudioTopRibbon"
     topBar.Size = UDim2.new(1, 0, 0, 28)
@@ -1781,14 +1864,14 @@ UI.InitializeUI = function()
     topBar.BorderSizePixel = 1
     topBar.BorderColor3 = StudioTheme.border
     topBar.Parent = mainUIContainer
-    
+
     local function getExecutorName()
         if identifyexecutor then local ok, name = pcall(identifyexecutor); if ok and name then return name end end
         if syn then return "Synapse" end; if krnl then return "Krnl" end; if fluxus then return "Fluxus" end
         return "Executor"
     end
     local executorName = getExecutorName()
-    
+
     local topTitle = Instance.new("TextLabel")
     topTitle.Size = UDim2.new(0, 300, 1, 0)
     topTitle.Position = UDim2.new(0, 10, 0, 0)
@@ -1797,30 +1880,30 @@ UI.InitializeUI = function()
     topTitle.TextSize = 12
     topTitle.TextColor3 = StudioTheme.text
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "WASOR 4.0 (" .. executorName .. ")"
+    topTitle.Text = "WASOR 4.5 (" .. executorName .. ")"
     topTitle.Parent = topBar
-    
+
     navBar = Instance.new("Frame")
-    navBar.Size = UDim2.new(0, 520, 1, 0)
-    navBar.Position = UDim2.new(0.5, -260, 0, 0)
+    navBar.Size = UDim2.new(0, 560, 1, 0)
+    navBar.Position = UDim2.new(0.5, -280, 0, 0)
     navBar.BackgroundTransparency = 1
     navBar.Parent = topBar
-    
+
     local navLayout = Instance.new("UIListLayout")
     navLayout.FillDirection = Enum.FillDirection.Horizontal
     navLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     navLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    navLayout.Padding = UDim.new(0, 6)
+    navLayout.Padding = UDim.new(0, 5)
     navLayout.Parent = navBar
-    
-    local tabs = {"Modules", "Settings"}
+
+    local tabs = {"Modules", "Settings", "(Chat)", "Binds"}
     for _, tabName in ipairs(tabs) do
-        local btn = makeStudioButton(navBar, tabName, 76, 22, (tabName == activeTab) and StudioTheme.blue or StudioTheme.btnBg, (tabName == activeTab) and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted)
+        local btn = makeStudioButton(navBar, tabName, 66, 22, (tabName == activeTab) and StudioTheme.blue or StudioTheme.btnBg, (tabName == activeTab) and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted)
         btn.Activated:Connect(function() selectTab(tabName) end)
         UI.tabButtons[tabName] = btn
     end
-    
-    local disableModeBtn = makeStudioButton(navBar, "Disable Mode: OFF", 116, 22, StudioTheme.btnBg, StudioTheme.textMuted, Enum.Font.SourceSansSemibold, 11)
+
+    local disableModeBtn = makeStudioButton(navBar, "Disable Mode: OFF", 110, 22, StudioTheme.btnBg, StudioTheme.textMuted, Enum.Font.SourceSansSemibold, 11)
     local function updateDisableModeBtn()
         local on = (State.S.ModuleDisableMode == true)
         disableModeBtn.Text = on and "Disable Mode: ON" or "Disable Mode: OFF"
@@ -1831,13 +1914,23 @@ UI.InitializeUI = function()
         State.S.ModuleDisableMode = not State.S.ModuleDisableMode
         updateDisableModeBtn()
         UI.updateAllModuleVisuals()
-        UI.showToast(State.S.ModuleDisableMode and "Module Selection Mode Enabled (Click non-Misc modules to disable)" or "Module Selection Mode Disabled", State.S.ModuleDisableMode and StudioTheme.orange or StudioTheme.blue)
+        if State.S.ModuleDisableMode then
+            if not State.S.DisableModeWarningShown then
+                State.S.DisableModeWarningShown = true
+                VH.Config.saveConfig()
+                UI.showToast("Disable Mode hides disabled modules by default! Revert by clicking Disable Mode, or in Settings enable Faded style.", StudioTheme.orange)
+            else
+                UI.showToast("Module Selection Mode Enabled (Click non-Misc modules to disable)", StudioTheme.orange)
+            end
+        else
+            UI.showToast("Module Selection Mode Disabled", StudioTheme.blue)
+        end
     end)
     UI.updateDisableModeBtn = updateDisableModeBtn
     updateDisableModeBtn()
-    
+
     searchBox = makeStudioTextBox(navBar, "", 115, 22, "Search modules...", false)
-    
+
     local function filterModules(query)
         query = query:lower()
         for _, win in pairs(UI.windows) do
@@ -1857,14 +1950,14 @@ UI.InitializeUI = function()
             win.Frame.Visible = (activeTab == "Modules") and (query == "" or hasVisibleModule)
         end
     end
-    
+
     searchBox:GetPropertyChangedSignal("Text"):Connect(function()
         if searchBox.Text ~= "" and activeTab ~= "Modules" then
             selectTab("Modules")
         end
         filterModules(searchBox.Text)
     end)
-    
+
     local reloadBtn = makeStudioButton(topBar, "Reload", 58, 22, StudioTheme.btnBg, StudioTheme.text)
     reloadBtn.Position = UDim2.new(1, -66, 0, 3)
     reloadBtn.Activated:Connect(function()
@@ -1884,7 +1977,7 @@ UI.InitializeUI = function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/refs/heads/main/github_loader.lua"))()
         end)
     end)
-    
+
     local hudTextLabel = Instance.new("TextLabel")
     hudTextLabel.Size = UDim2.new(0, 150, 1, 0)
     hudTextLabel.Position = UDim2.new(1, -224, 0, 0)
@@ -1896,19 +1989,19 @@ UI.InitializeUI = function()
     hudTextLabel.Text = "FPS: -- | PING: --"
     hudTextLabel.Parent = topBar
     UI.HUDLabel = hudTextLabel
-    
+
     toastContainer = Instance.new("Frame")
     toastContainer.Size = UDim2.new(0, 280, 0, 320)
     toastContainer.Position = UDim2.new(1, -290, 1, -330)
     toastContainer.BackgroundTransparency = 1
     toastContainer.BorderSizePixel = 0
     toastContainer.Parent = screenGui
-    
+
     local toastLayout = Instance.new("UIListLayout")
     toastLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
     toastLayout.Padding = UDim.new(0, 4)
     toastLayout.Parent = toastContainer
-    
+
     local networkUsersHUD = Instance.new("Frame")
     networkUsersHUD.Name = "NetworkUsersHUD"
     networkUsersHUD.Size = UDim2.new(0, 200, 0, 0)
@@ -1920,18 +2013,18 @@ UI.InitializeUI = function()
     networkUsersHUD.AutomaticSize = Enum.AutomaticSize.Y
     networkUsersHUD.Visible = S.NetworkTags and S.ShowNetworkUsersHUD
     networkUsersHUD.Parent = screenGui
-    
+
     local netPadding = Instance.new("UIPadding")
     netPadding.PaddingTop = UDim.new(0, 4)
     netPadding.PaddingBottom = UDim.new(0, 4)
     netPadding.PaddingLeft = UDim.new(0, 6)
     netPadding.PaddingRight = UDim.new(0, 6)
     netPadding.Parent = networkUsersHUD
-    
+
     local netLayout = Instance.new("UIListLayout")
     netLayout.Padding = UDim.new(0, 2)
     netLayout.Parent = networkUsersHUD
-    
+
     local netHeader = Instance.new("TextLabel")
     netHeader.Size = UDim2.new(1, 0, 0, 16)
     netHeader.BackgroundTransparency = 1
@@ -1941,10 +2034,10 @@ UI.InitializeUI = function()
     netHeader.TextXAlignment = Enum.TextXAlignment.Left
     netHeader.Text = "Network Users (0)"
     netHeader.Parent = networkUsersHUD
-    
+
     UI.networkUsersHUD = networkUsersHUD
     UI.netHeader = netHeader
-    
+
     hudWatermark = Instance.new("TextLabel")
     hudWatermark.Size = UDim2.new(0, 200, 0, 16)
     hudWatermark.Position = UDim2.new(0, 10, 0, 32)
@@ -1953,10 +2046,10 @@ UI.InitializeUI = function()
     hudWatermark.TextSize = 12
     hudWatermark.TextColor3 = StudioTheme.blue
     hudWatermark.TextXAlignment = Enum.TextXAlignment.Left
-    hudWatermark.Text = "WASOR 4.0"
+    hudWatermark.Text = "WASOR 4.5"
     hudWatermark.Visible = S.HUDWatermark
     hudWatermark.Parent = screenGui
-    
+
     hudCoords = Instance.new("TextLabel")
     hudCoords.Size = UDim2.new(0, 250, 0, 14)
     hudCoords.Position = UDim2.new(0, 10, 0, 48)
@@ -1968,7 +2061,7 @@ UI.InitializeUI = function()
     hudCoords.Text = "XYZ: 0.0, 0.0, 0.0"
     hudCoords.Visible = S.HUDCoords
     hudCoords.Parent = screenGui
-    
+
     hudServerAge = Instance.new("TextLabel")
     hudServerAge.Size = UDim2.new(0, 250, 0, 14)
     hudServerAge.Position = UDim2.new(0, 10, 0, 62)
@@ -1980,10 +2073,170 @@ UI.InitializeUI = function()
     hudServerAge.Text = "AGE: 0m 0s"
     hudServerAge.Visible = S.HUDServerAge
     hudServerAge.Parent = screenGui
-    
+
     settingsPanel, settingsContent = createPanel("Client Settings - Preferences", 540, 360)
     settingsContent.Visible = false
-    
+
+    chatPanel, chatContent = createPanel("(Chat) & Network Users", 540, 360)
+    chatPanel:SetAttribute("MinResizeW", 280)
+    chatPanel:SetAttribute("MinResizeH", 180)
+    chatContent.Visible = true
+
+    UI.addSectionHeader(chatContent, "Network Chat Hub")
+    UI.addToggleOption(chatContent, "Hide Chat When Switching to Modules", S.ChatHideOnModules ~= false, function(v)
+        S.ChatHideOnModules = v
+        VH.Config.saveConfig()
+    end)
+    UI.addToggleOption(chatContent, "Enable Network Chat Hub", S.NetworkChat, function(v)
+        S.NetworkChat = v
+        VH.Config.saveConfig()
+        if v then
+            task.spawn(function()
+                pcall(function()
+                    loadstring(game:HttpGet(('https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua'), true))()
+                end)
+            end)
+        else
+            local oldChat = game:GetService("CoreGui"):FindFirstChild("DiscordNetworkHub")
+            if oldChat then oldChat:Destroy() end
+        end
+    end)
+    UI.addButtonOption(chatContent, "Launch / Reload External Chat Window", function()
+        pcall(function()
+            loadstring(game:HttpGet(('https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua'), true))()
+        end)
+        UI.showToast("Network Chat launched!", StudioTheme.blue)
+    end)
+
+    UI.addSectionHeader(chatContent, "Network Users in Server")
+    UI.addToggleOption(chatContent, "Show Network Users List HUD", S.ShowNetworkUsersHUD, function(v)
+        S.ShowNetworkUsersHUD = v
+        if UI.networkUsersHUD then UI.networkUsersHUD.Visible = S.NetworkTags and v end
+        VH.Config.saveConfig()
+    end)
+    UI.addToggleOption(chatContent, "Show Player Head Tags", S.ShowNetworkHeadTags, function(v)
+        S.ShowNetworkHeadTags = v
+        if not v then
+            for username, bill in pairs(State.networkTagsPool) do
+                pcall(function() bill:Destroy() end)
+                State.networkTagsPool[username] = nil
+            end
+        end
+        VH.Config.saveConfig()
+    end)
+    UI.addButtonOption(chatContent, "Force Refresh Network Users", function()
+        if VH.runNetworkTagsSync then pcall(VH.runNetworkTagsSync) end
+        if UI.refreshChatPanelUsers then pcall(UI.refreshChatPanelUsers) end
+        UI.showToast("Network users refreshed!", StudioTheme.blue)
+    end)
+
+    local netListFrame = Instance.new("Frame")
+    netListFrame.Size = UDim2.new(1, 0, 0, 140)
+    netListFrame.BackgroundColor3 = StudioTheme.insetBg
+    netListFrame.BorderSizePixel = 1
+    netListFrame.BorderColor3 = StudioTheme.border
+    netListFrame.Parent = chatContent
+
+    local netListScroll = Instance.new("ScrollingFrame")
+    netListScroll.Size = UDim2.new(1, -8, 1, -8)
+    netListScroll.Position = UDim2.new(0, 4, 0, 4)
+    netListScroll.BackgroundTransparency = 1
+    netListScroll.BorderSizePixel = 0
+    netListScroll.ScrollBarThickness = 3
+    netListScroll.ScrollBarImageColor3 = StudioTheme.borderSubtle
+    netListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    netListScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    netListScroll.Parent = netListFrame
+    local netListLayout = Instance.new("UIListLayout"); netListLayout.Padding = UDim.new(0, 3); netListLayout.Parent = netListScroll
+
+    local function refreshChatPanelUsers()
+        for _, ch in ipairs(netListScroll:GetChildren()) do
+            if ch:IsA("TextLabel") then ch:Destroy() end
+        end
+        local count = 0
+        if State.networkTagsPool then
+            for uname, _ in pairs(State.networkTagsPool) do
+                count = count + 1
+                local lbl = Instance.new("TextLabel")
+                lbl.Size = UDim2.new(1, 0, 0, 18)
+                lbl.BackgroundTransparency = 1
+                lbl.Font = Enum.Font.SourceSans
+                lbl.TextSize = 11
+                lbl.TextColor3 = StudioTheme.text
+                lbl.TextXAlignment = Enum.TextXAlignment.Left
+                lbl.Text = "@" .. uname .. " [Online Network User]"
+                lbl.Parent = netListScroll
+            end
+        end
+        if count == 0 then
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, 0, 0, 18)
+            lbl.BackgroundTransparency = 1
+            lbl.Font = Enum.Font.SourceSans
+            lbl.TextSize = 11
+            lbl.TextColor3 = StudioTheme.textDim
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.Text = "No other network users detected in this server."
+            lbl.Parent = netListScroll
+        end
+    end
+    UI.refreshChatPanelUsers = refreshChatPanelUsers
+    refreshChatPanelUsers()
+
+    bindsPanel, bindsContent = createPanel("Keybind Manager", 540, 400)
+    bindsContent.Visible = true
+
+    UI.addSectionHeader(bindsContent, "Quick Config Actions")
+    UI.addButtonOption(bindsContent, "Save All Keybinds & Settings", function()
+        VH.Config.saveConfig()
+        UI.showToast("All settings and binds saved!", StudioTheme.green)
+    end)
+
+    UI.addSectionHeader(bindsContent, "System & Utility Keybinds")
+    UI.addKeybindOption(bindsContent, "Menu Toggle Keybind", S.UIToggleKey or Enum.KeyCode.RightControl, function(k) S.UIToggleKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Panic Button (Disable All)", S.PanicKey or Enum.KeyCode.End, function(k) S.PanicKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Trigger Macro Key", S.MacroKey or Enum.KeyCode.H, function(k) S.MacroKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Grab User ID (Hover)", S.UserIDGrabKey or Enum.KeyCode.K, function(k) S.UserIDGrabKey = k; VH.Config.saveConfig() end)
+
+    UI.addSectionHeader(bindsContent, "Movement Keybinds")
+    UI.addKeybindOption(bindsContent, "Sprint Speed Boost", S.SprintKey or Enum.KeyCode.LeftShift, function(k) S.SprintKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Fly Mode Bind", S.FlyKey or Enum.KeyCode.Unknown, function(k) S.FlyKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "NoClip Bind", S.NoClipKey or Enum.KeyCode.Unknown, function(k) S.NoClipKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Infinite Jump Bind", S.InfJumpKey or Enum.KeyCode.Unknown, function(k) S.InfJumpKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Auto Bunnyhop Bind", S.BHopKey or Enum.KeyCode.Unknown, function(k) S.BHopKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Ghost Mode Bind", S.GhostKey or Enum.KeyCode.Unknown, function(k) S.GhostKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Blink Teleport Bind", S.BlinkKey or Enum.KeyCode.Unknown, function(k) S.BlinkKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Jump Power Bind", S.JumpStrengthKey or Enum.KeyCode.Unknown, function(k) S.JumpStrengthKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Wall Walk Bind", S.WallWalkKey or Enum.KeyCode.V, function(k) S.WallWalkKey = k; VH.Config.saveConfig() end)
+
+    UI.addSectionHeader(bindsContent, "Combat Keybinds")
+    UI.addKeybindOption(bindsContent, "Walk Fling Bind", S.WalkFlingKey or Enum.KeyCode.Unknown, function(k) S.WalkFlingKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Aimbot Hold Key", S.AimbotHoldKey or Enum.KeyCode.Unknown, function(k) S.AimbotHoldKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Auto Clicker Bind", S.AutoClickerKey or Enum.KeyCode.Unknown, function(k) S.AutoClickerKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Kill Aura Bind", S.KillAuraKey or Enum.KeyCode.Unknown, function(k) S.KillAuraKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Triggerbot Bind", S.TriggerbotKey or Enum.KeyCode.Unknown, function(k) S.TriggerbotKey = k; VH.Config.saveConfig() end)
+
+    UI.addSectionHeader(bindsContent, "Render & World Keybinds")
+    UI.addKeybindOption(bindsContent, "Viewport ESP Bind", S.ViewportESPKey or Enum.KeyCode.P, function(k) S.ViewportESPKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Minimap Bind", S.MinimapKey or Enum.KeyCode.Unknown, function(k) S.MinimapKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Click Teleport Bind", S.ClickTeleportKey or Enum.KeyCode.Unknown, function(k) S.ClickTeleportKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Click Delete Bind", S.ClickDeleteKey or Enum.KeyCode.Unknown, function(k) S.ClickDeleteKey = k; VH.Config.saveConfig() end)
+    UI.addKeybindOption(bindsContent, "Freecam / Spectate Bind", S.FreecamKey or Enum.KeyCode.Unknown, function(k) S.FreecamKey = k; VH.Config.saveConfig() end)
+
+    UI.addSectionHeader(bindsContent, "Dynamic Module Keybinds")
+    S.ModuleBinds = S.ModuleBinds or {}
+    for modName, _ in pairs(UI.moduleButtons) do
+        local curBind = (S.ModuleBinds[modName] and Enum.KeyCode[S.ModuleBinds[modName]]) or Enum.KeyCode.Unknown
+        UI.addKeybindOption(bindsContent, modName .. " Bind", curBind, function(k)
+            if k == Enum.KeyCode.Unknown then
+                S.ModuleBinds[modName] = nil
+            else
+                S.ModuleBinds[modName] = k.Name
+            end
+            VH.Config.saveConfig()
+        end)
+    end
+
     local sidebar = Instance.new("Frame")
     sidebar.Size = UDim2.new(0, 140, 1, -24)
     sidebar.Position = UDim2.new(0, 0, 0, 24)
@@ -1991,23 +2244,23 @@ UI.InitializeUI = function()
     sidebar.BorderSizePixel = 1
     sidebar.BorderColor3 = StudioTheme.border
     sidebar.Parent = settingsPanel
-    
+
     local sidebarLayout = Instance.new("UIListLayout")
     sidebarLayout.Padding = UDim.new(0, 2)
     sidebarLayout.Parent = sidebar
-    
+
     local sidebarPadding = Instance.new("UIPadding")
     sidebarPadding.PaddingTop = UDim.new(0, 4)
     sidebarPadding.PaddingLeft = UDim.new(0, 4)
     sidebarPadding.PaddingRight = UDim.new(0, 4)
     sidebarPadding.Parent = sidebar
-    
+
     local mainContent = Instance.new("Frame")
     mainContent.Size = UDim2.new(1, -140, 1, -24)
     mainContent.Position = UDim2.new(0, 140, 0, 24)
     mainContent.BackgroundTransparency = 1
     mainContent.Parent = settingsPanel
-    
+
     local function createTabPage()
         local page = Instance.new("ScrollingFrame")
         page.Size = UDim2.new(1, 0, 1, 0)
@@ -2019,27 +2272,27 @@ UI.InitializeUI = function()
         page.AutomaticCanvasSize = Enum.AutomaticSize.Y
         page.Visible = false
         page.Parent = mainContent
-        
+
         local listLayout = Instance.new("UIListLayout")
         listLayout.Padding = UDim.new(0, 4)
         listLayout.Parent = page
-        
+
         local padding = Instance.new("UIPadding")
         padding.PaddingTop = UDim.new(0, 6)
         padding.PaddingBottom = UDim.new(0, 6)
         padding.PaddingLeft = UDim.new(0, 6)
         padding.PaddingRight = UDim.new(0, 6)
         padding.Parent = page
-        
+
         return page
     end
-    
+
     local pageInterface = createTabPage()
     local pageHUD = createTabPage()
     local pageInput = createTabPage()
     local pageConfig = createTabPage()
     local pageModules = createTabPage()
-    
+
     local tabPages = {
         ["Interface Settings"] = pageInterface,
         ["HUD Settings"] = pageHUD,
@@ -2047,7 +2300,7 @@ UI.InitializeUI = function()
         ["System & Config"] = pageConfig,
         ["Module Manager"] = pageModules
     }
-    
+
     local function selectSettingsTab(tabName)
         for name, page in pairs(tabPages) do
             page.Visible = (name == tabName)
@@ -2065,7 +2318,7 @@ UI.InitializeUI = function()
             pcall(UI.refreshDisabledModulesList)
         end
     end
-    
+
     local function createSidebarButton(tabName)
         local btn = makeStudioButton(sidebar, "  " .. tabName, UDim2.new(1, 0, 0, 24), 24, StudioTheme.btnBg, StudioTheme.textMuted, Enum.Font.SourceSansSemibold, 11)
         btn.TextXAlignment = Enum.TextXAlignment.Left
@@ -2074,42 +2327,42 @@ UI.InitializeUI = function()
         end)
         return btn
     end
-    
+
     createSidebarButton("Interface Settings")
     createSidebarButton("HUD Settings")
     createSidebarButton("Input & Macros")
     createSidebarButton("System & Config")
     createSidebarButton("Module Manager")
-    
+
     selectSettingsTab("Interface Settings")
-    
+
     UI.addSectionHeader(pageInterface, "Interface Display & Scaling")
     UI.addSliderOption(pageInterface, "UI Scale Sizing (%)", 70, 150, math.round((S.UIScale or 1.0) * 100), function(v)
         local scale = v / 100
         UI.applyUIScale(scale)
         VH.Config.saveConfig()
     end)
-    
+
     UI.addKeybindOption(pageInterface, "Menu Toggle Keybind", S.UIToggleKey or Enum.KeyCode.RightControl, function(k) S.UIToggleKey = k; VH.Config.saveConfig(); VH.Utils.notify("UI Toggle Keybind set to: " .. k.Name, StudioTheme.green) end)
     UI.addToggleOption(pageInterface, "Show Notification Toasts", S.ToastEnabled, function(v) S.ToastEnabled = v; VH.Config.saveConfig() end)
-    
+
     UI.addSectionHeader(pageHUD, "Heads Up Display (HUD)")
     UI.addToggleOption(pageHUD, "Display Client Watermark", S.HUDWatermark, function(v) S.HUDWatermark = v; hudWatermark.Visible = v; VH.Config.saveConfig() end)
     UI.addToggleOption(pageHUD, "Display Player Coordinates", S.HUDCoords, function(v) S.HUDCoords = v; hudCoords.Visible = v; VH.Config.saveConfig() end)
     UI.addToggleOption(pageHUD, "Display Server Age HUD", S.ServerAgeHUD, function(v) S.ServerAgeHUD = v; hudServerAge.Visible = v; VH.Config.saveConfig() end)
     UI.addToggleOption(pageHUD, "Display Active ArrayList", S.HUDArrayList, function(v) S.HUDArrayList = v; UI.updateHUDArrayList(); VH.Config.saveConfig() end)
     UI.addToggleOption(pageHUD, "Display active mods when outside of the main UI", S.HUDArrayListOutside, function(v) S.HUDArrayListOutside = v; UI.updateHUDArrayList(); VH.Config.saveConfig() end)
-    
+
     UI.addSectionHeader(pageInput, "Target Locker & Friends")
     UI.addTextboxOption(pageInput, "Specify Target / Friend", "Username", function(txt) if txt == "" then return end; VH.Utils.notify("Target lock set to: " .. txt, StudioTheme.green) end)
     UI.addButtonOption(pageInput, "Clear Current Friends Lists", function() VH.Utils.notify("Friends lists reset", StudioTheme.red) end)
-    
+
     UI.addSectionHeader(pageInput, "Macros & Bindings")
     UI.addTextboxOption(pageInput, "Configure Macro Text", "Say something...", function(txt) S.MacroText = txt; VH.Config.saveConfig(); VH.Utils.notify("Macro text configured!", StudioTheme.green) end)
     UI.addKeybindOption(pageInput, "Trigger Macro Key", S.MacroKey or Enum.KeyCode.H, function(k) S.MacroKey = k; VH.Config.saveConfig(); VH.Utils.notify("Macro trigger set to: " .. k.Name, StudioTheme.green) end)
     UI.addKeybindOption(pageInput, "Panic Button (Disable All)", S.PanicKey or Enum.KeyCode.End, function(k) S.PanicKey = k; VH.Config.saveConfig(); VH.Utils.notify("Panic Key set to: " .. k.Name, StudioTheme.red) end)
     UI.addKeybindOption(pageInput, "Grab User ID (Hover Player)", S.UserIDGrabKey or Enum.KeyCode.K, function(k) S.UserIDGrabKey = k; VH.Config.saveConfig(); VH.Utils.notify("UserID Grab set to: " .. k.Name, StudioTheme.green) end)
-    
+
     UI.addSectionHeader(pageConfig, "Executor Capabilities")
     local supportedFuncs = 0; local totalFuncs = 0
     local capsList = {
@@ -2120,8 +2373,13 @@ UI.InitializeUI = function()
     for _, cap in ipairs(capsList) do totalFuncs = totalFuncs + 1; if cap[2] then supportedFuncs = supportedFuncs + 1 end end
     UI.addInfoRowOption(pageConfig, "Supported Functions", supportedFuncs .. " / " .. totalFuncs)
     UI.addInfoRowOption(pageConfig, "Executor Name", executorName)
-    
+
     UI.addSectionHeader(pageConfig, "Saves & Client Controls")
+    UI.addToggleOption(pageConfig, "Save Config Between Teleports", S.SaveConfigBetweenTeleports == true, function(v)
+        S.SaveConfigBetweenTeleports = v
+        VH.Config.saveConfig()
+        UI.showToast(v and "Config will persist across teleports" or "Config will reset on teleport (Safest)", StudioTheme.blue)
+    end)
     UI.addTextboxOption(pageConfig, "Configuration Name", "utility_hub_config", function(txt) end)
     UI.addButtonOption(pageConfig, "Save Current Settings", function() VH.Config.saveConfig(); VH.Utils.notify("Configuration saved successfully!", StudioTheme.green) end)
     UI.addButtonOption(pageConfig, "Load Stored Settings", function() VH.Config.loadConfig(); VH.Utils.notify("Configuration loaded successfully!", StudioTheme.green) end)
@@ -2133,7 +2391,7 @@ UI.InitializeUI = function()
         VH.Config.saveConfig(); VH.Utils.notify("All settings reset to default!", StudioTheme.red)
     end)
     UI.addButtonOption(pageConfig, "Destruct Client GUI Completely", function() VH.Cleanup.cleanupAll() end)
-    
+
     UI.addSectionHeader(pageModules, "Module Disabler & Exclusion Mode")
     UI.addToggleOption(pageModules, "Enable Module Selection Mode", S.ModuleDisableMode, function(v)
         S.ModuleDisableMode = v
@@ -2141,7 +2399,7 @@ UI.InitializeUI = function()
         UI.updateAllModuleVisuals()
         UI.showToast(v and "Module Selection Mode Enabled (Click non-Misc modules to disable)" or "Module Selection Mode Disabled", v and StudioTheme.orange or StudioTheme.blue)
     end)
-    
+
     local styleBtn = nil
     styleBtn = UI.addButtonOption(pageModules, "Disabled Style: " .. (S.DisabledModuleStyle or "Greyish") .. " (Click to Switch)", function()
         if S.DisabledModuleStyle == "Invisible" then
@@ -2156,24 +2414,24 @@ UI.InitializeUI = function()
         UI.updateAllModuleVisuals()
         UI.showToast("Disabled modules style set to: " .. S.DisabledModuleStyle, StudioTheme.blue)
     end)
-    
+
     UI.addButtonOption(pageModules, "Revert All Disabled Modules", function()
         UI.revertAllDisabled()
     end)
-    
+
     UI.addSectionHeader(pageModules, "Disabled Modules List")
-    
+
     local disabledListContainer = Instance.new("Frame")
     disabledListContainer.Name = "DisabledListContainer"
     disabledListContainer.Size = UDim2.new(1, 0, 0, 0)
     disabledListContainer.AutomaticSize = Enum.AutomaticSize.Y
     disabledListContainer.BackgroundTransparency = 1
     disabledListContainer.Parent = pageModules
-    
+
     local dListLayout = Instance.new("UIListLayout")
     dListLayout.Padding = UDim.new(0, 2)
     dListLayout.Parent = disabledListContainer
-    
+
     local function refreshDisabledList()
         for _, ch in ipairs(disabledListContainer:GetChildren()) do
             if ch:IsA("Frame") or ch:IsA("TextLabel") then ch:Destroy() end
@@ -2187,7 +2445,7 @@ UI.InitializeUI = function()
             end
         end
         table.sort(sortedList)
-        
+
         if #sortedList == 0 then
             local emptyLabel = Instance.new("TextLabel")
             emptyLabel.Size = UDim2.new(1, 0, 0, 24)
@@ -2206,7 +2464,7 @@ UI.InitializeUI = function()
                 row.BorderSizePixel = 1
                 row.BorderColor3 = StudioTheme.border
                 row.Parent = disabledListContainer
-                
+
                 local lbl = Instance.new("TextLabel")
                 lbl.Size = UDim2.new(1, -70, 1, 0)
                 lbl.Position = UDim2.new(0, 8, 0, 0)
@@ -2217,7 +2475,7 @@ UI.InitializeUI = function()
                 lbl.TextXAlignment = Enum.TextXAlignment.Left
                 lbl.Text = "[" .. cat .. "] " .. modName
                 lbl.Parent = row
-                
+
                 local revBtn = makeStudioButton(row, "Re-enable", 60, 18, StudioTheme.btnBg, StudioTheme.text)
                 revBtn.Position = UDim2.new(1, -64, 0.5, -9)
                 revBtn.Activated:Connect(function()
@@ -2230,17 +2488,17 @@ UI.InitializeUI = function()
     end
     UI.refreshDisabledModulesList = refreshDisabledList
     refreshDisabledList()
-    
+
     catPositions = { ["Combat"] = 20, ["Player"] = 235, ["Movement"] = 450, ["Render"] = 665, ["World"] = 880, ["Misc"] = 1095, ["Search"] = 1310 }
-    
+
     selectTab("Modules")
     UI.applyUIScale(S.UIScale or 1.0)
-    
+
     UI.hudWatermark = hudWatermark
     UI.hudCoords = hudCoords
     UI.hudServerAge = hudServerAge
     UI.hudArrayListFrame = hudArrayListFrame
-    
+
     if S.EulaAccepted == true then
         if runWelcomeToasts then runWelcomeToasts() end
     else
@@ -2249,7 +2507,7 @@ UI.InitializeUI = function()
         hudCoords.Visible = false
         hudServerAge.Visible = false
         hudArrayListFrame.Visible = false
-        
+
         local eulaFrame = Instance.new("Frame")
         eulaFrame.Name = "EulaFrame"
         eulaFrame.Size = UDim2.new(0, 360, 0, 240)
@@ -2273,11 +2531,11 @@ UI.InitializeUI = function()
         header.BackgroundColor3 = State.currentThemeColor or StudioTheme.blue or Color3.fromRGB(0, 122, 204)
         header.BorderSizePixel = 0
         header.Parent = eulaFrame
-        
+
         local headerCorner = Instance.new("UICorner")
         headerCorner.CornerRadius = UDim.new(0, 6)
         headerCorner.Parent = header
-        
+
         local headerHide = Instance.new("Frame")
         headerHide.Size = UDim2.new(1, 0, 0, 6)
         headerHide.Position = UDim2.new(0, 0, 1, -6)
@@ -2356,7 +2614,7 @@ UI.InitializeUI = function()
             hudWatermark.Visible = S.HUDWatermark
             hudCoords.Visible = S.HUDCoords
             hudServerAge.Visible = S.ServerAgeHUD
-            
+
             if VH.runNetworkTagsSync then
                 pcall(VH.runNetworkTagsSync)
             end
@@ -2370,7 +2628,7 @@ UI.InitializeUI = function()
 
         createButton("Agree", UDim2.new(0, 0, 0, 0), Color3.fromRGB(46, 204, 113), agreeCallback)
         createButton("Decline", UDim2.new(0.52, 0, 0, 0), Color3.fromRGB(218, 38, 38), declineCallback)
-        
+
         makeDraggable(eulaFrame, header)
     end
 end
@@ -2382,7 +2640,7 @@ UI.updateNetworkUsersHUD = function(activeInServer)
             child:Destroy()
         end
     end
-    
+
     local userCount = 0
     for username, userData in pairs(activeInServer) do
         userCount = userCount + 1
@@ -2390,7 +2648,7 @@ UI.updateNetworkUsersHUD = function(activeInServer)
         local dispName = p and p.DisplayName or username
         local executor = userData.executor or "Unknown"
         local is_admin = userData.is_admin
-        
+
         local lbl = Instance.new("TextLabel")
         lbl.Size = UDim2.new(1, 0, 0, 16)
         lbl.BackgroundTransparency = 1
@@ -2401,9 +2659,9 @@ UI.updateNetworkUsersHUD = function(activeInServer)
         lbl.Text = string.format("%s [%s]", dispName, executor)
         lbl.Parent = UI.networkUsersHUD
     end
-    
+
     UI.netHeader.Text = string.format("Network Users (%d)", userCount)
-    
+
     if userCount == 0 then
         local lbl = Instance.new("TextLabel")
         lbl.Size = UDim2.new(1, 0, 0, 16)

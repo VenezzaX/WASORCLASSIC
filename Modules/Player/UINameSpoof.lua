@@ -159,4 +159,3 @@ end, false)
 if S.RandomizeUIText then
     startSpoofer()
 end
-

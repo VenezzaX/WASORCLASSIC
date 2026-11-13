@@ -853,4 +853,3 @@ end, false)
 if S.AutoplayBot then
     startAutoplay()
 end
-

@@ -311,7 +311,6 @@ local function updateESPAndAimbot()
         end
     end
 
-
     if S.Chams then
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LP and p.Character then
@@ -483,16 +482,16 @@ local function updateESPAndAimbot()
                                 local tr = Vector2.new(bottomRight.X, topLeft.Y)
                                 local bl = Vector2.new(topLeft.X, bottomRight.Y)
                                 local br = bottomRight
-                                -- Top-Left Corner
+
                                 c[1].From = topLeft; c[1].To = topLeft + Vector2.new(len, 0)
                                 c[2].From = topLeft; c[2].To = topLeft + Vector2.new(0, len)
-                                -- Top-Right Corner
+
                                 c[3].From = tr; c[3].To = tr - Vector2.new(len, 0)
                                 c[4].From = tr; c[4].To = tr + Vector2.new(0, len)
-                                -- Bottom-Left Corner
+
                                 c[5].From = bl; c[5].To = bl + Vector2.new(len, 0)
                                 c[6].From = bl; c[6].To = bl - Vector2.new(0, len)
-                                -- Bottom-Right Corner
+
                                 c[7].From = br; c[7].To = br - Vector2.new(len, 0)
                                 c[8].From = br; c[8].To = br - Vector2.new(0, len)
 
@@ -505,11 +504,11 @@ local function updateESPAndAimbot()
                                 local tr = Vector2.new(bottomRight.X, topLeft.Y)
                                 local bl = Vector2.new(topLeft.X, bottomRight.Y)
                                 local br = bottomRight
-                                -- Left Bracket [
+
                                 c[1].From = topLeft; c[1].To = bl
                                 c[2].From = topLeft; c[2].To = topLeft + Vector2.new(capLen, 0)
                                 c[3].From = bl; c[3].To = bl + Vector2.new(capLen, 0)
-                                -- Right Bracket ]
+
                                 c[4].From = tr; c[4].To = br
                                 c[5].From = tr; c[5].To = tr - Vector2.new(capLen, 0)
                                 c[6].From = br; c[6].To = br - Vector2.new(capLen, 0)
@@ -523,7 +522,7 @@ local function updateESPAndAimbot()
                                 local tr = Vector2.new(bottomRight.X, topLeft.Y)
                                 local bl = Vector2.new(topLeft.X, bottomRight.Y)
                                 local br = bottomRight
-                                -- 8-Sided Chamfered Cyber Box
+
                                 c[1].From = topLeft + Vector2.new(chamfer, 0); c[1].To = tr - Vector2.new(chamfer, 0)
                                 c[2].From = tr - Vector2.new(chamfer, 0); c[2].To = tr + Vector2.new(0, chamfer)
                                 c[3].From = tr + Vector2.new(0, chamfer); c[3].To = br - Vector2.new(0, chamfer)
@@ -541,11 +540,11 @@ local function updateESPAndAimbot()
                                 local tr = Vector2.new(bottomRight.X, topLeft.Y)
                                 local bl = Vector2.new(topLeft.X, bottomRight.Y)
                                 local br = bottomRight
-                                -- Top Horizon Bar
+
                                 c[1].From = topLeft; c[1].To = tr
                                 c[2].From = topLeft; c[2].To = topLeft + Vector2.new(0, tickLen)
                                 c[3].From = tr; c[3].To = tr + Vector2.new(0, tickLen)
-                                -- Bottom Horizon Bar
+
                                 c[4].From = bl; c[4].To = br
                                 c[5].From = bl; c[5].To = bl - Vector2.new(0, tickLen)
                                 c[6].From = br; c[6].To = br - Vector2.new(0, tickLen)
@@ -620,7 +619,20 @@ local function updateESPAndAimbot()
                             healthBarOutline.Size = Vector2.new(2, height); healthBarOutline.Color = Color3.new(0, 0, 0); healthBarOutline.Thickness = 1; healthBarOutline.Filled = true
                             local healthBarFill = pool.healthBarFill; healthBarFill.Visible = espAllowed and S.ESPHealth; healthBarFill.Position = Vector2.new(topLeft.X - 4, topLeft.Y + 1)
                             healthBarFill.Size = Vector2.new(1, (height - 2) * hpPct); healthBarFill.Color = Color3.fromRGB(255 * (1 - hpPct), 255 * hpPct, 0); healthBarFill.Filled = true
-                            local nameTag = pool.nameTag; nameTag.Visible = espAllowed and S.ESPNames; nameTag.Text = p.DisplayName; nameTag.Size = 13; nameTag.Font = 2
+                            local formatMode = S.ESPNameFormat or "Both"
+                            local nameText = p.DisplayName
+                            if formatMode == "Both" or formatMode == "Both (Display & User)" then
+                                if p.DisplayName ~= p.Name then
+                                    nameText = string.format("%s (@%s)", p.DisplayName, p.Name)
+                                else
+                                    nameText = "@" .. p.Name
+                                end
+                            elseif formatMode == "Username Only" then
+                                nameText = "@" .. p.Name
+                            else
+                                nameText = p.DisplayName
+                            end
+                            local nameTag = pool.nameTag; nameTag.Visible = espAllowed and S.ESPNames; nameTag.Text = nameText; nameTag.Size = 13; nameTag.Font = 2
                             nameTag.Center = true; nameTag.Outline = true; nameTag.Color = Color3.new(1, 1, 1); nameTag.Position = Vector2.new(topLeft.X + width / 2, topLeft.Y - 16)
                             local healthText = pool.healthText; healthText.Visible = espAllowed and S.ESPHealth; healthText.Text = string.format("%d HP", math.floor(hum.Health))
                             healthText.Size = 11; healthText.Font = 3; healthText.Center = true; healthText.Outline = true
@@ -942,7 +954,9 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
     pcall(function()
         if S.AirWalk then
             if myHRP then
-                if not S.AirWalkPlat then
+                local vSpeed = S.AirWalkVerticalSpeed or 10
+                local deltaY = vSpeed * (dt or (1 / 60))
+                if not S.AirWalkPlat or not S.AirWalkPlat.Parent then
                     local plat = Instance.new("Part")
                     plat.Name = "VoidAirWalkPlat"
                     plat.Size = Vector3.new(10, 1, 10)
@@ -950,14 +964,18 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
                     plat.CanCollide = true
                     plat.Transparency = 1
                     plat.Parent = Workspace
-                    plat.CFrame = CFrame.new(myHRP.Position.X, myHRP.Position.Y - 3.5, myHRP.Position.Z)
+                    local initY = myHRP.Position.Y - 3.5
+                    plat.CFrame = CFrame.new(myHRP.Position.X, initY, myHRP.Position.Z)
                     S.AirWalkPlat = plat
                 else
                     local targetY = S.AirWalkPlat.Position.Y
                     if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                        targetY = myHRP.Position.Y - 2.0
-                    elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-                        targetY = myHRP.Position.Y - 5.0
+                        targetY = targetY + deltaY
+                    elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.C) then
+                        targetY = targetY - deltaY
+                    end
+                    if math.abs(myHRP.Position.Y - targetY) > 50 and not UserInputService:IsKeyDown(Enum.KeyCode.Space) and not UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and not UserInputService:IsKeyDown(Enum.KeyCode.C) then
+                        targetY = myHRP.Position.Y - 3.5
                     end
                     S.AirWalkPlat.CFrame = CFrame.new(myHRP.Position.X, targetY, myHRP.Position.Z)
                 end
@@ -987,11 +1005,21 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
     end)
 
     pcall(function()
-        if S.AntiVoid and myHRP then
-            if myHRP.Position.Y > S.AntiVoidY then S.LastSafePosition = myHRP.CFrame
-            else
-                if not S.LastAntiVoidTime or (tick() - S.LastAntiVoidTime) > 1.5 then
-                    S.LastAntiVoidTime = tick(); myHRP.CFrame = S.LastSafePosition; myHRP.AssemblyLinearVelocity = Vector3.zero; notify("Anti-Void pulled you back!", Color3.fromRGB(218, 170, 42))
+        if S.AntiVoid and myHRP and hum and hum.Health > 0 then
+            local isGrounded = (hum.FloorMaterial ~= Enum.Material.Air) and math.abs(myHRP.AssemblyLinearVelocity.Y) < 3
+            if isGrounded and myHRP.Position.Y > (S.AntiVoidY or -500) then
+                S.LastSafePosition = myHRP.CFrame
+            elseif myHRP.Position.Y <= (S.AntiVoidY or -500) then
+                if not S.LastAntiVoidTime or (tick() - S.LastAntiVoidTime) > 1.2 then
+                    S.LastAntiVoidTime = tick()
+                    myHRP.AssemblyLinearVelocity = Vector3.zero
+                    myHRP.AssemblyAngularVelocity = Vector3.zero
+                    if S.LastSafePosition then
+                        myHRP.CFrame = S.LastSafePosition + Vector3.new(0, 3, 0)
+                    else
+                        myHRP.CFrame = CFrame.new(myHRP.Position.X, (S.AntiVoidY or -500) + 40, myHRP.Position.Z)
+                    end
+                    notify("Anti-Void pulled you back to safety!", Color3.fromRGB(218, 170, 42))
                 end
             end
         end
@@ -1091,7 +1119,6 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
         end
     end)
 
-
     pcall(function()
         if S.AutoJump and myHum and myHRP and myHum.FloorMaterial ~= Enum.Material.Air then
             local edgeRay = Ray.new(myHRP.Position + (myHRP.CFrame.LookVector * 2), Vector3.new(0, -5, 0))
@@ -1181,6 +1208,10 @@ task.spawn(function()
             end
 
             if S.WalkFling and character and character.Parent and root and root.Parent then
+                local hum = getHum(character)
+                if hum and S.WalkFlingSpeed then
+                    hum.WalkSpeed = S.WalkFlingSpeed
+                end
                 local vel = root.Velocity
                 root.Velocity = vel * 10000 + Vector3.new(0, 10000, 0)
 
@@ -1288,9 +1319,26 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
     end
     if gpe then return end
     if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-        if S.ClickDelete and UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) then
+        local modKey = S.ClickDeleteModifier or "LeftAlt"
+        local altDown = UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) or UserInputService:IsKeyDown(Enum.KeyCode.RightAlt)
+        if modKey == "LeftControl" then
+            altDown = UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
+        elseif modKey == "LeftShift" then
+            altDown = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
+        elseif modKey == "None" then
+            altDown = true
+        end
+        if S.ClickDelete and altDown then
             if not isModDisabled("Click-Delete", "Click Delete") then
-                local target = Mouse.Target; if target and not target.Parent:FindFirstChildOfClass("Humanoid") then target:Destroy() end
+                local target = Mouse.Target
+                if target and not target.Parent:FindFirstChildOfClass("Humanoid") and not target:IsDescendantOf(LP.Character) then
+                    local delName = target.Name
+                    local s = pcall(function() target:Destroy() end)
+                    if not s or (target and target.Parent) then
+                        pcall(function() target.Parent = nil end)
+                    end
+                    notify("Deleted: " .. delName, Color3.fromRGB(50, 195, 75))
+                end
             end
         elseif S.ClickTeleport and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
             if not isModDisabled("Click-Teleport", "Click Teleport") then
@@ -1330,10 +1378,10 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
             S.InfJump = not S.InfJump; notify("Infinite Jump " .. (S.InfJump and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Infinite Jump"]; if mod then mod.SetActive(S.InfJump) end
         end
     elseif S.JumpStrengthKey and S.JumpStrengthKey ~= Enum.KeyCode.Unknown and k == S.JumpStrengthKey then
-        if not isModDisabled("Jump Force") then
+        if not isModDisabled("Jump Power") then
             S.ForceJumpPower = not S.ForceJumpPower; local hum = getHum()
             if hum then if S.ForceJumpPower then hum.UseJumpPower = true; hum.JumpPower = S.JumpPower else hum.UseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or true; hum.JumpPower = State.gameDefaultJumpPower or 50 end end
-            notify("Jump Force " .. (S.ForceJumpPower and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Jump Force"]; if mod then mod.SetActive(S.ForceJumpPower) end; saveConfig()
+            notify("Jump Power " .. (S.ForceJumpPower and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Jump Power"]; if mod then mod.SetActive(S.ForceJumpPower) end; saveConfig()
         end
     elseif S.GhostKey and S.GhostKey ~= Enum.KeyCode.Unknown and k == S.GhostKey then
         if not isModDisabled("Ghost Mode") then
@@ -1383,6 +1431,29 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
             notify("Viewport ESP " .. (S.ViewportESP and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
             local mod = moduleButtons["Viewport ESP"]
             if mod and mod.SetActive then mod.SetActive(S.ViewportESP) end
+        end
+    elseif S.WallWalkKey and S.WallWalkKey ~= Enum.KeyCode.Unknown and k == S.WallWalkKey then
+        if not isModDisabled("Wall Walk") then
+            local mod = moduleButtons["Wall Walk"]
+            if mod and mod.SetActive then
+                mod.SetActive(not S.WallWalk)
+            else
+                S.WallWalk = not S.WallWalk
+            end
+            notify("Wall Walk " .. (S.WallWalk and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
+        end
+    end
+
+    if S.ModuleBinds and type(S.ModuleBinds) == "table" then
+        for modName, bindKeyName in pairs(S.ModuleBinds) do
+            if bindKeyName and k.Name == bindKeyName then
+                local btn = UI.moduleButtons and UI.moduleButtons[modName]
+                if btn and btn.SetActive and btn.IsActive then
+                    local newState = not btn.IsActive()
+                    btn.SetActive(newState)
+                    notify(modName .. " " .. (newState and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
+                end
+            end
         end
     end
 end))
@@ -1482,8 +1553,8 @@ pcall(connectChatLogger)
 pcall(function() applyThemeColor(S.ThemeColor or "Purple"); updateHUDArrayList() end)
 
 local toggleKeyName = S.UIToggleKey and S.UIToggleKey.Name or "RCtrl"
-logMessage("System", "WASOR 4.0 loaded successfully. Keybind: [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
-notify("WASOR 4.0 loaded! [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
+logMessage("System", "WASOR 4.5 loaded successfully. Keybind: [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
+notify("WASOR 4.5 loaded! [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
 print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내리는 것 또한 그중 하나입니다). 그리고 인내심이야말로 우리 삶의 핵심이라는 사실을 기억하십시오.")
 
     local request = (http and http.request) or http_request or (syn and syn.request)
@@ -1784,7 +1855,7 @@ print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내�
             local count = #disabledList
             local fullNames = table.concat(disabledList, ", ")
             warn("[WASOR] ⚠️ Warning: " .. count .. " module(s) currently disabled: " .. fullNames)
-            
+
             local toastMsg
             if count <= 3 then
                 toastMsg = "⚠️ Disabled: " .. fullNames

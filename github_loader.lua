@@ -1,4 +1,273 @@
-if _G.WASOR_Loading then return end
+local function checkDeltaCompatibility()
+    local function isDeltaExecutor()
+        local getExec = identifyexecutor or getexecutorname
+        if type(getExec) == "function" then
+            local success, execName = pcall(getExec)
+            if success and type(execName) == "string" then
+                if string.find(string.lower(execName), "delta", 1, true) then
+                    return true
+                end
+            end
+        end
+        return false
+    end
+
+    local function loadDeltaKeyboard()
+        local ok, err = pcall(function()
+            loadstring(game:HttpGet(('https://raw.githubusercontent.com/VenezzaX/MobileKeyboard/refs/heads/main/Keyboard.lua'), true))()
+        end)
+        if not ok then
+            warn("[Delta Loader] Failed to load MobileKeyboard: " .. tostring(err))
+        end
+    end
+
+    if not isDeltaExecutor() then
+        return
+    end
+
+    task.spawn(function()
+        local promptFile = "WASOR_Cache/delta_kb_prompt.txt"
+        local savedChoice = nil
+
+        pcall(function()
+            if isfile and readfile and isfile(promptFile) then
+                local content = readfile(promptFile)
+                if content == "yes" or content == "no" then
+                    savedChoice = content
+                end
+            end
+        end)
+
+        if savedChoice == "yes" then
+            loadDeltaKeyboard()
+            return
+        elseif savedChoice == "no" then
+            return
+        end
+
+        local parentGui = nil
+        if gethui then
+            pcall(function() parentGui = gethui() end)
+        end
+        if not parentGui and get_hidden_gui then
+            pcall(function() parentGui = get_hidden_gui() end)
+        end
+        if not parentGui then
+            pcall(function() parentGui = game:GetService("CoreGui") end)
+        end
+        if not parentGui then
+            local lp = game:GetService("Players").LocalPlayer or game:GetService("Players").PlayerAdded:Wait()
+            parentGui = lp:WaitForChild("PlayerGui")
+        end
+
+        local oldPrompt = parentGui:FindFirstChild("WASOR_DeltaKeyboardPrompt")
+        if oldPrompt then
+            pcall(function() oldPrompt:Destroy() end)
+        end
+
+        local PromptGui = Instance.new("ScreenGui")
+        PromptGui.Name = "WASOR_DeltaKeyboardPrompt"
+        PromptGui.ResetOnSpawn = false
+        PromptGui.IgnoreGuiInset = true
+        PromptGui.DisplayOrder = 2147483647
+        PromptGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+        local Card = Instance.new("Frame")
+        Card.Name = "PromptCard"
+        Card.AnchorPoint = Vector2.new(0.5, 0.5)
+        Card.Position = UDim2.new(0.5, 0, 0.5, 0)
+        Card.Size = UDim2.new(0, 360, 0, 205)
+        Card.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
+        Card.BackgroundTransparency = 0.05
+        Card.BorderSizePixel = 0
+        Card.Parent = PromptGui
+
+        local CardCorner = Instance.new("UICorner")
+        CardCorner.CornerRadius = UDim.new(0, 10)
+        CardCorner.Parent = Card
+
+        local CardStroke = Instance.new("UIStroke")
+        CardStroke.Color = Color3.fromRGB(130, 95, 255)
+        CardStroke.Thickness = 1.4
+        CardStroke.Transparency = 0.2
+        CardStroke.Parent = Card
+
+        local Header = Instance.new("TextLabel")
+        Header.Name = "Header"
+        Header.Size = UDim2.new(1, -32, 0, 24)
+        Header.Position = UDim2.new(0, 16, 0, 14)
+        Header.BackgroundTransparency = 1
+        Header.Font = Enum.Font.GothamBold
+        Header.Text = "WASOR  •  Delta Compatibility"
+        Header.TextColor3 = Color3.fromRGB(240, 240, 250)
+        Header.TextSize = 14
+        Header.TextXAlignment = Enum.TextXAlignment.Left
+        Header.Parent = Card
+
+        local Message = Instance.new("TextLabel")
+        Message.Name = "Message"
+        Message.Size = UDim2.new(1, -32, 0, 42)
+        Message.Position = UDim2.new(0, 16, 0, 42)
+        Message.BackgroundTransparency = 1
+        Message.Font = Enum.Font.GothamMedium
+        Message.Text = "This code hasn't been made for delta but you can try using the Delta keyboard"
+        Message.TextColor3 = Color3.fromRGB(215, 215, 230)
+        Message.TextSize = 13
+        Message.TextWrapped = true
+        Message.TextXAlignment = Enum.TextXAlignment.Left
+        Message.TextYAlignment = Enum.TextYAlignment.Top
+        Message.Parent = Card
+
+        local WarningLabel = Instance.new("TextLabel")
+        WarningLabel.Name = "WarningLabel"
+        WarningLabel.Size = UDim2.new(1, -32, 0, 30)
+        WarningLabel.Position = UDim2.new(0, 16, 0, 86)
+        WarningLabel.BackgroundTransparency = 1
+        WarningLabel.Font = Enum.Font.Gotham
+        WarningLabel.Text = "Experimental feature — hiding this prompt forever is not recommended."
+        WarningLabel.TextColor3 = Color3.fromRGB(255, 185, 95)
+        WarningLabel.TextSize = 11
+        WarningLabel.TextWrapped = true
+        WarningLabel.TextXAlignment = Enum.TextXAlignment.Left
+        WarningLabel.TextYAlignment = Enum.TextYAlignment.Top
+        WarningLabel.Parent = Card
+
+        local hideForever = false
+
+        local CheckRow = Instance.new("TextButton")
+        CheckRow.Name = "HideForeverToggle"
+        CheckRow.Size = UDim2.new(1, -32, 0, 22)
+        CheckRow.Position = UDim2.new(0, 16, 0, 122)
+        CheckRow.BackgroundTransparency = 1
+        CheckRow.Text = ""
+        CheckRow.AutoButtonColor = false
+        CheckRow.Parent = Card
+
+        local CheckBox = Instance.new("Frame")
+        CheckBox.Name = "CheckBox"
+        CheckBox.Size = UDim2.new(0, 16, 0, 16)
+        CheckBox.Position = UDim2.new(0, 0, 0.5, -8)
+        CheckBox.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+        CheckBox.BorderSizePixel = 0
+        CheckBox.Parent = CheckRow
+
+        local BoxCorner = Instance.new("UICorner")
+        BoxCorner.CornerRadius = UDim.new(0, 4)
+        BoxCorner.Parent = CheckBox
+
+        local BoxStroke = Instance.new("UIStroke")
+        BoxStroke.Color = Color3.fromRGB(130, 95, 255)
+        BoxStroke.Thickness = 1.2
+        BoxStroke.Parent = CheckBox
+
+        local CheckMark = Instance.new("TextLabel")
+        CheckMark.Name = "CheckMark"
+        CheckMark.Size = UDim2.new(1, 0, 1, 0)
+        CheckMark.BackgroundTransparency = 1
+        CheckMark.Font = Enum.Font.GothamBold
+        CheckMark.Text = "✓"
+        CheckMark.TextColor3 = Color3.fromRGB(255, 255, 255)
+        CheckMark.TextSize = 12
+        CheckMark.Visible = false
+        CheckMark.Parent = CheckBox
+
+        local CheckText = Instance.new("TextLabel")
+        CheckText.Name = "CheckText"
+        CheckText.Size = UDim2.new(1, -24, 1, 0)
+        CheckText.Position = UDim2.new(0, 24, 0, 0)
+        CheckText.BackgroundTransparency = 1
+        CheckText.Font = Enum.Font.Gotham
+        CheckText.Text = "Hide forever (Not recommended)"
+        CheckText.TextColor3 = Color3.fromRGB(185, 185, 205)
+        CheckText.TextSize = 12
+        CheckText.TextXAlignment = Enum.TextXAlignment.Left
+        CheckText.Parent = CheckRow
+
+        CheckRow.MouseButton1Click:Connect(function()
+            hideForever = not hideForever
+            CheckMark.Visible = hideForever
+            CheckBox.BackgroundColor3 = hideForever and Color3.fromRGB(130, 95, 255) or Color3.fromRGB(28, 28, 38)
+        end)
+
+        local YesBtn = Instance.new("TextButton")
+        YesBtn.Name = "YesButton"
+        YesBtn.Size = UDim2.new(0.5, -20, 0, 34)
+        YesBtn.Position = UDim2.new(0, 16, 1, -46)
+        YesBtn.BackgroundColor3 = Color3.fromRGB(130, 95, 255)
+        YesBtn.BorderSizePixel = 0
+        YesBtn.Font = Enum.Font.GothamBold
+        YesBtn.Text = "Yes"
+        YesBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        YesBtn.TextSize = 13
+        YesBtn.Parent = Card
+
+        local YesCorner = Instance.new("UICorner")
+        YesCorner.CornerRadius = UDim.new(0, 7)
+        YesCorner.Parent = YesBtn
+
+        local NoBtn = Instance.new("TextButton")
+        NoBtn.Name = "NoButton"
+        NoBtn.Size = UDim2.new(0.5, -20, 0, 34)
+        NoBtn.Position = UDim2.new(0.5, 4, 1, -46)
+        NoBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 44)
+        NoBtn.BorderSizePixel = 0
+        NoBtn.Font = Enum.Font.GothamBold
+        NoBtn.Text = "No"
+        NoBtn.TextColor3 = Color3.fromRGB(220, 220, 235)
+        NoBtn.TextSize = 13
+        NoBtn.Parent = Card
+
+        local NoCorner = Instance.new("UICorner")
+        NoCorner.CornerRadius = UDim.new(0, 7)
+        NoCorner.Parent = NoBtn
+
+        local function finishPrompt(accepted)
+            if hideForever then
+                pcall(function()
+                    if makefolder and isfolder and not isfolder("WASOR_Cache") then
+                        makefolder("WASOR_Cache")
+                    end
+                    if writefile then
+                        writefile(promptFile, accepted and "yes" or "no")
+                    end
+                end)
+            end
+            pcall(function()
+                PromptGui:Destroy()
+            end)
+            if accepted then
+                loadDeltaKeyboard()
+            end
+        end
+
+        YesBtn.MouseButton1Click:Connect(function()
+            finishPrompt(true)
+        end)
+
+        NoBtn.MouseButton1Click:Connect(function()
+            finishPrompt(false)
+        end)
+
+        PromptGui.Parent = parentGui
+    end)
+end
+
+checkDeltaCompatibility()
+
+if _G.WASOR_Reloading then return end
+if _G.VoidHub or _G.WASOR_Loaded or _G.WASOR_Loading then
+    _G.WASOR_Reloading = true
+    pcall(function()
+        if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
+            _G.VoidHub.Cleanup.cleanupAll()
+        end
+    end)
+    _G.VoidHub = nil
+    _G.WASOR_Loading = nil
+    _G.WASOR_Loaded = nil
+    _G.WASOR_Reloading = nil
+    print("[WASOR 4.5] Existing instance detected. Cleaned up and reloading...")
+end
 _G.WASOR_Loading = true
 
 if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
@@ -17,6 +286,9 @@ pcall(function()
     RunService:UnbindFromRenderStep("VoidAimbotUpdate")
     RunService:UnbindFromRenderStep("VoidFlyUpdate")
     RunService:UnbindFromRenderStep("VoidFreecamUpdate")
+    pcall(function() RunService:UnbindFromRenderStep("WallWalkCameraRenderUpdate") end)
+    pcall(function() RunService:UnbindFromRenderStep("WallWalkControlStep") end)
+    pcall(function() RunService:UnbindFromRenderStep("WallWalkGravityStep") end)
 end)
 
 pcall(function()
@@ -40,7 +312,7 @@ pcall(function()
     for _, parent in ipairs(containers) do
         pcall(function()
             for _, child in ipairs(parent:GetChildren()) do
-                if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "TranscendingViewportGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                if child.Name == "MeteorRobloxGUI" or child.Name == "WallWalkToggleUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "TranscendingViewportGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
                     pcall(function() child:Destroy() end)
                 end
             end
@@ -51,30 +323,16 @@ end)
 _G.VoidHub = {}
 
 local Wallpapers = {
-    "https://i.pinimg.com/1200x/97/e4/f7/97e4f7952175029a8a606ebbc279b169.jpg",
-    "https://i.pinimg.com/1200x/e1/95/97/e195971a0e803c0501e1617d4a644bfd.jpg",
-    "https://i.pinimg.com/736x/43/6f/d7/436fd71cea52fa6423442a0ea809c960.jpg",
-    "https://i.pinimg.com/736x/8b/30/4b/8b304b04d4cc2f398aa29e4687331bb0.jpg",
-    "https://i.pinimg.com/1200x/72/20/2c/72202c9a1510560d0b79b168662c2a5f.jpg",
-    "https://i.pinimg.com/736x/a3/71/5c/a3715cfcf007a932d9d1944c30d21b57.jpg",
-    "https://i.pinimg.com/1200x/e8/ca/70/e8ca70cc4cc7132799c9d69936705507.jpg",
-    "https://i.pinimg.com/736x/c3/25/21/c3252117e76c482e708f8b15cd7284af.jpg",
-    "https://i.pinimg.com/1200x/91/9e/01/919e0112d159fb574650d937eee6ed72.jpg",
-    "https://i.pinimg.com/1200x/54/09/0c/54090c9c283f5c88f6aff0a7ea5d157c.jpg",
-    "https://i.pinimg.com/736x/79/a0/4e/79a04e89d83970afaa524574858a7f71.jpg",
-    "https://i.pinimg.com/1200x/b1/10/99/b11099a740518d4a62329925f7de746e.jpg",
-    "https://i.pinimg.com/1200x/66/7c/98/667c9833dc1af0f62fba85f03fb1b4db.jpg",
-    "https://i.pinimg.com/1200x/fd/ca/88/fdca880e184501f6d81cc921c194429a.jpg",
-    "https://i.pinimg.com/736x/5e/08/9c/5e089c57eecac254f7c38db3a06866da.jpg",
-    "https://i.pinimg.com/736x/2f/a6/e3/2fa6e31d0ab6f3c4dd7ef7d38da1567b.jpg",
-    "https://i.pinimg.com/736x/38/a1/79/38a179e084924541a37184547b42f255.jpg",
-    "https://i.pinimg.com/736x/0b/a7/6a/0ba76ac5e70edf6868ef4c0b6c908e77.jpg",
-    "https://i.pinimg.com/736x/09/d6/c3/09d6c3bbef9df6c12585b78f3db8369f.jpg",
-    "https://i.pinimg.com/736x/00/5f/0e/005f0e599757b20d1b2272f3425372d2.jpg",
-    "https://i.pinimg.com/736x/f5/40/66/f540661fff65ea19ea159536d80e73fb.jpg",
-    "https://i.pinimg.com/1200x/7b/4d/48/7b4d48d372320cc67b6a88d6712efb50.jpg",
-    "https://i.pinimg.com/1200x/e6/6d/f0/e66df06af7f73694cf196c07757ce814.jpg",
-    "https://i.pinimg.com/736x/34/bf/fa/34bffa64c7815e353a9190b714aa8edf.jpg"
+    "https://i.pinimg.com/736x/3d/60/f1/3d60f1d1d3d16d222b0e9944cc26c631.jpg",
+    "https://i.pinimg.com/1200x/28/e2/57/28e257b746182ca3b70ce04f2785a35f.jpg",
+    "https://i.pinimg.com/736x/7f/17/d8/7f17d86c487a8a1072122d3a084d7e6f.jpg",
+    "https://i.pinimg.com/1200x/3a/b9/fe/3ab9febe374d7adde7f69464df9129c8.jpg",
+    "https://i.pinimg.com/736x/e6/29/a7/e629a7903924beb41bd1586255502667.jpg",
+    "https://i.pinimg.com/736x/a4/50/8b/a4508bab44e95df8b5bf7a6bab405d77.jpg",
+    "https://i.pinimg.com/736x/30/50/4c/30504cd470176b3b369b80aa52750de3.jpg",
+    "https://i.pinimg.com/736x/f8/dc/d4/f8dcd4d0bf9c7f4452052d319c913b2a.jpg",
+    "https://i.pinimg.com/1200x/3e/1d/84/3e1d84ed48093d0960d50afc8165004e.jpg",
+    "https://i.pinimg.com/736x/d5/4e/d3/d54ed3a47092eedef1e80791f7b202ea.jpg",
 }
 
 local TweenService = game:GetService("TweenService")
@@ -434,6 +692,7 @@ local Modules = {
     "Modules/Movement/JumpHackStrength",
     "Modules/Movement/Climb",
     "Modules/Movement/WallRun",
+    "Modules/Movement/WallWalk",
     "Modules/Movement/FlyMode",
     "Modules/Movement/FlyBypass",
     "Modules/Movement/InfiniteJump",
@@ -597,14 +856,14 @@ local downloadFailed = false
 local function runFile(path)
     local content = nil
     local cachePath = "WASOR_Classic_Cache/" .. path .. ".lua"
-    
+
     if useCache and hasFileSystem and isfile(cachePath) then
         local success, cachedCode = pcall(readfile, cachePath)
         if success and cachedCode and #cachedCode > 0 then
             content = cachedCode
         end
     end
-    
+
     if not content then
         local url
         if latestSHA then
@@ -616,7 +875,7 @@ local function runFile(path)
         if not result and latestSHA then
             result = httpRequest(BASE_URL .. path .. ".lua")
         end
-        
+
         if result and #result > 0 then
             content = result
             if hasFileSystem then
@@ -636,7 +895,7 @@ local function runFile(path)
             end
         end
     end
-    
+
     if content then
         local func, err = loadstring(content, path)
         if func then
@@ -703,8 +962,8 @@ if LoadingScreenGui and LoadingScreenGui.Parent then
     task.wait(0.3)
     local fadeBg = nil
     if BgImage and BgImage.Parent then
-        fadeBg = TweenService:Create(BgImage, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { 
-            ImageTransparency = 1 
+        fadeBg = TweenService:Create(BgImage, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            ImageTransparency = 1
         })
         fadeBg:Play()
     end

@@ -32,4 +32,3 @@ end, function(drawer)
         saveConfig()
     end)
 end, false)
-

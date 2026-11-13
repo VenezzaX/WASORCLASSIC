@@ -103,13 +103,13 @@ Cleanup.cleanupAll = function()
     State.teleportQueued = false
     State.networkTagsRunning = false
     State.networkTagsLoopActive = false
-    
+
     pcall(function()
         if delfile and isfile and isfile("autoexec/WASOR.lua") then
             delfile("autoexec/WASOR.lua")
         end
     end)
-    
+
     pcall(function()
         if _G.WASOR_ScreenGui and _G.WASOR_ScreenGui.Parent then
             pcall(function() _G.WASOR_ScreenGui:Destroy() end)
@@ -119,7 +119,7 @@ Cleanup.cleanupAll = function()
         for _, parent in ipairs(containers) do
             pcall(function()
                 for _, child in ipairs(parent:GetChildren()) do
-                    if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "NetworkUserTag" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "WASOR_ModelViewerGui" or child.Name == "TranscendingViewportGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                    if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "NetworkUserTag" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "WASOR_ModelViewerGui" or child.Name == "TranscendingViewportGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "WallWalkToggleUI" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
                         pcall(function() child:Destroy() end)
                     end
                 end
@@ -127,7 +127,7 @@ Cleanup.cleanupAll = function()
         end
         if State.clearNetworkTags then pcall(State.clearNetworkTags) end
     end)
-    
+
     for _, c in ipairs(S.Connections) do pcall(function() c:Disconnect() end) end
     S.Connections = {}
     pcall(function() Services.RunService:UnbindFromRenderStep("VoidESPUpdate") end)
@@ -138,7 +138,7 @@ Cleanup.cleanupAll = function()
     pcall(function() Services.RunService:UnbindFromRenderStep("VoidESPPreviewUpdate") end)
     pcall(function() Services.RunService:UnbindFromRenderStep("TranscendingFluidSync") end)
     if State.stopViewportESP then pcall(State.stopViewportESP) end
-    
+
     if S.GodModeConn then pcall(function() S.GodModeConn:Disconnect() end) S.GodModeConn = nil end
     if S.TallRunningConn then pcall(function() S.TallRunningConn:Disconnect() end) S.TallRunningConn = nil end
     if S.SpoofConn then pcall(function() S.SpoofConn:Disconnect() end) S.SpoofConn = nil end
@@ -151,19 +151,19 @@ Cleanup.cleanupAll = function()
         end
         S.UISpoofObjects = {}
     end
-    
+
     for p, conn in pairs(S.ChatConnections) do pcall(function() conn:Disconnect() end) end
     S.ChatConnections = {}
-    
+
     for p, _ in pairs(S.ESPPool) do Cleanup.destroyESP(p) end
     S.OverheadPool = {}
-    
+
     if S.AirWalkPlat then pcall(function() S.AirWalkPlat:Destroy() end) S.AirWalkPlat = nil end
     if S.GhostDummy then pcall(function() S.GhostDummy:Destroy() end) S.GhostDummy = nil end
     if S.FloatBody then pcall(function() S.FloatBody:Destroy() end) S.FloatBody = nil end
     if S.WaterPlat then pcall(function() S.WaterPlat:Destroy() end) S.WaterPlat = nil end
     if State.UI_CirclePart then pcall(function() State.UI_CirclePart:Destroy() end) State.UI_CirclePart = nil end
-    
+
     pcall(function()
         for _, obj in ipairs(Services.Workspace:GetChildren()) do
             if obj.Name == "UltraInstinctCircle" or obj.Name == "VoidWaterPlat" or obj.Name == "VoidAirWalkPlatform" or obj.Name == "GhostDummy" then
@@ -171,14 +171,14 @@ Cleanup.cleanupAll = function()
             end
         end
     end)
-    
+
     if State.playerCards then
         for p, item in pairs(State.playerCards) do
             pcall(function() if item.HPConn then item.HPConn:Disconnect() end; if item.CharConn then item.CharConn:Disconnect() end end)
         end
         State.playerCards = {}
     end
-    
+
     pcall(function()
         if State.isFreecam then
             State.isFreecam = false
@@ -195,7 +195,7 @@ Cleanup.cleanupAll = function()
             if hum then Services.Camera.CameraSubject = hum end
         end
     end)
-    
+
     pcall(function()
         if Services.LP.Character then
             VH.Utils.revertTallAnimations(Services.LP.Character)
@@ -214,8 +214,9 @@ Cleanup.cleanupAll = function()
             end
         end
     end)
-    
+
     pcall(function() State.S.HeadSitActive = false; State.S.HeadSitTargetPlayer = nil; State.S.AirSwim = false end)
+    pcall(function() if VH.WallWalkCleanup then pcall(VH.WallWalkCleanup) end end)
     pcall(function() VH.Utils.toggleMapXray(false); VH.Utils.toggleClearVision(false) end)
     pcall(function() if VH.Utils.toggleNo3DRenderCover then VH.Utils.toggleNo3DRenderCover(false) else Services.RunService:Set3dRenderingEnabled(true) end end)
     pcall(function() Services.Lighting.Ambient = State.originalAmbient; Services.Lighting.OutdoorAmbient = State.originalOutdoor end)
