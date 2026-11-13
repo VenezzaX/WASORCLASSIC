@@ -1621,6 +1621,7 @@ local function _BaseCamera()
 	end
 
 	function BaseCamera:UpdateMouseBehavior()
+		if not self.wallWalkActive then return end
 		if FFlagUserCameraToggle and self.isCameraToggle and not self.inMouseLockedMode then
 			CameraUI.setCameraModeToastEnabled(true)
 			CameraInput.enableCameraToggleInput()
@@ -2089,91 +2090,43 @@ local function _TransparencyController()
 end
 
 local function _MouseLockController()
-	local DEFAULT_MOUSE_LOCK_CURSOR = "rbxasset://textures/MouseLockedCursor.png"
-	local CONTEXT_ACTION_NAME = "WallWalkMouseLockSwitchAction"
-	local MOUSELOCK_ACTION_PRIORITY = Enum.ContextActionPriority.High.Value
-	local GameSettings = UserSettings().GameSettings
-	local Mouse = LocalPlayer:GetMouse()
-
 	local MouseLockController = {}
 	MouseLockController.__index = MouseLockController
 
 	function MouseLockController.new()
 		local self = setmetatable({}, MouseLockController)
-		self.isMouseLocked = false
-		self.savedMouseCursor = nil
-		self.boundKeys = {Enum.KeyCode.LeftShift, Enum.KeyCode.RightShift}
 		self.mouseLockToggledEvent = Instance.new("BindableEvent")
-
-		pcall(function()
-			ContextActionService:UnbindAction("MouseLockSwitchAction")
-		end)
-
-		GameSettings.Changed:Connect(function(property)
-			if property == "ControlMode" or property == "ComputerMovementMode" then
-				self:UpdateMouseLockAvailability()
-			end
-		end)
-		LocalPlayer:GetPropertyChangedSignal("DevEnableMouseLock"):Connect(function() self:UpdateMouseLockAvailability() end)
-		LocalPlayer:GetPropertyChangedSignal("DevComputerMovementMode"):Connect(function() self:UpdateMouseLockAvailability() end)
-		self:UpdateMouseLockAvailability()
 		return self
 	end
 
-	function MouseLockController:GetIsMouseLocked() return self.enabled and self.isMouseLocked end
-	function MouseLockController:GetBindableToggleEvent() return self.mouseLockToggledEvent.Event end
-	function MouseLockController:GetMouseLockOffset() return Vector3.new(1.75, 0, 0) end
+	function MouseLockController:GetIsMouseLocked()
+		local locked = false
+		pcall(function()
+			if UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter or UserGameSettings.RotationType == Enum.RotationType.CameraRelative then
+				locked = true
+			end
+		end)
+		return locked
+	end
+
+	function MouseLockController:GetBindableToggleEvent()
+		return self.mouseLockToggledEvent.Event
+	end
+
+	function MouseLockController:GetMouseLockOffset()
+		return Vector3.new(1.75, 0, 0)
+	end
 
 	function MouseLockController:UpdateMouseLockAvailability()
-		local devAllows = LocalPlayer.DevEnableMouseLock
-		local notScriptable = LocalPlayer.DevComputerMovementMode ~= Enum.DevComputerMovementMode.Scriptable
-		local hasMode = GameSettings.ControlMode == Enum.ControlMode.MouseLockSwitch
-		local notClickMove = GameSettings.ComputerMovementMode ~= Enum.ComputerMovementMode.ClickToMove
-		local available = devAllows and hasMode and notClickMove and notScriptable
-		if available ~= self.enabled then
-			self:EnableMouseLock(available)
-		end
 	end
 
 	function MouseLockController:OnMouseLockToggled()
-		self.isMouseLocked = not self.isMouseLocked
-		if self.isMouseLocked then
-			self.savedMouseCursor = Mouse.Icon
-			Mouse.Icon = DEFAULT_MOUSE_LOCK_CURSOR
-		else
-			Mouse.Icon = self.savedMouseCursor or ""
-			self.savedMouseCursor = nil
-		end
-		self.mouseLockToggledEvent:Fire()
 	end
 
 	function MouseLockController:EnableMouseLock(enable)
-		if enable == self.enabled then return end
-		self.enabled = enable
-		if enable then
-			ContextActionService:BindActionAtPriority(CONTEXT_ACTION_NAME, function(_, state)
-				if state == Enum.UserInputState.Begin then
-					self:OnMouseLockToggled()
-					return Enum.ContextActionResult.Sink
-				end
-				return Enum.ContextActionResult.Pass
-			end, false, MOUSELOCK_ACTION_PRIORITY, unpack(self.boundKeys))
-		else
-			if Mouse.Icon == DEFAULT_MOUSE_LOCK_CURSOR then
-				Mouse.Icon = ""
-			end
-			ContextActionService:UnbindAction(CONTEXT_ACTION_NAME)
-			if self.isMouseLocked then
-				self.isMouseLocked = false
-				self.mouseLockToggledEvent:Fire()
-			end
-		end
 	end
 
 	function MouseLockController:Destroy()
-		self:EnableMouseLock(false)
-		ContextActionService:UnbindAction(CONTEXT_ACTION_NAME)
-		Mouse.Icon = ""
 	end
 
 	return MouseLockController
@@ -3962,8 +3915,10 @@ local function cleanupAll()
     pcall(function() RunService:UnbindFromRenderStep("WallWalkCameraRenderUpdate") end)
     pcall(function() RunService:UnbindFromRenderStep("WallWalkControlStep") end)
     pcall(function() RunService:UnbindFromRenderStep("WallWalkGravityStep") end)
-    UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-    UserGameSettings.RotationType = Enum.RotationType.MovementRelative
+    if wallWalkEnabled then
+        UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+        UserGameSettings.RotationType = Enum.RotationType.MovementRelative
+    end
     if screenGui then screenGui:Destroy() end
 end
 

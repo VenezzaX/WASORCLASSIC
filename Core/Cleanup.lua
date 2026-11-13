@@ -26,38 +26,66 @@ local function getGuiContainers()
     return containers
 end
 
+local function safeHideDrawing(d)
+    if not d then return end
+    pcall(function() d.Visible = false end)
+end
+
+local function safeRemoveDrawing(d)
+    if not d then return end
+    pcall(function() d.Visible = false end)
+    pcall(function()
+        if d.Destroy then
+            d:Destroy()
+        elseif d.Remove then
+            d:Remove()
+        end
+    end)
+    pcall(function() d:Remove() end)
+    pcall(function() d:Destroy() end)
+end
+
 Cleanup.hideESP = function(p)
     local S = State.S
-    local pool = S.ESPPool and S.ESPPool[p]
+    if not S or not S.ESPPool then return end
+    local pool = S.ESPPool[p]
+    if not pool and type(p) == "userdata" then
+        for playerObj, entry in pairs(S.ESPPool) do
+            if playerObj == p or (p.UserId and playerObj.UserId and p.UserId == playerObj.UserId) or (p.Name and playerObj.Name and p.Name == playerObj.Name) then
+                pool = entry
+                break
+            end
+        end
+    end
     if pool then
-        if pool.boxOutline then pcall(function() pool.boxOutline.Visible = false end) end
-        if pool.boxFill then pcall(function() pool.boxFill.Visible = false end) end
-        if pool.tracer then pcall(function() pool.tracer.Visible = false end) end
-        if pool.nameTag then pcall(function() pool.nameTag.Visible = false end) end
-        if pool.healthText then pcall(function() pool.healthText.Visible = false end) end
-        if pool.distText then pcall(function() pool.distText.Visible = false end) end
-        if pool.healthBarOutline then pcall(function() pool.healthBarOutline.Visible = false end) end
-        if pool.healthBarFill then pcall(function() pool.healthBarFill.Visible = false end) end
-        if pool.losLine then pcall(function() pool.losLine.Visible = false end) end
-        if pool.indicator then pcall(function() pool.indicator.Visible = false end) end
+        safeHideDrawing(pool.boxOutline)
+        safeHideDrawing(pool.boxFill)
+        safeHideDrawing(pool.tracer)
+        safeHideDrawing(pool.nameTag)
+        safeHideDrawing(pool.healthText)
+        safeHideDrawing(pool.distText)
+        safeHideDrawing(pool.healthBarOutline)
+        safeHideDrawing(pool.healthBarFill)
+        safeHideDrawing(pool.losLine)
+        safeHideDrawing(pool.indicator)
         if pool.skeleton then
-            for _, line in ipairs(pool.skeleton) do pcall(function() line.Visible = false end) end
+            for _, line in ipairs(pool.skeleton) do safeHideDrawing(line) end
         end
         if pool.corners then
-            for _, line in ipairs(pool.corners) do pcall(function() line.Visible = false end) end
+            for _, line in ipairs(pool.corners) do safeHideDrawing(line) end
         end
         if pool.lines3D then
-            for _, line in ipairs(pool.lines3D) do pcall(function() line.Visible = false end) end
+            for _, line in ipairs(pool.lines3D) do safeHideDrawing(line) end
         end
         if pool.extraLines then
-            for _, line in ipairs(pool.extraLines) do pcall(function() line.Visible = false end) end
+            for _, line in ipairs(pool.extraLines) do safeHideDrawing(line) end
         end
     end
 end
 
 Cleanup.hideAllESP = function()
     local S = State.S
-    if S.ESPPool then
+    if S and S.ESPPool then
         for p, _ in pairs(S.ESPPool) do
             Cleanup.hideESP(p)
         end
@@ -66,32 +94,43 @@ end
 
 Cleanup.destroyESP = function(p)
     local S = State.S
-    local pool = S.ESPPool and S.ESPPool[p]
+    if not S or not S.ESPPool then return end
+    local poolKey = p
+    local pool = S.ESPPool[p]
+    if not pool and type(p) == "userdata" then
+        for playerObj, entry in pairs(S.ESPPool) do
+            if playerObj == p or (p.UserId and playerObj.UserId and p.UserId == playerObj.UserId) or (p.Name and playerObj.Name and p.Name == playerObj.Name) then
+                pool = entry
+                poolKey = playerObj
+                break
+            end
+        end
+    end
     if pool then
-        Cleanup.hideESP(p)
-        pcall(function() if pool.boxOutline then pool.boxOutline:Remove() end end)
-        pcall(function() if pool.boxFill then pool.boxFill:Remove() end end)
-        pcall(function() if pool.tracer then pool.tracer:Remove() end end)
-        pcall(function() if pool.nameTag then pool.nameTag:Remove() end end)
-        pcall(function() if pool.healthText then pool.healthText:Remove() end end)
-        pcall(function() if pool.distText then pool.distText:Remove() end end)
-        pcall(function() if pool.healthBarOutline then pool.healthBarOutline:Remove() end end)
-        pcall(function() if pool.healthBarFill then pool.healthBarFill:Remove() end end)
-        pcall(function() if pool.losLine then pool.losLine:Remove() end end)
-        pcall(function() if pool.indicator then pool.indicator:Remove() end end)
+        Cleanup.hideESP(poolKey)
+        safeRemoveDrawing(pool.boxOutline)
+        safeRemoveDrawing(pool.boxFill)
+        safeRemoveDrawing(pool.tracer)
+        safeRemoveDrawing(pool.nameTag)
+        safeRemoveDrawing(pool.healthText)
+        safeRemoveDrawing(pool.distText)
+        safeRemoveDrawing(pool.healthBarOutline)
+        safeRemoveDrawing(pool.healthBarFill)
+        safeRemoveDrawing(pool.losLine)
+        safeRemoveDrawing(pool.indicator)
         if pool.skeleton then
-            for _, line in ipairs(pool.skeleton) do pcall(function() line:Remove() end) end
+            for _, line in ipairs(pool.skeleton) do safeRemoveDrawing(line) end
         end
         if pool.corners then
-            for _, line in ipairs(pool.corners) do pcall(function() line:Remove() end) end
+            for _, line in ipairs(pool.corners) do safeRemoveDrawing(line) end
         end
         if pool.lines3D then
-            for _, line in ipairs(pool.lines3D) do pcall(function() line:Remove() end) end
+            for _, line in ipairs(pool.lines3D) do safeRemoveDrawing(line) end
         end
         if pool.extraLines then
-            for _, line in ipairs(pool.extraLines) do pcall(function() line:Remove() end) end
+            for _, line in ipairs(pool.extraLines) do safeRemoveDrawing(line) end
         end
-        S.ESPPool[p] = nil
+        S.ESPPool[poolKey] = nil
     end
 end
 
@@ -155,7 +194,7 @@ Cleanup.cleanupAll = function()
     for p, conn in pairs(S.ChatConnections) do pcall(function() conn:Disconnect() end) end
     S.ChatConnections = {}
 
-    for p, _ in pairs(S.ESPPool) do Cleanup.destroyESP(p) end
+    if S.ESPPool then for p, _ in pairs(S.ESPPool) do Cleanup.destroyESP(p) end; S.ESPPool = {} end
     S.OverheadPool = {}
 
     if S.AirWalkPlat then pcall(function() S.AirWalkPlat:Destroy() end) S.AirWalkPlat = nil end

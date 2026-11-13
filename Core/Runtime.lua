@@ -33,7 +33,7 @@ local rowHomeFPS = State.rowHomeFPS
 local rowHomePing = State.rowHomePing
 
 local Players = Services.Players
-local LP = Services.LP
+local LP = Services.LP or Players.LocalPlayer
 local Mouse = Services.Mouse
 local Camera = Services.Camera
 
@@ -299,14 +299,24 @@ local function updateESPAndAimbot()
         ["Red"] = Color3.fromRGB(220, 40, 40), ["Green"] = Color3.fromRGB(55, 200, 80), ["Blue"] = Color3.fromRGB(40, 120, 220),
         ["Yellow"] = Color3.fromRGB(220, 175, 45), ["Cyan"] = Color3.fromRGB(45, 200, 220), ["White"] = Color3.fromRGB(255, 255, 255)
     }
+    local localPlayer = Services.LP or Players.LocalPlayer
+    local activePlayers = Players:GetPlayers()
+    local activeSet = {}
+    for _, ap in ipairs(activePlayers) do
+        activeSet[ap] = true
+    end
+
     for p, _ in pairs(S.ESPPool) do
-        local inPlayers = false
-        pcall(function()
-            if p and p.Parent == Players then
-                inPlayers = true
+        local inServer = activeSet[p]
+        if not inServer and type(p) == "userdata" then
+            for _, ap in ipairs(activePlayers) do
+                if (p.UserId and ap.UserId and p.UserId == ap.UserId) or (p.Name and ap.Name and p.Name == ap.Name) then
+                    inServer = true
+                    break
+                end
             end
-        end)
-        if not inPlayers then
+        end
+        if not inServer or p == localPlayer or (localPlayer and p.UserId and localPlayer.UserId and p.UserId == localPlayer.UserId) or (localPlayer and p.Name and localPlayer.Name and p.Name == localPlayer.Name) then
             destroyESP(p)
         end
     end
@@ -358,15 +368,20 @@ local function updateESPAndAimbot()
 
     local espEnabled = (S.ESPBoxes or S.ESPTracers or S.ESPNames or S.ESPHealth or S.ESPDistances or S.SkeletonESP or S.LineOfSight or S.OutOfViewIndicators)
     if espEnabled then
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p == LP then continue end
+        for _, p in ipairs(activePlayers) do
+            if p == localPlayer or (localPlayer and p.UserId and localPlayer.UserId and p.UserId == localPlayer.UserId) or (localPlayer and p.Name and localPlayer.Name and p.Name == localPlayer.Name) then
+                if S.ESPPool[p] then
+                    destroyESP(p)
+                end
+                continue
+            end
             local success, err = pcall(function()
                 local char = p.Character
                 local hrp = char and (char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
                 local valid = char and hrp and hum and hum.Health > 0
                 if valid then
-                    local isTeammate = p.Team == LP.Team
+                    local isTeammate = localPlayer and p.Team and localPlayer.Team and p.Team == localPlayer.Team
                     local isFriend = checkFriendship(p.UserId)
 
                     local espAllowed = true
@@ -691,12 +706,7 @@ local function updateESPAndAimbot()
                                 losLine.Visible = false
                             end
                         else
-                            pool.boxOutline.Visible = false; pool.boxFill.Visible = false; pool.tracer.Visible = false; pool.nameTag.Visible = false
-                            pool.healthText.Visible = false; pool.distText.Visible = false; pool.healthBarOutline.Visible = false; pool.healthBarFill.Visible = false
-                            for _, line in ipairs(pool.skeleton) do line.Visible = false end
-                            for _, line in ipairs(pool.corners) do line.Visible = false end
-                            if pool.lines3D then for _, line in ipairs(pool.lines3D) do line.Visible = false end end
-                            if pool.losLine then pool.losLine.Visible = false end
+                            hideESP(p)
                         end
                     end
                 else
