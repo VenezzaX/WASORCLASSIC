@@ -792,7 +792,7 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
 
     if S.InstantRespawn and myHum and myHum.Health <= 0 then task.wait(); LP:LoadCharacter() end
 
-    if S.FlyBypass and myHum and myHRP then
+    if S.FlyBypass and (S.FlyBypassVersion == "V1") and myHum and myHRP then
         myHum.PlatformStand = true
         pcall(function()
             myHRP.AssemblyLinearVelocity = Vector3.zero
@@ -1441,6 +1441,16 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
                 S.WallWalk = not S.WallWalk
             end
             notify("Wall Walk " .. (S.WallWalk and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
+        end
+    elseif S.FlyBypassKey and S.FlyBypassKey ~= Enum.KeyCode.Unknown and k == S.FlyBypassKey then
+        if not isModDisabled("Fly Bypass") then
+            local mod = moduleButtons["Fly Bypass"]
+            if mod and mod.SetActive then
+                mod.SetActive(not S.FlyBypass)
+            else
+                S.FlyBypass = not S.FlyBypass
+            end
+            notify("Fly Bypass " .. (S.FlyBypass and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
         end
     end
 
