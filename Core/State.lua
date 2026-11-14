@@ -230,6 +230,9 @@ VH.ESPSync = {
     end,
     Set = function(self, key, value, source)
         State.S[key] = value
+        if value == false and VH.Cleanup and VH.Cleanup.hideModuleESP then
+            pcall(VH.Cleanup.hideModuleESP, key)
+        end
         if VH.Config and VH.Config.saveConfig then
             pcall(VH.Config.saveConfig)
         end

@@ -51,7 +51,17 @@ Cleanup.hideESP = function(p)
     local pool = S.ESPPool[p]
     if not pool and type(p) == "userdata" then
         for playerObj, entry in pairs(S.ESPPool) do
-            if playerObj == p or (p.UserId and playerObj.UserId and p.UserId == playerObj.UserId) or (p.Name and playerObj.Name and p.Name == playerObj.Name) then
+            local matches = false
+            pcall(function()
+                if playerObj == p then
+                    matches = true
+                elseif p.UserId and playerObj.UserId and p.UserId == playerObj.UserId then
+                    matches = true
+                elseif p.Name and playerObj.Name and p.Name == playerObj.Name then
+                    matches = true
+                end
+            end)
+            if matches then
                 pool = entry
                 break
             end
@@ -79,6 +89,37 @@ Cleanup.hideESP = function(p)
         end
         if pool.extraLines then
             for _, line in ipairs(pool.extraLines) do safeHideDrawing(line) end
+        end
+    end
+end
+
+Cleanup.hideModuleESP = function(mod)
+    local S = State.S
+    if not S or not S.ESPPool then return end
+    for _, pool in pairs(S.ESPPool) do
+        if pool then
+            if mod == "SkeletonESP" and pool.skeleton then
+                for _, line in ipairs(pool.skeleton) do safeHideDrawing(line) end
+            elseif mod == "ESPBoxes" then
+                safeHideDrawing(pool.boxOutline)
+                safeHideDrawing(pool.boxFill)
+                if pool.corners then for _, line in ipairs(pool.corners) do safeHideDrawing(line) end end
+                if pool.lines3D then for _, line in ipairs(pool.lines3D) do safeHideDrawing(line) end end
+            elseif mod == "ESPTracers" then
+                safeHideDrawing(pool.tracer)
+            elseif mod == "ESPNames" then
+                safeHideDrawing(pool.nameTag)
+            elseif mod == "ESPHealth" then
+                safeHideDrawing(pool.healthText)
+                safeHideDrawing(pool.healthBarOutline)
+                safeHideDrawing(pool.healthBarFill)
+            elseif mod == "ESPDistances" then
+                safeHideDrawing(pool.distText)
+            elseif mod == "LineOfSight" then
+                safeHideDrawing(pool.losLine)
+            elseif mod == "OutOfViewIndicators" then
+                safeHideDrawing(pool.indicator)
+            end
         end
     end
 end
@@ -117,7 +158,7 @@ Cleanup.destroyESP = function(p)
         end
     end
     if pool then
-        Cleanup.hideESP(poolKey)
+        pcall(function() Cleanup.hideESP(poolKey) end)
         safeRemoveDrawing(pool.boxOutline)
         safeRemoveDrawing(pool.boxFill)
         safeRemoveDrawing(pool.tracer)
@@ -168,9 +209,12 @@ Cleanup.destroyAllESP = function()
             table.insert(toDestroy, p)
         end
         for _, p in ipairs(toDestroy) do
-            Cleanup.destroyESP(p)
+            pcall(function() Cleanup.destroyESP(p) end)
         end
         S.ESPPool = {}
+    end
+    if cleardrawcache then
+        pcall(cleardrawcache)
     end
 end
 
@@ -238,8 +282,32 @@ Cleanup.cleanupAll = function()
     for p, conn in pairs(S.ChatConnections) do pcall(function() conn:Disconnect() end) end
     S.ChatConnections = {}
 
-    if S.ESPPool then for p, _ in pairs(S.ESPPool) do Cleanup.destroyESP(p) end; S.ESPPool = {} end
-    S.OverheadPool = {}
+    if Cleanup.destroyAllESP then
+        pcall(Cleanup.destroyAllESP)
+    end
+    if VH.Utils and VH.Utils.refreshOverheads then
+        pcall(VH.Utils.refreshOverheads)
+    end
+    if S.OverheadPool then
+        for p, bill in pairs(S.OverheadPool) do
+            pcall(function() bill:Destroy() end)
+        end
+        S.OverheadPool = {}
+    end
+    pcall(function()
+        for _, p in ipairs(Services.Players:GetPlayers()) do
+            if p.Character then
+                local head = p.Character:FindFirstChild("Head")
+                if head then
+                    local tag = head:FindFirstChild("VoidOverheadTag")
+                    if tag then pcall(function() tag:Destroy() end) end
+                end
+            end
+        end
+    end)
+    if cleardrawcache then
+        pcall(cleardrawcache)
+    end
 
     if S.AirWalkPlat then pcall(function() S.AirWalkPlat:Destroy() end) S.AirWalkPlat = nil end
     if S.GhostDummy then pcall(function() S.GhostDummy:Destroy() end) S.GhostDummy = nil end

@@ -109,6 +109,10 @@ local function getNodePosition(char, node)
     if not part then return nil end
     if attachmentName then
         local attach = part:FindFirstChild(attachmentName)
+        if not attach and string.find(attachmentName, "Attachment") then
+            local rigName = string.gsub(attachmentName, "Attachment", "RigAttachment")
+            attach = part:FindFirstChild(rigName)
+        end
         if attach and attach:IsA("Attachment") then
             return attach.WorldPosition
         end
@@ -727,6 +731,9 @@ local function updateESPAndAimbot()
             end)
             if not success then
                 hideESP(p)
+            end
+            if S.OverheadInfo and Utils.createOverhead then
+                pcall(Utils.createOverhead, p)
             end
         end
     else
@@ -1599,7 +1606,27 @@ end
 if LP.Character then onCharSpawn(LP.Character) end
 table.insert(S.Connections, LP.CharacterAdded:Connect(onCharSpawn))
 
+local function hookPlayerCharacter(p)
+    if p == LP or (LP and p.UserId and LP.UserId and p.UserId == LP.UserId) then return end
+    pcall(function()
+        table.insert(S.Connections, p.CharacterRemoving:Connect(function()
+            hideESP(p)
+            if VH.Utils and VH.Utils.removeOverhead then
+                pcall(VH.Utils.removeOverhead, p)
+            end
+        end))
+        table.insert(S.Connections, p.CharacterAdded:Connect(function()
+            hideESP(p)
+        end))
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+    hookPlayerCharacter(p)
+end
+
 table.insert(S.Connections, Players.PlayerAdded:Connect(function(p)
+    hookPlayerCharacter(p)
     if S.JoinLeaveToasts then notify(p.DisplayName .. " joined the server.", Color3.fromRGB(50, 195, 75)) end
 end))
 
@@ -1607,6 +1634,9 @@ table.insert(S.Connections, Players.PlayerRemoving:Connect(function(p)
     if S.JoinLeaveToasts then notify(p.DisplayName .. " left the server.", Color3.fromRGB(218, 38, 38)) end
     pcall(function()
         destroyESP(p)
+        if VH.Utils and VH.Utils.removeOverhead then
+            pcall(VH.Utils.removeOverhead, p)
+        end
         if S.ChatConnections[p] then pcall(function() S.ChatConnections[p]:Disconnect() end); S.ChatConnections[p] = nil end
         if State.playerCards and State.playerCards[p] then
             if State.playerCards[p].HPConn then State.playerCards[p].HPConn:Disconnect() end

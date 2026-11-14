@@ -629,8 +629,166 @@ Utils.runExternalScript = function(name, url, optionalPlaceId)
     end)
 end
 
-Utils.createOverhead = function(p) end
-Utils.refreshOverheads = function() end
+Utils.removeOverhead = function(p)
+    local S = State.S
+    if S.OverheadPool and S.OverheadPool[p] then
+        pcall(function() S.OverheadPool[p]:Destroy() end)
+        S.OverheadPool[p] = nil
+    end
+    pcall(function()
+        if p and p.Character then
+            local head = p.Character:FindFirstChild("Head")
+            if head then
+                local tag = head:FindFirstChild("VoidOverheadTag")
+                if tag then tag:Destroy() end
+            end
+        end
+    end)
+end
+
+Utils.createOverhead = function(p)
+    local S = State.S
+    if not S.OverheadInfo then return end
+    if not p or p == Services.LP then return end
+    local isTeammate = Services.LP and p.Team and Services.LP.Team and p.Team == Services.LP.Team
+    if S.OverheadTeamCheck and isTeammate then
+        Utils.removeOverhead(p)
+        return
+    end
+    local char = p.Character
+    if not char then return end
+    local head = char:FindFirstChild("Head")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not head or not hum or hum.Health <= 0 then
+        Utils.removeOverhead(p)
+        return
+    end
+
+    local bill = head:FindFirstChild("VoidOverheadTag")
+    if not bill then
+        bill = Instance.new("BillboardGui")
+        bill.Name = "VoidOverheadTag"
+        bill.Size = UDim2.new(0, 140, 0, 36)
+        bill.StudsOffset = Vector3.new(0, 3, 0)
+        bill.AlwaysOnTop = true
+        bill.MaxDistance = S.OverheadMaxDistance or 300
+        bill.Adornee = head
+
+        local bg = Instance.new("Frame")
+        bg.Name = "BG"
+        bg.Size = UDim2.new(1, 0, 1, 0)
+        bg.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+        bg.BackgroundTransparency = 0.25
+        bg.BorderSizePixel = 0
+        bg.Parent = bill
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 4)
+        corner.Parent = bg
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(45, 45, 52)
+        stroke.Thickness = 1
+        stroke.Parent = bg
+
+        local nameLbl = Instance.new("TextLabel")
+        nameLbl.Name = "NameLbl"
+        nameLbl.Size = UDim2.new(1, -8, 0, 16)
+        nameLbl.Position = UDim2.new(0, 4, 0, 2)
+        nameLbl.BackgroundTransparency = 1
+        nameLbl.Font = Enum.Font.GothamBold
+        nameLbl.TextSize = 10
+        nameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLbl.TextXAlignment = Enum.TextXAlignment.Center
+        nameLbl.Text = p.DisplayName
+        nameLbl.Parent = bg
+
+        local barBg = Instance.new("Frame")
+        barBg.Name = "BarBG"
+        barBg.Size = UDim2.new(1, -8, 0, 4)
+        barBg.Position = UDim2.new(0, 4, 0, 18)
+        barBg.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+        barBg.BorderSizePixel = 0
+        barBg.Parent = bg
+
+        local barCorner = Instance.new("UICorner")
+        barCorner.CornerRadius = UDim.new(0, 2)
+        barCorner.Parent = barBg
+
+        local barFill = Instance.new("Frame")
+        barFill.Name = "BarFill"
+        barFill.Size = UDim2.new(math.clamp(hum.Health / math.max(1, hum.MaxHealth), 0, 1), 0, 1, 0)
+        barFill.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+        barFill.BorderSizePixel = 0
+        barFill.Parent = barBg
+
+        local fillCorner = Instance.new("UICorner")
+        fillCorner.CornerRadius = UDim.new(0, 2)
+        fillCorner.Parent = barFill
+
+        local subLbl = Instance.new("TextLabel")
+        subLbl.Name = "SubLbl"
+        subLbl.Size = UDim2.new(1, -8, 0, 12)
+        subLbl.Position = UDim2.new(0, 4, 0, 22)
+        subLbl.BackgroundTransparency = 1
+        subLbl.Font = Enum.Font.Gotham
+        subLbl.TextSize = 9
+        subLbl.TextColor3 = Color3.fromRGB(180, 180, 190)
+        subLbl.TextXAlignment = Enum.TextXAlignment.Center
+        subLbl.Text = string.format("%d HP", math.floor(hum.Health))
+        subLbl.Parent = bg
+
+        bill.Parent = head
+        S.OverheadPool[p] = bill
+    else
+        bill.MaxDistance = S.OverheadMaxDistance or 300
+        local bg = bill:FindFirstChild("BG")
+        if bg then
+            local barBg = bg:FindFirstChild("BarBG")
+            local barFill = barBg and barBg:FindFirstChild("BarFill")
+            local hpPct = math.clamp(hum.Health / math.max(1, hum.MaxHealth), 0, 1)
+            if barFill then
+                barFill.Size = UDim2.new(hpPct, 0, 1, 0)
+                barFill.BackgroundColor3 = Color3.fromRGB(math.floor(255 * (1 - hpPct)), math.floor(255 * hpPct), 0)
+            end
+            local subLbl = bg:FindFirstChild("SubLbl")
+            if subLbl then
+                local cam = Services.Camera or (Services.Workspace and Services.Workspace.CurrentCamera)
+                local dist = cam and math.round((head.Position - cam.CFrame.Position).Magnitude) or 0
+                subLbl.Text = string.format("%d HP | %d studs", math.floor(hum.Health), dist)
+            end
+        end
+    end
+end
+
+Utils.refreshOverheads = function()
+    local S = State.S
+    if not S.OverheadInfo then
+        if S.OverheadPool then
+            for p, bill in pairs(S.OverheadPool) do
+                pcall(function() bill:Destroy() end)
+            end
+            S.OverheadPool = {}
+        end
+        for _, p in ipairs(Services.Players:GetPlayers()) do
+            pcall(function()
+                if p.Character then
+                    local head = p.Character:FindFirstChild("Head")
+                    if head then
+                        local tag = head:FindFirstChild("VoidOverheadTag")
+                        if tag then tag:Destroy() end
+                    end
+                end
+            end)
+        end
+    else
+        for _, p in ipairs(Services.Players:GetPlayers()) do
+            if p ~= Services.LP then
+                Utils.createOverhead(p)
+            end
+        end
+    end
+end
 
 Utils.updateFlyVelocity = function()
     local S = State.S

@@ -262,6 +262,11 @@ if _G.VoidHub or _G.WASOR_Loaded or _G.WASOR_Loading then
             _G.VoidHub.Cleanup.cleanupAll()
         end
     end)
+    pcall(function()
+        if cleardrawcache then
+            cleardrawcache()
+        end
+    end)
     _G.VoidHub = nil
     _G.WASOR_Loading = nil
     _G.WASOR_Loaded = nil
@@ -273,6 +278,12 @@ _G.WASOR_Loading = true
 if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
     pcall(_G.VoidHub.Cleanup.cleanupAll)
 end
+
+pcall(function()
+    if cleardrawcache then
+        cleardrawcache()
+    end
+end)
 
 pcall(function()
     if delfile and isfile and isfile("autoexec/WASOR.lua") then
