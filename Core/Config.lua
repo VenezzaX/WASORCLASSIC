@@ -1,20 +1,22 @@
-local VH = _G.VoidHub
+local VH = _G.VoidHub or {}
 local Config = {}
 
-local Services = VH.Services
-local State = VH.State
+local Services = VH.Services or {
+    HttpService = game:GetService("HttpService")
+}
+local State = VH.State or {}
 
 Config.saveFavorites = function()
     pcall(function()
-        if writefile then
-            writefile("utility_hub_favorites.json", Services.HttpService:JSONEncode(State.S.FavoriteMaps))
+        if writefile and State.S then
+            writefile("utility_hub_favorites.json", Services.HttpService:JSONEncode(State.S.FavoriteMaps or {}))
         end
     end)
 end
 
 Config.loadFavorites = function()
     pcall(function()
-        if readfile and isfile and isfile("utility_hub_favorites.json") then
+        if readfile and isfile and isfile("utility_hub_favorites.json") and State.S then
             local data = readfile("utility_hub_favorites.json")
             State.S.FavoriteMaps = Services.HttpService:JSONDecode(data) or {}
         end
@@ -23,7 +25,7 @@ end
 
 Config.saveConfig = function()
     pcall(function()
-        if writefile then
+        if writefile and State.S then
             local configData = {}
             for k, v in pairs(State.S) do
                 if type(v) == "boolean" or type(v) == "number" or type(v) == "string" then
@@ -39,12 +41,28 @@ Config.saveConfig = function()
     end)
 end
 
+Config.resetTogglesForTeleport = function()
+    local S = State.S
+    if not S then return end
+    if S.SaveConfigBetweenTeleports ~= true then
+        S.Fly = false; S.NoClip = false; S.BHop = false; S.AirWalk = false; S.GhostMode = false
+        S.Float = false; S.WaterWalk = false; S.TallAnim = false; S.Spin = false; S.GravityEnabled = false
+        S.GodMode = false; S.KillAura = false; S.AutoClicker = false; S.FlingActive = false; S.FlingAllActive = false; S.WalkFling = false
+        S.FollowActive = false; S.AntiAnchor = false; S.No3DRender = false; S.ClickTeleport = false; S.SprintEnabled = false
+        S.GraphicsReducer = false; S.ForceWalkSpeed = false; S.ForceJumpPower = false; S.Climb = false
+        S.AimbotActive = false; S.AimlockActive = false; S.SilentAim = false; S.TriggerbotActive = false; S.AutoplayBot = false; S.TouchAura = false
+        S.WallRun = false; S.WallWalk = false; S.FlyBypass = false; S.PathfindingWalk = false
+        S.MinimapActive = false; S.OutOfViewIndicators = false; S.ESPPreviewActive = false
+        S.ClickDelete = false; S.CameraMaxZoomEnabled = false
+    end
+end
+
 Config.loadConfig = function()
     pcall(function()
         if readfile and isfile and isfile("utility_hub_config.json") then
             local data = readfile("utility_hub_config.json")
             local configData = Services.HttpService:JSONDecode(data)
-            if configData then
+            if configData and State.S then
                 for k, v in pairs(configData) do
                     if type(v) == "table" and v.__type == "EnumItem" then
                         local enumType, enumName = v.Value:match("^Enum%.([^%.]+)%.([^%.]+)$")
@@ -62,22 +80,10 @@ Config.loadConfig = function()
         end
     end)
 
-    local S = State.S
-    S.WallWalk = false
-    if S.SaveConfigBetweenTeleports ~= true then
-        S.Fly = false; S.NoClip = false; S.BHop = false; S.AirWalk = false; S.GhostMode = false
-        S.Float = false; S.WaterWalk = false; S.TallAnim = false; S.Spin = false; S.GravityEnabled = false
-        S.GodMode = false; S.KillAura = false; S.AutoClicker = false; S.FlingActive = false; S.FlingAllActive = false; S.WalkFling = false
-        S.FollowActive = false; S.AntiAnchor = false; S.No3DRender = false; S.ClickTeleport = false; S.SprintEnabled = false
-        S.GraphicsReducer = false; S.ForceWalkSpeed = false; S.ForceJumpPower = false; S.Climb = false
-        S.AimbotActive = false; S.AimlockActive = false; S.SilentAim = false; S.TriggerbotActive = false; S.AutoplayBot = false; S.TouchAura = false
-        S.WallRun = false; S.WallWalk = false; S.FlyBypass = false; S.PathfindingWalk = false
-        S.MinimapActive = false; S.OutOfViewIndicators = false; S.ESPPreviewActive = false
-        S.ClickDelete = false; S.CameraMaxZoomEnabled = false
-    end
+    local S = State.S or {}
     pcall(function()
-        if setfpscap then
-            setfpscap(S.FPSCap or 144)
+        if setfpscap and S.FPSCap then
+            setfpscap(S.FPSCap)
         end
     end)
 end

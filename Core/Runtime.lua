@@ -306,19 +306,31 @@ local function updateESPAndAimbot()
         activeSet[ap] = true
     end
 
+    local toClean = {}
     for p, _ in pairs(S.ESPPool) do
         local inServer = activeSet[p]
         if not inServer and type(p) == "userdata" then
-            for _, ap in ipairs(activePlayers) do
-                if (p.UserId and ap.UserId and p.UserId == ap.UserId) or (p.Name and ap.Name and p.Name == ap.Name) then
-                    inServer = true
-                    break
+            pcall(function()
+                for _, ap in ipairs(activePlayers) do
+                    if (p.UserId and ap.UserId and p.UserId == ap.UserId) or (p.Name and ap.Name and p.Name == ap.Name) then
+                        inServer = true
+                        break
+                    end
                 end
+            end)
+        end
+        local isLocal = false
+        pcall(function()
+            if p == localPlayer or (localPlayer and p.UserId and localPlayer.UserId and p.UserId == localPlayer.UserId) or (localPlayer and p.Name and localPlayer.Name and p.Name == localPlayer.Name) then
+                isLocal = true
             end
+        end)
+        if not inServer or isLocal then
+            table.insert(toClean, p)
         end
-        if not inServer or p == localPlayer or (localPlayer and p.UserId and localPlayer.UserId and p.UserId == localPlayer.UserId) or (localPlayer and p.Name and localPlayer.Name and p.Name == localPlayer.Name) then
-            destroyESP(p)
-        end
+    end
+    for _, p in ipairs(toClean) do
+        destroyESP(p)
     end
 
     if S.Chams then
@@ -719,7 +731,11 @@ local function updateESPAndAimbot()
         end
     else
         if next(S.ESPPool) ~= nil then
-            hideAllESP()
+            if VH.Cleanup and VH.Cleanup.destroyAllESP then
+                VH.Cleanup.destroyAllESP()
+            else
+                hideAllESP()
+            end
         end
     end
 end
@@ -1592,6 +1608,11 @@ table.insert(S.Connections, Players.PlayerRemoving:Connect(function(p)
     pcall(function()
         destroyESP(p)
         if S.ChatConnections[p] then pcall(function() S.ChatConnections[p]:Disconnect() end); S.ChatConnections[p] = nil end
+        if State.playerCards and State.playerCards[p] then
+            if State.playerCards[p].HPConn then State.playerCards[p].HPConn:Disconnect() end
+            if State.playerCards[p].CharConn then State.playerCards[p].CharConn:Disconnect() end
+            State.playerCards[p] = nil
+        end
         if State.currentSpectateTarget == p then spectatePlayer(nil) end
     end)
 end))
@@ -1605,8 +1626,8 @@ pcall(connectChatLogger)
 pcall(function() applyThemeColor(S.ThemeColor or "Purple"); updateHUDArrayList() end)
 
 local toggleKeyName = S.UIToggleKey and S.UIToggleKey.Name or "RCtrl"
-logMessage("System", "WeAreSkidding loaded successfully. Keybind: [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
-notify("WeAreSkidding loaded! [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
+logMessage("System", "WASOR 4.5 loaded successfully. Keybind: [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
+notify("WASOR 4.5 loaded! [" .. toggleKeyName .. "] to toggle UI", Color3.fromRGB(50, 195, 75))
 print("자유롭게 스스로 선택을 내리십시오(현명한 판단을 내리는 것 또한 그중 하나입니다). 그리고 인내심이야말로 우리 삶의 핵심이라는 사실을 기억하십시오.")
 
     local request = (http and http.request) or http_request or (syn and syn.request)

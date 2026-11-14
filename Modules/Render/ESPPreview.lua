@@ -93,6 +93,20 @@ local espColorMapping = {
     ["White"] = Color3.fromRGB(255, 255, 255)
 }
 
+local StudioTheme = {
+    windowBg     = Color3.fromRGB(37, 37, 38),
+    headerBg     = Color3.fromRGB(45, 45, 48),
+    panelBg      = Color3.fromRGB(42, 42, 45),
+    insetBg      = Color3.fromRGB(26, 26, 28),
+    border       = Color3.fromRGB(20, 20, 22),
+    borderSubtle = Color3.fromRGB(55, 55, 58),
+    text         = Color3.fromRGB(225, 225, 228),
+    textMuted    = Color3.fromRGB(160, 160, 165),
+    blue         = Color3.fromRGB(0, 122, 204),
+    btnBg        = Color3.fromRGB(50, 50, 54),
+    btnHover     = Color3.fromRGB(65, 65, 70),
+}
+
 local function getGuiParent()
     local success, core = pcall(function()
         return (gethui and gethui()) or (get_hidden_gui and get_hidden_gui()) or CoreGui
@@ -1032,58 +1046,43 @@ local function initESPPreviewUI()
     previewFrame.Name = "ESPPreviewWindow"
     previewFrame.Size = UDim2.new(0, 300, 0, 390)
     previewFrame.Position = UDim2.new(0.5, -150, 0.5, -195)
-    previewFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-    previewFrame.BorderSizePixel = 0
+    previewFrame.BackgroundColor3 = StudioTheme.windowBg
+    previewFrame.BorderSizePixel = 1
+    previewFrame.BorderColor3 = StudioTheme.border
     previewFrame.ClipsDescendants = true
     previewFrame.Visible = false
     previewFrame.Parent = parentGui
 
-    local winCorner = Instance.new("UICorner")
-    winCorner.CornerRadius = UDim.new(0, 8)
-    winCorner.Parent = previewFrame
-
-    local winStroke = Instance.new("UIStroke")
-    winStroke.Color = State.currentThemeColor or Color3.fromRGB(141, 47, 196)
-    winStroke.Thickness = 1.5
-    winStroke.Parent = previewFrame
-
     local header = Instance.new("Frame")
-    header.Size = UDim2.new(1, 0, 0, 26)
-    header.BackgroundColor3 = Color3.fromRGB(26, 26, 34)
-    header.BorderSizePixel = 0
+    header.Size = UDim2.new(1, 0, 0, 24)
+    header.BackgroundColor3 = StudioTheme.headerBg
+    header.BorderSizePixel = 1
+    header.BorderColor3 = StudioTheme.border
     header.Parent = previewFrame
-
-    local headerCorner = Instance.new("UICorner")
-    headerCorner.CornerRadius = UDim.new(0, 8)
-    headerCorner.Parent = header
-
-    local headerFill = Instance.new("Frame")
-    headerFill.Size = UDim2.new(1, 0, 0, 8)
-    headerFill.Position = UDim2.new(0, 0, 1, -8)
-    headerFill.BackgroundColor3 = Color3.fromRGB(26, 26, 34)
-    headerFill.BorderSizePixel = 0
-    headerFill.Parent = header
 
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -60, 1, 0)
-    titleLbl.Position = UDim2.new(0, 10, 0, 0)
+    titleLbl.Position = UDim2.new(0, 8, 0, 0)
     titleLbl.BackgroundTransparency = 1
-    titleLbl.Font = Enum.Font.GothamBold
-    titleLbl.TextSize = 11
-    titleLbl.TextColor3 = Color3.fromRGB(240, 240, 240)
+    titleLbl.Font = Enum.Font.SourceSansBold
+    titleLbl.TextSize = 12
+    titleLbl.TextColor3 = StudioTheme.text
     titleLbl.TextXAlignment = Enum.TextXAlignment.Left
     titleLbl.Text = "ESP Live Visual Preview"
     titleLbl.Parent = header
 
     local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 26, 1, 0)
-    closeBtn.Position = UDim2.new(1, -26, 0, 0)
-    closeBtn.BackgroundTransparency = 1
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.TextSize = 11
-    closeBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    closeBtn.Size = UDim2.new(0, 24, 1, 0)
+    closeBtn.Position = UDim2.new(1, -24, 0, 0)
+    closeBtn.BackgroundColor3 = StudioTheme.headerBg
+    closeBtn.BorderSizePixel = 0
+    closeBtn.Font = Enum.Font.SourceSansBold
+    closeBtn.TextSize = 12
+    closeBtn.TextColor3 = StudioTheme.textMuted
     closeBtn.Text = "X"
     closeBtn.Parent = header
+    closeBtn.MouseEnter:Connect(function() closeBtn.BackgroundColor3 = Color3.fromRGB(215, 60, 60); closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255) end)
+    closeBtn.MouseLeave:Connect(function() closeBtn.BackgroundColor3 = StudioTheme.headerBg; closeBtn.TextColor3 = StudioTheme.textMuted end)
     closeBtn.MouseButton1Click:Connect(function()
         previewFrame.Visible = false
         S.ESPPreviewActive = false
@@ -1109,21 +1108,13 @@ local function initESPPreviewUI()
     end)
 
     local vpContainer = Instance.new("Frame")
-    vpContainer.Size = UDim2.new(1, -16, 0, 240)
-    vpContainer.Position = UDim2.new(0, 8, 0, 30)
-    vpContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-    vpContainer.BorderSizePixel = 0
+    vpContainer.Size = UDim2.new(1, -12, 0, 245)
+    vpContainer.Position = UDim2.new(0, 6, 0, 28)
+    vpContainer.BackgroundColor3 = StudioTheme.insetBg
+    vpContainer.BorderSizePixel = 1
+    vpContainer.BorderColor3 = StudioTheme.border
     vpContainer.ClipsDescendants = true
     vpContainer.Parent = previewFrame
-
-    local vpCorner = Instance.new("UICorner")
-    vpCorner.CornerRadius = UDim.new(0, 6)
-    vpCorner.Parent = vpContainer
-
-    local vpStroke = Instance.new("UIStroke")
-    vpStroke.Color = Color3.fromRGB(40, 40, 52)
-    vpStroke.Thickness = 1
-    vpStroke.Parent = vpContainer
 
     viewport = Instance.new("ViewportFrame")
     viewport.Size = UDim2.new(1, 0, 1, 0)
@@ -1153,19 +1144,16 @@ local function initESPPreviewUI()
     emptyHintLabel.Size = UDim2.new(1, -20, 0, 28)
     emptyHintLabel.Position = UDim2.new(0, 10, 1, -34)
     emptyHintLabel.BackgroundTransparency = 0.4
-    emptyHintLabel.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
-    emptyHintLabel.BorderSizePixel = 0
-    emptyHintLabel.Font = Enum.Font.GothamMedium
-    emptyHintLabel.TextSize = 8
-    emptyHintLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
+    emptyHintLabel.BackgroundColor3 = StudioTheme.windowBg
+    emptyHintLabel.BorderSizePixel = 1
+    emptyHintLabel.BorderColor3 = StudioTheme.border
+    emptyHintLabel.Font = Enum.Font.SourceSansSemibold
+    emptyHintLabel.TextSize = 10
+    emptyHintLabel.TextColor3 = StudioTheme.textMuted
     emptyHintLabel.Text = "💡 Click chips below or Render menu to enable ESP elements"
     emptyHintLabel.Visible = false
     emptyHintLabel.ZIndex = 7
     emptyHintLabel.Parent = espContainer
-
-    local hintCorner = Instance.new("UICorner")
-    hintCorner.CornerRadius = UDim.new(0, 4)
-    hintCorner.Parent = emptyHintLabel
 
     previewBoxFill = Instance.new("Frame")
     previewBoxFill.BorderSizePixel = 0
@@ -1215,8 +1203,8 @@ local function initESPPreviewUI()
     previewNameTag.Size = UDim2.new(0, 120, 0, 14)
     previewNameTag.AnchorPoint = Vector2.new(0.5, 1)
     previewNameTag.BackgroundTransparency = 1
-    previewNameTag.Font = Enum.Font.GothamBold
-    previewNameTag.TextSize = 10
+    previewNameTag.Font = Enum.Font.SourceSansBold
+    previewNameTag.TextSize = 11
     previewNameTag.TextColor3 = Color3.fromRGB(255, 255, 255)
     previewNameTag.Text = localPlayer.DisplayName or localPlayer.Name
     previewNameTag.Visible = false
@@ -1232,8 +1220,8 @@ local function initESPPreviewUI()
     previewHealthText.Size = UDim2.new(0, 80, 0, 12)
     previewHealthText.AnchorPoint = Vector2.new(0.5, 0)
     previewHealthText.BackgroundTransparency = 1
-    previewHealthText.Font = Enum.Font.GothamMedium
-    previewHealthText.TextSize = 9
+    previewHealthText.Font = Enum.Font.SourceSansSemibold
+    previewHealthText.TextSize = 10
     previewHealthText.TextColor3 = Color3.fromRGB(50, 220, 50)
     previewHealthText.Text = "100 HP"
     previewHealthText.Visible = false
@@ -1249,8 +1237,8 @@ local function initESPPreviewUI()
     previewDistText.Size = UDim2.new(0, 80, 0, 12)
     previewDistText.AnchorPoint = Vector2.new(0.5, 0)
     previewDistText.BackgroundTransparency = 1
-    previewDistText.Font = Enum.Font.GothamMedium
-    previewDistText.TextSize = 9
+    previewDistText.Font = Enum.Font.SourceSans
+    previewDistText.TextSize = 10
     previewDistText.TextColor3 = Color3.fromRGB(200, 200, 200)
     previewDistText.Text = "25 studs"
     previewDistText.Visible = false
@@ -1282,66 +1270,50 @@ local function initESPPreviewUI()
     end)
 
     local controlsBar = Instance.new("Frame")
-    controlsBar.Size = UDim2.new(1, -16, 0, 104)
-    controlsBar.Position = UDim2.new(0, 8, 1, -110)
-    controlsBar.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-    controlsBar.BorderSizePixel = 0
+    controlsBar.Size = UDim2.new(1, -12, 0, 106)
+    controlsBar.Position = UDim2.new(0, 6, 1, -112)
+    controlsBar.BackgroundColor3 = StudioTheme.panelBg
+    controlsBar.BorderSizePixel = 1
+    controlsBar.BorderColor3 = StudioTheme.border
     controlsBar.Parent = previewFrame
-
-    local ctrlCorner = Instance.new("UICorner")
-    ctrlCorner.CornerRadius = UDim.new(0, 6)
-    ctrlCorner.Parent = controlsBar
-
-    local ctrlStroke = Instance.new("UIStroke")
-    ctrlStroke.Color = Color3.fromRGB(40, 40, 55)
-    ctrlStroke.Thickness = 1
-    ctrlStroke.Parent = controlsBar
 
     local function makeControlBtn(text, xPos, yPos, width, height, callback)
         local b = Instance.new("TextButton")
-        b.Size = UDim2.new(0, width, 0, height or 20)
+        b.Size = UDim2.new(0, width, 0, height or 22)
         b.Position = UDim2.new(0, xPos, 0, yPos)
-        b.BackgroundColor3 = Color3.fromRGB(32, 32, 42)
-        b.BorderSizePixel = 0
-        b.Font = Enum.Font.GothamBold
-        b.TextSize = 9
-        b.TextColor3 = Color3.fromRGB(230, 230, 230)
+        b.BackgroundColor3 = StudioTheme.btnBg
+        b.BorderSizePixel = 1
+        b.BorderColor3 = StudioTheme.border
+        b.Font = Enum.Font.SourceSansBold
+        b.TextSize = 11
+        b.TextColor3 = StudioTheme.text
         b.Text = text
         b.Parent = controlsBar
 
-        local bCorner = Instance.new("UICorner")
-        bCorner.CornerRadius = UDim.new(0, 4)
-        bCorner.Parent = b
-
-        local bStroke = Instance.new("UIStroke")
-        bStroke.Color = Color3.fromRGB(50, 50, 68)
-        bStroke.Thickness = 1
-        bStroke.Parent = b
-
-        b.MouseEnter:Connect(function() b.BackgroundColor3 = Color3.fromRGB(48, 48, 64) end)
-        b.MouseLeave:Connect(function() b.BackgroundColor3 = Color3.fromRGB(32, 32, 42) end)
+        b.MouseEnter:Connect(function() b.BackgroundColor3 = StudioTheme.btnHover end)
+        b.MouseLeave:Connect(function() b.BackgroundColor3 = StudioTheme.btnBg end)
         b.MouseButton1Click:Connect(callback)
         return b
     end
 
-    makeControlBtn("Front", 4, 3, 64, 20, function() orbitAngle = 180; autoSpin = false end)
-    makeControlBtn("Back", 72, 3, 64, 20, function() orbitAngle = 0; autoSpin = false end)
-    makeControlBtn("Spin 360°", 140, 3, 70, 20, function() autoSpin = not autoSpin end)
-    makeControlBtn("Reset", 214, 3, 66, 20, function() orbitAngle = 180; viewDistance = 7.5; autoSpin = false end)
+    makeControlBtn("Front", 4, 3, 64, 22, function() orbitAngle = 180; autoSpin = false end)
+    makeControlBtn("Back", 72, 3, 64, 22, function() orbitAngle = 0; autoSpin = false end)
+    makeControlBtn("Spin 360°", 140, 3, 72, 22, function() autoSpin = not autoSpin end)
+    makeControlBtn("Reset", 216, 3, 66, 22, function() orbitAngle = 180; viewDistance = 7.5; autoSpin = false end)
 
     local styleLabel = Instance.new("TextLabel")
     hudStyleLabel = styleLabel
-    styleLabel.Size = UDim2.new(0, 130, 0, 20)
-    styleLabel.Position = UDim2.new(0, 6, 0, 26)
+    styleLabel.Size = UDim2.new(0, 130, 0, 22)
+    styleLabel.Position = UDim2.new(0, 6, 0, 28)
     styleLabel.BackgroundTransparency = 1
-    styleLabel.Font = Enum.Font.GothamBold
-    styleLabel.TextSize = 9
-    styleLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+    styleLabel.Font = Enum.Font.SourceSansBold
+    styleLabel.TextSize = 11
+    styleLabel.TextColor3 = StudioTheme.text
     styleLabel.TextXAlignment = Enum.TextXAlignment.Left
     styleLabel.Text = "Style: " .. (S.ESPBoxStyle or "Full")
     styleLabel.Parent = controlsBar
 
-    makeControlBtn("Next Style ►", 188, 26, 92, 20, function()
+    makeControlBtn("Next Style ►", 188, 28, 94, 22, function()
         local cur = table.find(allStyles, S.ESPBoxStyle or "Full") or 1
         local nxt = (cur % #allStyles) + 1
         local newStyle = allStyles[nxt]
@@ -1357,27 +1329,19 @@ local function initESPPreviewUI()
     chipRefreshers = {}
     local function makeChip(name, modName, configKey, xPos, width)
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0, width, 0, 18)
-        btn.Position = UDim2.new(0, xPos, 0, 49)
-        btn.BorderSizePixel = 0
-        btn.Font = Enum.Font.GothamBold
-        btn.TextSize = 8
+        btn.Size = UDim2.new(0, width, 0, 20)
+        btn.Position = UDim2.new(0, xPos, 0, 53)
+        btn.BorderSizePixel = 1
+        btn.Font = Enum.Font.SourceSansBold
+        btn.TextSize = 10
         btn.Text = name
         btn.Parent = controlsBar
 
-        local cCorner = Instance.new("UICorner")
-        cCorner.CornerRadius = UDim.new(0, 4)
-        cCorner.Parent = btn
-
-        local cStroke = Instance.new("UIStroke")
-        cStroke.Thickness = 1
-        cStroke.Parent = btn
-
         local function refreshChip()
             local active = (S[configKey] == true)
-            btn.BackgroundColor3 = active and Color3.fromRGB(30, 130, 65) or Color3.fromRGB(34, 34, 44)
-            btn.TextColor3 = active and Color3.fromRGB(240, 255, 240) or Color3.fromRGB(160, 160, 175)
-            cStroke.Color = active and Color3.fromRGB(65, 215, 110) or Color3.fromRGB(50, 50, 65)
+            btn.BackgroundColor3 = active and StudioTheme.blue or StudioTheme.btnBg
+            btn.TextColor3 = active and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted
+            btn.BorderColor3 = active and Color3.fromRGB(40, 160, 255) or StudioTheme.border
         end
         refreshChip()
         table.insert(chipRefreshers, refreshChip)
@@ -1400,16 +1364,16 @@ local function initESPPreviewUI()
     local colorLabel = Instance.new("TextLabel")
     hudColorLabel = colorLabel
     colorLabel.Size = UDim2.new(0, 130, 0, 20)
-    colorLabel.Position = UDim2.new(0, 6, 0, 74)
+    colorLabel.Position = UDim2.new(0, 6, 0, 78)
     colorLabel.BackgroundTransparency = 1
-    colorLabel.Font = Enum.Font.GothamMedium
-    colorLabel.TextSize = 8
-    colorLabel.TextColor3 = Color3.fromRGB(160, 160, 180)
+    colorLabel.Font = Enum.Font.SourceSansSemibold
+    colorLabel.TextSize = 11
+    colorLabel.TextColor3 = StudioTheme.textMuted
     colorLabel.TextXAlignment = Enum.TextXAlignment.Left
     colorLabel.Text = "Color: " .. (S.ESPColor or "Team Color")
     colorLabel.Parent = controlsBar
 
-    makeControlBtn("Next Color ►", 188, 74, 92, 20, function()
+    makeControlBtn("Next Color ►", 188, 78, 94, 20, function()
         local cur = table.find(colorOptions, S.ESPColor or "Team Color") or 1
         local nxt = (cur % #colorOptions) + 1
         local newColor = colorOptions[nxt]

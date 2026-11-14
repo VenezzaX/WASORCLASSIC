@@ -17,6 +17,20 @@ local UserInputService = game:GetService("UserInputService")
 
 local localPlayer = Players.LocalPlayer
 
+local StudioTheme = {
+    windowBg = Color3.fromRGB(37, 37, 38),
+    headerBg = Color3.fromRGB(45, 45, 48),
+    panelBg = Color3.fromRGB(42, 42, 45),
+    insetBg = Color3.fromRGB(26, 26, 28),
+    border = Color3.fromRGB(20, 20, 22),
+    text = Color3.fromRGB(225, 225, 228),
+    textMuted = Color3.fromRGB(160, 160, 165),
+    blue = Color3.fromRGB(0, 122, 204),
+    green = Color3.fromRGB(76, 175, 80),
+    yellow = Color3.fromRGB(220, 170, 50),
+    btnBg = Color3.fromRGB(50, 50, 54),
+}
+
 local CONFIG = {
     SizeSmall = UDim2.new(0, 260, 0, 260),
     SizeLarge = UDim2.new(0, 480, 0, 480),
@@ -29,8 +43,8 @@ local CONFIG = {
     MaxZoomScale = 1200,
     ZoomIncrement = 30,
 
-    UI_BackgroundColor = Color3.fromRGB(18, 20, 26),
-    UI_StrokeColor = Color3.fromRGB(55, 60, 75),
+    UI_BackgroundColor = StudioTheme.windowBg,
+    UI_StrokeColor = StudioTheme.border,
     UI_ZIndex_Map = 1,
     UI_ZIndex_Controls = 100,
 
@@ -137,16 +151,16 @@ local function updateLayoutVisuals()
 end
 
 local function styleButton(btn, text, order)
-    btn.Size = UDim2.new(0, 44, 0, 36)
-    btn.BackgroundColor3 = Color3.fromRGB(32, 36, 48)
-    btn.TextColor3 = Color3.fromRGB(240, 245, 255)
+    btn.Size = UDim2.new(0, 44, 0, 26)
+    btn.BackgroundColor3 = StudioTheme.btnBg
+    btn.TextColor3 = StudioTheme.text
     btn.Text = text
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 12
+    btn.BorderSizePixel = 1
+    btn.BorderColor3 = StudioTheme.border
     btn.LayoutOrder = order
     btn.ZIndex = CONFIG.UI_ZIndex_Controls
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-    Instance.new("UIStroke", btn).Color = CONFIG.UI_StrokeColor
     btn.Parent = controlFrame
 end
 
@@ -164,23 +178,21 @@ local function initMinimap()
     mapFrame.Size = CONFIG.SizeSmall
     mapFrame.Position = CONFIG.PosNormal
     mapFrame.AnchorPoint = Vector2.new(1, 0)
-    mapFrame.BackgroundColor3 = CONFIG.UI_BackgroundColor
-    mapFrame.BorderSizePixel = 0
+    mapFrame.BackgroundColor3 = StudioTheme.windowBg
+    mapFrame.BorderSizePixel = 1
+    mapFrame.BorderColor3 = StudioTheme.border
     mapFrame.Visible = false
     mapFrame.Parent = parentGui
 
-    Instance.new("UICorner", mapFrame).CornerRadius = UDim.new(0, 16)
-    local mainStroke = Instance.new("UIStroke", mapFrame); mainStroke.Color = CONFIG.UI_StrokeColor; mainStroke.Thickness = 3
-
     viewport = Instance.new("ViewportFrame")
-    viewport.Size = UDim2.new(1, -12, 1, -12)
-    viewport.Position = UDim2.new(0, 6, 0, 6)
-    viewport.BackgroundTransparency = 1
-    viewport.BorderSizePixel = 0
+    viewport.Size = UDim2.new(1, -8, 1, -8)
+    viewport.Position = UDim2.new(0, 4, 0, 4)
+    viewport.BackgroundColor3 = StudioTheme.insetBg
+    viewport.BorderSizePixel = 1
+    viewport.BorderColor3 = StudioTheme.border
     viewport.ClipsDescendants = true
     viewport.ZIndex = CONFIG.UI_ZIndex_Map
     viewport.Parent = mapFrame
-    Instance.new("UICorner", viewport).CornerRadius = UDim.new(0, 12)
 
     mapWorld = Instance.new("Folder", viewport)
     mapWorld.Name = "MapWorld"
@@ -195,26 +207,27 @@ local function initMinimap()
     mapCamera.Parent = mapWorld
 
     nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, -20, 0, 30)
-    nameLabel.Position = UDim2.new(0, 16, 1, -40)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.TextColor3 = Color3.fromRGB(255, 235, 60)
+    nameLabel.Size = UDim2.new(1, -16, 0, 20)
+    nameLabel.Position = UDim2.new(0, 8, 1, -26)
+    nameLabel.BackgroundColor3 = StudioTheme.headerBg
+    nameLabel.BorderSizePixel = 1
+    nameLabel.BorderColor3 = StudioTheme.border
+    nameLabel.TextColor3 = StudioTheme.text
     nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.Font = Enum.Font.GothamMedium
-    nameLabel.TextSize = 14
-    nameLabel.TextStrokeTransparency = 0.5
-    nameLabel.Text = localPlayer.DisplayName or localPlayer.Name
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.TextSize = 12
+    nameLabel.Text = "  " .. (localPlayer.DisplayName or localPlayer.Name)
     nameLabel.ZIndex = CONFIG.UI_ZIndex_Controls
     nameLabel.Parent = mapFrame
 
     controlFrame = Instance.new("Frame")
-    controlFrame.Size = UDim2.new(0, 50, 0, 160)
-    controlFrame.Position = UDim2.new(0, -65, 0, 0)
+    controlFrame.Size = UDim2.new(0, 48, 0, 100)
+    controlFrame.Position = UDim2.new(0, -54, 0, 0)
     controlFrame.BackgroundTransparency = 1
     controlFrame.Parent = mapFrame
 
     local controlLayout = Instance.new("UIListLayout", controlFrame)
-    controlLayout.Padding = UDim.new(0, 8)
+    controlLayout.Padding = UDim.new(0, 4)
     controlLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
     toggleBtn = Instance.new("TextButton"); styleButton(toggleBtn, "[+]", 1)

@@ -99,7 +99,17 @@ Cleanup.destroyESP = function(p)
     local pool = S.ESPPool[p]
     if not pool and type(p) == "userdata" then
         for playerObj, entry in pairs(S.ESPPool) do
-            if playerObj == p or (p.UserId and playerObj.UserId and p.UserId == playerObj.UserId) or (p.Name and playerObj.Name and p.Name == playerObj.Name) then
+            local matches = false
+            pcall(function()
+                if playerObj == p then
+                    matches = true
+                elseif p.UserId and playerObj.UserId and p.UserId == playerObj.UserId then
+                    matches = true
+                elseif p.Name and playerObj.Name and p.Name == playerObj.Name then
+                    matches = true
+                end
+            end)
+            if matches then
                 pool = entry
                 poolKey = playerObj
                 break
@@ -132,13 +142,56 @@ Cleanup.destroyESP = function(p)
         end
         S.ESPPool[poolKey] = nil
     end
+
+    pcall(function()
+        if p and p.Character then
+            local chams = p.Character:FindFirstChild("VoidChams")
+            if chams then chams:Destroy() end
+        end
+    end)
+
+    pcall(function()
+        if State.playerCards and State.playerCards[p] then
+            local card = State.playerCards[p]
+            if card.HPConn then card.HPConn:Disconnect() end
+            if card.CharConn then card.CharConn:Disconnect() end
+            State.playerCards[p] = nil
+        end
+    end)
+end
+
+Cleanup.destroyAllESP = function()
+    local S = State.S
+    if S and S.ESPPool then
+        local toDestroy = {}
+        for p, _ in pairs(S.ESPPool) do
+            table.insert(toDestroy, p)
+        end
+        for _, p in ipairs(toDestroy) do
+            Cleanup.destroyESP(p)
+        end
+        S.ESPPool = {}
+    end
 end
 
 Cleanup.cleanupAll = function()
+    _G.WASOR_Loaded = false
+    _G.WASOR_Loading = false
     local S = State.S
     State.uiRunning = false
+    State.teleportQueued = false
     State.networkTagsRunning = false
     State.networkTagsLoopActive = false
+
+    if VH.UI and VH.UI.destroyUI then
+        pcall(VH.UI.destroyUI)
+    end
+
+    pcall(function()
+        if delfile and isfile and isfile("autoexec/WASOR.lua") then
+            delfile("autoexec/WASOR.lua")
+        end
+    end)
 
     pcall(function()
         if _G.WASOR_ScreenGui and _G.WASOR_ScreenGui.Parent then

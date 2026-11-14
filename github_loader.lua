@@ -656,8 +656,8 @@ if loadingScreenMode ~= "Fully Hidden" then
     end
 end
 
-local GITHUB_USERNAME = "MizunoSync"
-local GITHUB_REPO = "WASOR"
+local GITHUB_USERNAME = "VenezzaX"
+local GITHUB_REPO = "WASORCLASSIC"
 local GITHUB_BRANCH = "main"
 
 local BASE_URL = string.format("https://raw.githubusercontent.com/%s/%s/%s/", GITHUB_USERNAME, GITHUB_REPO, GITHUB_BRANCH)
@@ -870,13 +870,13 @@ local latestSHA = nil
 local useCache = false
 
 if hasFileSystem then
-    if not isfolder("WASOR_Cache") then
-        pcall(makefolder, "WASOR_Cache")
+    if not isfolder("WASOR_Classic_Cache") then
+        pcall(makefolder, "WASOR_Classic_Cache")
     end
     if forceUpdate then
-        pcall(delfile, "WASOR_Cache/commit_sha.txt")
-    elseif isfile("WASOR_Cache/commit_sha.txt") then
-        local success, val = pcall(readfile, "WASOR_Cache/commit_sha.txt")
+        pcall(delfile, "WASOR_Classic_Cache/commit_sha.txt")
+    elseif isfile("WASOR_Classic_Cache/commit_sha.txt") then
+        local success, val = pcall(readfile, "WASOR_Classic_Cache/commit_sha.txt")
         if success and val and type(val) == "string" and #val >= 7 then
             cachedSHA = val:gsub("%s+", "")
         end
@@ -898,7 +898,7 @@ local downloadFailed = false
 
 local function runFile(path)
     local content = nil
-    local cachePath = "WASOR_Cache/" .. path .. ".lua"
+    local cachePath = "WASOR_Classic_Cache/" .. path .. ".lua"
 
     if useCache and hasFileSystem and isfile(cachePath) then
         local success, cachedCode = pcall(readfile, cachePath)
@@ -965,9 +965,13 @@ local function updateLoaderProgress(name)
     currentLoaded = currentLoaded + 1
     local alpha = math.clamp(currentLoaded / totalModules, 0, 1)
     if BarFill then
-        TweenService:Create(BarFill, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(alpha, 0, 1, 0)
-        }):Play()
+        if useCache then
+            BarFill.Size = UDim2.new(alpha, 0, 1, 0)
+        else
+            TweenService:Create(BarFill, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(alpha, 0, 1, 0)
+            }):Play()
+        end
     end
     if StatusText then
         StatusText.Text = name or "Loading..."
@@ -1011,38 +1015,43 @@ if PercentText then PercentText.Text = "100%" end
 if StatusText then StatusText.Text = "Ready!" end
 
 if LoadingScreenGui and LoadingScreenGui.Parent then
-    task.wait(0.3)
-    local fadeBg = nil
-    if BgImage and BgImage.Parent then
-        fadeBg = TweenService:Create(BgImage, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            ImageTransparency = 1
-        })
-        fadeBg:Play()
-    end
+    if useCache then
+        pcall(function() LoadingScreenGui:Destroy() end)
+        LoadingScreenGui = nil
+    else
+        task.wait(0.3)
+        local fadeBg = nil
+        if BgImage and BgImage.Parent then
+            fadeBg = TweenService:Create(BgImage, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                ImageTransparency = 1
+            })
+            fadeBg:Play()
+        end
 
-    if RightContainer and RightContainer.Parent then
-        for _, desc in ipairs(RightContainer:GetDescendants()) do
-            if desc:IsA("TextLabel") then
-                TweenService:Create(desc, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1 }):Play()
-            elseif desc:IsA("UIStroke") then
-                TweenService:Create(desc, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 }):Play()
-            elseif desc:IsA("Frame") then
-                TweenService:Create(desc, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 }):Play()
+        if RightContainer and RightContainer.Parent then
+            for _, desc in ipairs(RightContainer:GetDescendants()) do
+                if desc:IsA("TextLabel") then
+                    TweenService:Create(desc, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1 }):Play()
+                elseif desc:IsA("UIStroke") then
+                    TweenService:Create(desc, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 }):Play()
+                elseif desc:IsA("Frame") then
+                    TweenService:Create(desc, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 }):Play()
+                end
             end
         end
-    end
 
-    if MainFrame and MainFrame.BackgroundTransparency < 1 then
-        TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 }):Play()
-    end
+        if MainFrame and MainFrame.BackgroundTransparency < 1 then
+            TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 }):Play()
+        end
 
-    if fadeBg then
-        fadeBg.Completed:Wait()
-    else
-        task.wait(0.35)
+        if fadeBg then
+            fadeBg.Completed:Wait()
+        else
+            task.wait(0.35)
+        end
+        pcall(function() LoadingScreenGui:Destroy() end)
+        LoadingScreenGui = nil
     end
-    pcall(function() LoadingScreenGui:Destroy() end)
-    LoadingScreenGui = nil
 end
 
 _G.WASOR_Loading = false
@@ -1055,5 +1064,5 @@ else
 end
 
 if not useCache and hasFileSystem and latestSHA and not downloadFailed then
-    pcall(writefile, "WASOR_Cache/commit_sha.txt", latestSHA)
+    pcall(writefile, "WASOR_Classic_Cache/commit_sha.txt", latestSHA)
 end
