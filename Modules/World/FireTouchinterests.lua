@@ -14,5 +14,5 @@ registerModule("World", "Fire touchinterests", 580, 50, true, S.FireTouchinteres
 end, function(drawer)
     local tb = addTextboxOption(drawer, "Name Filter", "coin/checkpoint/etc", function(txt) S.FireTouchFilter = txt; saveConfig() end)
     tb.Set(S.FireTouchFilter or "")
-    addSliderOption(drawer, "Max Distance (studs)", 5, 1000, S.FireTouchDistance or 100, function(v) S.FireTouchDistance = v; saveConfig() end)
+    addSliderOption(drawer, "Max Distance (studs)", 5, 10000, S.FireTouchDistance or 100, function(v) S.FireTouchDistance = v; saveConfig() end)
 end, false)

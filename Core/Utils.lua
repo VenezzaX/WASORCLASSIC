@@ -444,7 +444,6 @@ Utils.setupAutoRejoin = function()
             if S.AutoRejoin then
                 task.spawn(function()
                     task.wait(5)
-                    Utils.setupAutoReinject()
                     pcall(function() Services.TeleportService:Teleport(game.PlaceId, Services.LP) end)
                 end)
             end
@@ -453,7 +452,6 @@ Utils.setupAutoRejoin = function()
     end)
     pcall(function()
         local tpFailConn = Services.TeleportService.TeleportInitFailed:Connect(function(_, result, err)
-            State.teleportQueued = false
             Utils.notify("[WASOR 4.5] Teleport Failed: " .. tostring(err or result) .. " (UI preserved)", Color3.fromRGB(218, 38, 38))
         end)
         table.insert(S.Connections, tpFailConn)
@@ -462,30 +460,30 @@ end
 
 Utils.setupAutoReinject = function()
     local S = State.S
-    pcall(function()
-        if delfile and isfile and isfile("autoexec/WASOR.lua") then
-            delfile("autoexec/WASOR.lua")
-        end
-    end)
-
-    if not S.AutoReinject then
-        State.teleportQueued = false
-        return
-    end
-
-    if State.teleportQueued then return end
-
-    local qot = queue_on_teleport or queueteleport or (syn and syn.queue_on_teleport) or queue_to_teleport or (fluxus and fluxus.queue_on_teleport)
-    if qot then
-        State.teleportQueued = true
-        local code = [[
-            repeat task.wait() until game:IsLoaded()
-            if _G.WASOR_Loaded or _G.WASOR_Loading then return end
+    local code = [[
+        repeat task.wait() until game:IsLoaded()
+        local success, err = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/github_loader.lua"))()
+        end)
+        if not success then
             pcall(function()
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/main/github_loader.lua"))()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/MizunoSync/WASOR/main/github_loader.lua"))()
             end)
-        ]]
-        pcall(qot, code)
+        end
+    ]]
+
+    local qot = queue_on_teleport or queueteleport or (syn and syn.queue_on_teleport)
+    if S.AutoReinject then
+        if qot then
+            pcall(qot, code)
+        end
+        if writefile then
+            pcall(writefile, "autoexec/WASOR.lua", code)
+        end
+    else
+        if writefile and isfile and isfile("autoexec/WASOR.lua") then
+            pcall(delfile, "autoexec/WASOR.lua")
+        end
     end
 end
 
@@ -1017,7 +1015,7 @@ Utils.toggleNo3DRenderCover = function(enable)
     statusLabel.Size = UDim2.new(1, 0, 0, 30)
     statusLabel.Position = UDim2.new(0, 0, 1, -40)
     statusLabel.BackgroundTransparency = 1
-    statusLabel.Font = Enum.Font.SourceSansBold
+    statusLabel.Font = Enum.Font.GothamBold
     statusLabel.TextSize = 13
     statusLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
     statusLabel.Text = "3D Rendering Paused (No 3D Rendering)"

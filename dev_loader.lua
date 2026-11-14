@@ -1,7 +1,9 @@
 local function writeCrashLog(context, err, stack)
     local timestamp = os.date("%Y-%m-%d %H:%M:%S")
     local crashMsg = string.format("==================== CRASH LOG [%s] ====================\nContext: %s\nError: %s\nTraceback:\n%s\n=================================================================\n\n", timestamp, tostring(context), tostring(err), tostring(stack or "N/A"))
+
     warn(string.format("[WASOR CRASH] [%s] Error: %s\nTraceback:\n%s", tostring(context), tostring(err), tostring(stack or "")))
+
     pcall(function()
         if writefile then
             local filename = "WASOR_crash.log"

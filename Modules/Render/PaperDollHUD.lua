@@ -981,24 +981,33 @@ local function initPaperDollHUD()
     viewToggleBtn.Name = "ViewToggleBtn"
     viewToggleBtn.Size = UDim2.new(0, 68, 0, 18)
     viewToggleBtn.Position = UDim2.new(0.5, -34, 1, -20)
-    viewToggleBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 38)
-    viewToggleBtn.BackgroundTransparency = 0.4
-    viewToggleBtn.BorderSizePixel = 1
-    viewToggleBtn.BorderColor3 = Color3.fromRGB(55, 55, 60)
-    viewToggleBtn.Font = Enum.Font.SourceSansBold
-    viewToggleBtn.TextSize = 10
+    viewToggleBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+    viewToggleBtn.BackgroundTransparency = 0.45
+    viewToggleBtn.BorderSizePixel = 0
+    viewToggleBtn.Font = Enum.Font.GothamBold
+    viewToggleBtn.TextSize = 8
     viewToggleBtn.TextColor3 = Color3.fromRGB(230, 230, 245)
     viewToggleBtn.Text = "⟲ " .. (S.PaperDollViewMode or "Front")
     viewToggleBtn.ZIndex = 15
     viewToggleBtn.Parent = hudFrame
 
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = viewToggleBtn
+
+    local btnStroke = Instance.new("UIStroke")
+    btnStroke.Color = Color3.fromRGB(60, 60, 80)
+    btnStroke.Thickness = 1
+    btnStroke.Transparency = 0.5
+    btnStroke.Parent = viewToggleBtn
+
     viewToggleBtn.MouseEnter:Connect(function()
-        viewToggleBtn.BackgroundTransparency = 0.15
-        viewToggleBtn.BorderColor3 = Color3.fromRGB(0, 122, 204)
+        viewToggleBtn.BackgroundTransparency = 0.2
+        btnStroke.Transparency = 0.2
     end)
     viewToggleBtn.MouseLeave:Connect(function()
-        viewToggleBtn.BackgroundTransparency = 0.4
-        viewToggleBtn.BorderColor3 = Color3.fromRGB(55, 55, 60)
+        viewToggleBtn.BackgroundTransparency = 0.45
+        btnStroke.Transparency = 0.5
     end)
 
     viewToggleBtn.MouseButton1Click:Connect(function()
