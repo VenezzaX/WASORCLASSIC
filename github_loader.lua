@@ -292,6 +292,21 @@ pcall(function()
 end)
 
 pcall(function()
+    local Players = game:GetService("Players")
+    local lp = Players.LocalPlayer
+    local char = lp and lp.Character
+    if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.CanCollide = false end
+        for _, d in ipairs(char:GetDescendants()) do
+            if d:IsA("Sound") and string.sub(d.Name, 1, 3) == "WW_" then
+                pcall(function() d:Destroy() end)
+            end
+        end
+    end
+end)
+
+pcall(function()
     if _G.WASOR_ScreenGui and _G.WASOR_ScreenGui.Parent then
         pcall(function() _G.WASOR_ScreenGui:Destroy() end)
         _G.WASOR_ScreenGui = nil

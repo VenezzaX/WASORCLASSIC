@@ -26,8 +26,13 @@ registerModule("Combat", "Walk Fling", 20, 50, true, S.WalkFling, function(v)
         local modAll = moduleButtons and moduleButtons["Fling All"]
         if modAll and modAll.SetActive then modAll.SetActive(false) end
         local hum = getHum()
-        if hum and S.WalkFlingSpeed then
-            hum.WalkSpeed = S.WalkFlingSpeed
+        if hum then
+            if not State.walkFlingPreviousSpeed and hum.WalkSpeed ~= (S.WalkFlingSpeed or 32) then
+                State.walkFlingPreviousSpeed = hum.WalkSpeed
+            end
+            if S.WalkFlingSpeed then
+                hum.WalkSpeed = S.WalkFlingSpeed
+            end
         end
     else
         task.spawn(function()
@@ -38,7 +43,9 @@ registerModule("Combat", "Walk Fling", 20, 50, true, S.WalkFling, function(v)
             end
             local hum = getHum()
             if hum then
-                hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or (State.gameDefaultSpeed or 16)
+                local restoreSpeed = State.walkFlingPreviousSpeed or (S.ForceWalkSpeed and S.WalkSpeed) or State.gameDefaultSpeed or 16
+                hum.WalkSpeed = restoreSpeed
+                State.walkFlingPreviousSpeed = nil
             end
         end)
     end

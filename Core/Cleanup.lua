@@ -247,8 +247,14 @@ Cleanup.cleanupAll = function()
             end
             for _, part in ipairs(Services.LP.Character:GetDescendants()) do
                 if part:IsA("BasePart") then
-                    local isRootOrTorso = (part.Name == "HumanoidRootPart" or part.Name == "Torso" or part.Name == "UpperTorso" or part.Name == "LowerTorso" or part.Name == "Head") and not part:IsA("Accessory") and not part:FindFirstAncestorOfClass("Accessory") and not part:FindFirstAncestorOfClass("Tool")
-                    part.CanCollide = isRootOrTorso
+                    if part.Name == "HumanoidRootPart" then
+                        part.CanCollide = false
+                    else
+                        local isTorsoOrHead = (part.Name == "Torso" or part.Name == "UpperTorso" or part.Name == "LowerTorso" or part.Name == "Head") and not part:IsA("Accessory") and not part:FindFirstAncestorOfClass("Accessory") and not part:FindFirstAncestorOfClass("Tool")
+                        part.CanCollide = isTorsoOrHead
+                    end
+                elseif part:IsA("Sound") and string.sub(part.Name, 1, 3) == "WW_" then
+                    pcall(function() part:Destroy() end)
                 end
             end
         end

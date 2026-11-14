@@ -154,12 +154,13 @@ local function restoreCollisions()
     if not char then return end
     for _, part in ipairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
-            if savedCollisions[part] ~= nil then
+            if part.Name == "HumanoidRootPart" then
+                part.CanCollide = false
+            elseif savedCollisions[part] ~= nil then
                 part.CanCollide = savedCollisions[part]
             else
                 local isCore = (
-                    part.Name == "HumanoidRootPart"
-                    or part.Name == "Torso"
+                    part.Name == "Torso"
                     or part.Name == "UpperTorso"
                     or part.Name == "LowerTorso"
                     or part.Name == "Head"

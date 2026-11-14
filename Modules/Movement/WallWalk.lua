@@ -2903,123 +2903,17 @@ local function _ControlModule()
 end
 
 local function _CreateSoundsSystem()
+	pcall(function()
+		local char = LocalPlayer and LocalPlayer.Character
+		if char then
+			for _, d in ipairs(char:GetDescendants()) do
+				if d:IsA("Sound") and string.sub(d.Name, 1, 3) == "WW_" then
+					d:Destroy()
+				end
+			end
+		end
+	end)
 	local SetState = Instance.new("BindableEvent")
-	SetState.Name = "SetState"
-	local playerScripts = LocalPlayer:FindFirstChild("PlayerScripts")
-	if playerScripts then
-		local old = playerScripts:FindFirstChild("SetState")
-		if old then old:Destroy() end
-		SetState.Parent = playerScripts
-	end
-
-	local SOUND_DATA = {
-		Climbing = { SoundId = "rbxasset://sounds/action_footsteps_plastic.mp3", Looped = true },
-		Died = { SoundId = "rbxasset://sounds/uuhhh.mp3" },
-		FreeFalling = { SoundId = "rbxasset://sounds/action_falling.mp3", Looped = true },
-		GettingUp = { SoundId = "rbxasset://sounds/action_get_up.mp3" },
-		Jumping = { SoundId = "rbxasset://sounds/action_jump.mp3" },
-		Landing = { SoundId = "rbxasset://sounds/action_jump_land.mp3" },
-		Running = { SoundId = "rbxasset://sounds/action_footsteps_plastic.mp3", Looped = true, Pitch = 1.85 },
-		Splash = { SoundId = "rbxasset://sounds/impact_water.mp3" },
-		Swimming = { SoundId = "rbxasset://sounds/action_swim.mp3", Looped = true, Pitch = 1.6 },
-	}
-
-	local function map(x, inMin, inMax, outMin, outMax)
-		return (x - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
-	end
-
-	local function setupForCharacter(character)
-		local humanoid = character:WaitForChild("Humanoid", 10)
-		local rootPart = character:WaitForChild("HumanoidRootPart", 10)
-		if not humanoid or not rootPart then return end
-
-		local sounds = {}
-		for name, props in pairs(SOUND_DATA) do
-			local sound = Instance.new("Sound")
-			sound.Name = "WW_" .. name
-			sound.Archivable = false
-			sound.EmitterSize = 5
-			sound.MaxDistance = 150
-			sound.Volume = 0.65
-			for k, v in pairs(props) do sound[k] = v end
-			sound.Parent = rootPart
-			sounds[name] = sound
-		end
-
-		local playingLooped = {}
-		local function stopLooped(except)
-			for s in pairs(playingLooped) do
-				if s ~= except then
-					s.Playing = false
-					playingLooped[s] = nil
-				end
-			end
-		end
-
-		local transitions = {
-			[Enum.HumanoidStateType.FallingDown] = function() stopLooped() end,
-			[Enum.HumanoidStateType.GettingUp] = function() stopLooped() sounds.GettingUp:Play() end,
-			[Enum.HumanoidStateType.Jumping] = function() stopLooped() sounds.Jumping:Play() end,
-			[Enum.HumanoidStateType.Freefall] = function()
-				sounds.FreeFalling.Volume = 0
-				stopLooped(sounds.FreeFalling)
-				playingLooped[sounds.FreeFalling] = true
-			end,
-			[Enum.HumanoidStateType.Landed] = function()
-				stopLooped()
-				local vs = math.abs(rootPart.AssemblyLinearVelocity.Y)
-				if vs > 75 then
-					sounds.Landing.Volume = math.clamp(map(vs, 50, 100, 0, 1), 0, 1)
-					sounds.Landing:Play()
-				end
-			end,
-			[Enum.HumanoidStateType.Running] = function()
-				stopLooped(sounds.Running)
-				sounds.Running.Playing = true
-				playingLooped[sounds.Running] = true
-			end,
-			[Enum.HumanoidStateType.Seated] = function() stopLooped() end,
-			[Enum.HumanoidStateType.Dead] = function() stopLooped() sounds.Died:Play() end,
-		}
-
-		local activeState = humanoid:GetState()
-		local function applyState(state)
-			if state == Enum.HumanoidStateType.RunningNoPhysics then
-				state = Enum.HumanoidStateType.Running
-			end
-			if state ~= activeState then
-				activeState = state
-				if transitions[state] then transitions[state]() end
-			end
-		end
-
-		local c1 = humanoid.StateChanged:Connect(function(_, s) applyState(s) end)
-		local c2 = SetState.Event:Connect(applyState)
-		local c3 = RunService.Stepped:Connect(function(_, dt)
-			local vel = rootPart.AssemblyLinearVelocity
-			if playingLooped[sounds.FreeFalling] then
-				sounds.FreeFalling.Volume = vel.Magnitude > 75 and math.clamp(sounds.FreeFalling.Volume + 0.9 * dt, 0, 1) or 0
-			end
-			if playingLooped[sounds.Running] then
-				sounds.Running.Playing = vel.Magnitude > 0.5
-			end
-		end)
-
-		local c4
-		c4 = character.AncestryChanged:Connect(function(_, parent)
-			if not parent then
-				c1:Disconnect()
-				c2:Disconnect()
-				c3:Disconnect()
-				c4:Disconnect()
-				for _, s in pairs(sounds) do s:Destroy() end
-			end
-		end)
-	end
-
-	if LocalPlayer.Character then task.spawn(setupForCharacter, LocalPlayer.Character) end
-	LocalPlayer.CharacterAdded:Connect(setupForCharacter)
-
 	return SetState
 end
 
@@ -3920,6 +3814,16 @@ local function cleanupAll()
         UserGameSettings.RotationType = Enum.RotationType.MovementRelative
     end
     if screenGui then screenGui:Destroy() end
+    pcall(function()
+        local char = LocalPlayer and LocalPlayer.Character
+        if char then
+            for _, d in ipairs(char:GetDescendants()) do
+                if d:IsA("Sound") and string.sub(d.Name, 1, 3) == "WW_" then
+                    d:Destroy()
+                end
+            end
+        end
+    end)
 end
 
 VH.WallWalkCleanup = cleanupAll

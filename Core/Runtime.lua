@@ -1205,9 +1205,17 @@ end))
 
 task.spawn(function()
     local movelFling = 0.1
+    local wasWalkFling = false
     while true do
         RunService.Heartbeat:Wait()
         if S.WalkFling then
+            if not wasWalkFling then
+                wasWalkFling = true
+                local hum = getHum()
+                if hum and not State.walkFlingPreviousSpeed and hum.WalkSpeed ~= (S.WalkFlingSpeed or 32) then
+                    State.walkFlingPreviousSpeed = hum.WalkSpeed
+                end
+            end
             local character = LP.Character
             local root = getHRP(character)
 
@@ -1234,6 +1242,16 @@ task.spawn(function()
                 if character and character.Parent and root and root.Parent then
                     root.Velocity = vel + Vector3.new(0, movelFling, 0)
                     movelFling = movelFling * -1
+                end
+            end
+        else
+            if wasWalkFling then
+                wasWalkFling = false
+                local hum = getHum()
+                if hum then
+                    local restoreSpeed = State.walkFlingPreviousSpeed or (S.ForceWalkSpeed and S.WalkSpeed) or State.gameDefaultSpeed or 16
+                    hum.WalkSpeed = restoreSpeed
+                    State.walkFlingPreviousSpeed = nil
                 end
             end
         end
@@ -1423,7 +1441,21 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
             if mod and mod.SetActive then
                 mod.SetActive(not S.WalkFling)
             else
-                S.WalkFling = not S.WalkFling
+                local newState = not S.WalkFling
+                S.WalkFling = newState
+                local hum = getHum()
+                if hum then
+                    if newState then
+                        if not State.walkFlingPreviousSpeed and hum.WalkSpeed ~= (S.WalkFlingSpeed or 32) then
+                            State.walkFlingPreviousSpeed = hum.WalkSpeed
+                        end
+                        if S.WalkFlingSpeed then hum.WalkSpeed = S.WalkFlingSpeed end
+                    else
+                        local restoreSpeed = State.walkFlingPreviousSpeed or (S.ForceWalkSpeed and S.WalkSpeed) or State.gameDefaultSpeed or 16
+                        hum.WalkSpeed = restoreSpeed
+                        State.walkFlingPreviousSpeed = nil
+                    end
+                end
             end
             notify("Walk Fling " .. (S.WalkFling and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
         end
@@ -1499,7 +1531,7 @@ local function onCharSpawn(char)
         bhopSlipProps = PhysicalProperties.new(bhopOrigProps.Density, bhopLowFriction, bhopOrigProps.Elasticity, 100, bhopOrigProps.ElasticityWeight)
     end
     if hum then
-        if not S.ForceWalkSpeed and not S.TallAnim and not S.SprintEnabled and not S.BHop then
+        if not S.ForceWalkSpeed and not S.TallAnim and not S.SprintEnabled and not S.BHop and not S.WalkFling then
             State.gameDefaultSpeed = hum.WalkSpeed
         end
         if not S.ForceJumpPower and not S.TallAnim then

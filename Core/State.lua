@@ -24,6 +24,7 @@ State.networkTagsLoopActive = false
 State.wasClimbing = false
 State.wasWallRunning = false
 
+State.walkFlingPreviousSpeed = nil
 State.gameDefaultSpeed = nil
 State.gameDefaultJumpPower = nil
 State.gameDefaultUseJumpPower = nil
@@ -148,7 +149,7 @@ State.updateGameDefaults = function(targetHum)
         local hum = targetHum or (char and (char:FindFirstChildOfClass("Humanoid") or char:FindFirstChild("Humanoid")))
         if hum then
             local S = State.S
-            local isSpeedModified = S and (S.ForceWalkSpeed or S.TallAnim or S.SprintEnabled or S.BHop)
+            local isSpeedModified = S and (S.ForceWalkSpeed or S.TallAnim or S.SprintEnabled or S.BHop or S.WalkFling)
             local isJumpModified = S and (S.ForceJumpPower or S.TallAnim)
 
             if not isSpeedModified then
@@ -178,7 +179,7 @@ pcall(function()
                 pcall(function()
                     hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
                         local S = State.S
-                        local isSpeedModified = S and (S.ForceWalkSpeed or S.TallAnim or S.SprintEnabled or S.BHop)
+                        local isSpeedModified = S and (S.ForceWalkSpeed or S.TallAnim or S.SprintEnabled or S.BHop or S.WalkFling)
                         if not isSpeedModified then
                             State.gameDefaultSpeed = hum.WalkSpeed
                             if State.S then
