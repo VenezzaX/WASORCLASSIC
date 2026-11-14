@@ -260,6 +260,8 @@ local success, err = pcall(function()
 
     if VH.UI and VH.UI.InitializeUI then
         VH.UI.InitializeUI()
+        local c = VH.UI.GetMainContainer and VH.UI.GetMainContainer()
+        if c then c.Visible = false end
     end
 
     for _, modulePath in ipairs(Modules) do
@@ -267,6 +269,11 @@ local success, err = pcall(function()
     end
 
     runFile("Core/Runtime")
+
+    local c = VH.UI and VH.UI.GetMainContainer and VH.UI.GetMainContainer()
+    if c and State.uiVisible ~= false and State.S and State.S.EulaAccepted == true then
+        c.Visible = true
+    end
 end)
 
 _G.WASOR_Loading = false

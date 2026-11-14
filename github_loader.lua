@@ -834,12 +834,33 @@ local function httpRequest(url)
 end
 
 local function getLatestCommitSHA()
+    local patchUrl = string.format("https://github.com/%s/%s/commit/%s.patch", GITHUB_USERNAME, GITHUB_REPO, GITHUB_BRANCH)
+    local patchRes = httpRequest(patchUrl)
+    if patchRes and type(patchRes) == "string" then
+        local sha = patchRes:match("From%s+(%w+)")
+        if sha and #sha == 40 then
+            return sha
+        end
+    end
+
+    local atomUrl = string.format("https://github.com/%s/%s/commits/%s.atom", GITHUB_USERNAME, GITHUB_REPO, GITHUB_BRANCH)
+    local atomRes = httpRequest(atomUrl)
+    if atomRes and type(atomRes) == "string" then
+        local sha = atomRes:match("Commit/(%w+)")
+        if sha and #sha == 40 then
+            return sha
+        end
+    end
+
     local apiUrl = string.format("https://api.github.com/repos/%s/%s/commits/%s", GITHUB_USERNAME, GITHUB_REPO, GITHUB_BRANCH)
     local response = httpRequest(apiUrl)
-    if response then
+    if response and type(response) == "string" then
         local sha = response:match('"sha"%s*:%s*"([^"]+)"')
-        return sha
+        if sha and #sha == 40 then
+            return sha
+        end
     end
+
     return nil
 end
 
@@ -856,11 +877,18 @@ if hasFileSystem then
         pcall(delfile, "WASOR_Classic_Cache/commit_sha.txt")
     elseif isfile("WASOR_Classic_Cache/commit_sha.txt") then
         local success, val = pcall(readfile, "WASOR_Classic_Cache/commit_sha.txt")
-        if success then cachedSHA = val end
+        if success and val and type(val) == "string" and #val >= 7 then
+            cachedSHA = val:gsub("%s+", "")
+        end
     end
     if not forceUpdate then
         latestSHA = getLatestCommitSHA()
+        if latestSHA and type(latestSHA) == "string" then
+            latestSHA = latestSHA:gsub("%s+", "")
+        end
         if latestSHA and cachedSHA and latestSHA == cachedSHA then
+            useCache = true
+        elseif not latestSHA and cachedSHA then
             useCache = true
         end
     end
@@ -958,6 +986,8 @@ local initSuccess, initErr = pcall(function()
     if _G.VoidHub and _G.VoidHub.UI and _G.VoidHub.UI.InitializeUI then
         updateLoaderProgress("Core/UI")
         _G.VoidHub.UI.InitializeUI()
+        local c = _G.VoidHub.UI.GetMainContainer and _G.VoidHub.UI.GetMainContainer()
+        if c then c.Visible = false end
     end
 
     for _, modulePath in ipairs(Modules) do
@@ -967,6 +997,13 @@ local initSuccess, initErr = pcall(function()
 
     updateLoaderProgress("Core/Runtime")
     runFile("Core/Runtime")
+
+    local c = _G.VoidHub and _G.VoidHub.UI and _G.VoidHub.UI.GetMainContainer and _G.VoidHub.UI.GetMainContainer()
+    if c and _G.VoidHub.State and _G.VoidHub.State.uiVisible ~= false then
+        if _G.VoidHub.State.S and _G.VoidHub.State.S.EulaAccepted == true then
+            c.Visible = true
+        end
+    end
 end)
 
 if BarFill then BarFill.Size = UDim2.new(1, 0, 1, 0) end
