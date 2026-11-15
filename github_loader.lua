@@ -263,6 +263,18 @@ if _G.VoidHub or _G.WASOR_Loaded or _G.WASOR_Loading then
         end
     end)
     pcall(function()
+        if _G.WASOR_ActiveDrawings then
+            for d, _ in pairs(_G.WASOR_ActiveDrawings) do
+                pcall(function()
+                    d.Visible = false
+                    if d.Remove then d:Remove()
+                    elseif d.Destroy then d:Destroy() end
+                end)
+            end
+            _G.WASOR_ActiveDrawings = {}
+        end
+    end)
+    pcall(function()
         if cleardrawcache then
             cleardrawcache()
         end
@@ -764,6 +776,7 @@ local Modules = {
     "Modules/Render/SkyboxChanger",
     "Modules/Render/AudioVisualizer",
     "Modules/Render/ViewportESP",
+    "Modules/Render/HeadsUpOverheads",
 
     "Modules/World/InstantPrompts",
     "Modules/World/FireAllPrompts",
@@ -1012,6 +1025,13 @@ local initSuccess, initErr = pcall(function()
 
     updateLoaderProgress("Core/Runtime")
     runFile("Core/Runtime")
+
+    if _G.VoidHub and _G.VoidHub.UI and _G.VoidHub.UI.selectTab then
+        pcall(_G.VoidHub.UI.selectTab, "Modules")
+    end
+    if _G.VoidHub and _G.VoidHub.UI and _G.VoidHub.UI.updateAllModuleVisuals then
+        pcall(_G.VoidHub.UI.updateAllModuleVisuals)
+    end
 
     local c = _G.VoidHub and _G.VoidHub.UI and _G.VoidHub.UI.GetMainContainer and _G.VoidHub.UI.GetMainContainer()
     if c and _G.VoidHub.State and _G.VoidHub.State.uiVisible ~= false then

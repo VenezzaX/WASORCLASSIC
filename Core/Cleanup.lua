@@ -35,14 +35,15 @@ local function safeRemoveDrawing(d)
     if not d then return end
     pcall(function() d.Visible = false end)
     pcall(function()
-        if d.Destroy then
-            d:Destroy()
-        elseif d.Remove then
+        if d.Remove then
             d:Remove()
+        elseif d.Destroy then
+            d:Destroy()
         end
     end)
-    pcall(function() d:Remove() end)
-    pcall(function() d:Destroy() end)
+    if _G.WASOR_ActiveDrawings then
+        _G.WASOR_ActiveDrawings[d] = nil
+    end
 end
 
 Cleanup.hideESP = function(p)
@@ -212,6 +213,16 @@ Cleanup.destroyAllESP = function()
             pcall(function() Cleanup.destroyESP(p) end)
         end
         S.ESPPool = {}
+    end
+    if _G.WASOR_ActiveDrawings then
+        for d, _ in pairs(_G.WASOR_ActiveDrawings) do
+            pcall(function()
+                d.Visible = false
+                if d.Remove then d:Remove()
+                elseif d.Destroy then d:Destroy() end
+            end)
+        end
+        _G.WASOR_ActiveDrawings = {}
     end
     if cleardrawcache then
         pcall(cleardrawcache)

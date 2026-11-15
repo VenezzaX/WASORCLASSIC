@@ -103,21 +103,46 @@ local bonesR6 = {
     { {"Torso", "NeckAttachment"}, {"Right Leg", nil} }
 }
 
+local rigAttachmentNames = {
+    ["NeckAttachment"] = "NeckRigAttachment",
+    ["WaistAttachment"] = "WaistRigAttachment",
+    ["LeftShoulderAttachment"] = "LeftShoulderRigAttachment",
+    ["LeftElbowAttachment"] = "LeftElbowRigAttachment",
+    ["LeftWristAttachment"] = "LeftWristRigAttachment",
+    ["RightShoulderAttachment"] = "RightShoulderRigAttachment",
+    ["RightElbowAttachment"] = "RightElbowRigAttachment",
+    ["RightWristAttachment"] = "RightWristRigAttachment",
+    ["LeftHipAttachment"] = "LeftHipRigAttachment",
+    ["LeftKneeAttachment"] = "LeftKneeRigAttachment",
+    ["LeftAnkleAttachment"] = "LeftAnkleRigAttachment",
+    ["RightHipAttachment"] = "RightHipRigAttachment",
+    ["RightKneeAttachment"] = "RightKneeRigAttachment",
+    ["RightAnkleAttachment"] = "RightAnkleRigAttachment"
+}
+
 local function getNodePosition(char, node)
     local partName, attachmentName = node[1], node[2]
     local part = char:FindFirstChild(partName)
     if not part then return nil end
     if attachmentName then
         local attach = part:FindFirstChild(attachmentName)
-        if not attach and string.find(attachmentName, "Attachment") then
-            local rigName = string.gsub(attachmentName, "Attachment", "RigAttachment")
-            attach = part:FindFirstChild(rigName)
+        if not attach then
+            local rigName = rigAttachmentNames[attachmentName]
+            if rigName then attach = part:FindFirstChild(rigName) end
         end
         if attach and attach:IsA("Attachment") then
             return attach.WorldPosition
         end
     end
     return part.Position
+end
+
+local function newDrawing(dtype)
+    local d = Drawing.new(dtype)
+    if _G.WASOR_ActiveDrawings then
+        _G.WASOR_ActiveDrawings[d] = true
+    end
+    return d
 end
 
 local lastTriggerFire = 0
@@ -338,6 +363,7 @@ local function updateESPAndAimbot()
     end
 
     if S.Chams then
+        State.chamsActive = true
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LP and p.Character then
                 local char = p.Character
@@ -361,7 +387,8 @@ local function updateESPAndAimbot()
                 hl.FillColor = color
             end
         end
-    else
+    elseif State.chamsActive then
+        State.chamsActive = false
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LP and p.Character then local hl = p.Character:FindFirstChild("VoidChams"); if hl then hl:Destroy() end end
         end
@@ -428,27 +455,15 @@ local function updateESPAndAimbot()
 
                     if not S.ESPPool[p] then
                         S.ESPPool[p] = {
-                            boxOutline = Drawing.new("Square"), boxFill = Drawing.new("Square"), tracer = Drawing.new("Line"),
-                            nameTag = Drawing.new("Text"), healthText = Drawing.new("Text"), distText = Drawing.new("Text"),
-                            healthBarOutline = Drawing.new("Square"), healthBarFill = Drawing.new("Square"), skeleton = {},
-                            corners = {}, lines3D = {}, losLine = Drawing.new("Line"), indicator = Drawing.new("Triangle")
+                            boxOutline = newDrawing("Square"), boxFill = newDrawing("Square"), tracer = newDrawing("Line"),
+                            nameTag = newDrawing("Text"), healthText = newDrawing("Text"), distText = newDrawing("Text"),
+                            healthBarOutline = newDrawing("Square"), healthBarFill = newDrawing("Square"), skeleton = {},
+                            corners = {}, lines3D = {}, losLine = newDrawing("Line"), indicator = newDrawing("Triangle")
                         }
-                        for i=1, 20 do table.insert(S.ESPPool[p].skeleton, Drawing.new("Line")) end
-                        for i=1, 8 do table.insert(S.ESPPool[p].corners, Drawing.new("Line")) end
-                        for i=1, 12 do table.insert(S.ESPPool[p].lines3D, Drawing.new("Line")) end
                     end
                     local pool = S.ESPPool[p]
-                    if pool and #pool.skeleton < 20 then
-                        for i = #pool.skeleton + 1, 20 do
-                            table.insert(pool.skeleton, Drawing.new("Line"))
-                        end
-                    end
-                    if pool and not pool.lines3D then
-                        pool.lines3D = {}
-                        for i = 1, 12 do table.insert(pool.lines3D, Drawing.new("Line")) end
-                    end
                     if not pool.losLine then
-                        pool.losLine = Drawing.new("Line")
+                        pool.losLine = newDrawing("Line")
                     end
 
                     local box = getBoundingBox(char)
@@ -506,6 +521,13 @@ local function updateESPAndAimbot()
 
                             local fill = pool.boxFill; fill.Visible = espAllowed and S.ESPBoxes and (S.ESPTransparency < 0.99) and (showFull or showCorners or showBracket or showTechHex or showTopBottom); fill.Position = topLeft; fill.Size = Vector2.new(width, height)
                             fill.Color = espDrawCol; fill.Transparency = math.clamp(1 - S.ESPTransparency, 0, 1); fill.Filled = true
+
+                            if showCorners or showBracket or showTechHex or showTopBottom then
+                                if not pool.corners then pool.corners = {} end
+                                if #pool.corners < 8 then
+                                    for i = #pool.corners + 1, 8 do table.insert(pool.corners, newDrawing("Line")) end
+                                end
+                            end
 
                             if showCorners then
                                 local len = math.clamp(math.min(width, height) * 0.22, 6, 18)
@@ -589,11 +611,14 @@ local function updateESPAndAimbot()
                                 end
                             end
 
-                            if show3D and pool.lines3D then
+                            if show3D then
+                                if not pool.lines3D then pool.lines3D = {} end
+                                if #pool.lines3D < 12 then
+                                    for i = #pool.lines3D + 1, 12 do table.insert(pool.lines3D, newDrawing("Line")) end
+                                end
                                 local rootPart = char:FindFirstChild("HumanoidRootPart") or hrp
                                 local cf = rootPart.CFrame
-                                local sz = char:GetExtentsSize()
-                                if not sz or sz.Magnitude < 1 then sz = Vector3.new(4, 5, 2) end
+                                local sz = Vector3.new(4, 5, 2)
                                 local hw, hh, hd = sz.X / 2, sz.Y / 2, sz.Z / 2
                                 local v3D = {
                                     cf * Vector3.new(-hw, hh, -hd),  cf * Vector3.new(hw, hh, -hd),
@@ -672,6 +697,10 @@ local function updateESPAndAimbot()
                             distText.Center = true; distText.Outline = true; distText.Color = Color3.fromRGB(200, 200, 200); distText.Position = Vector2.new(topLeft.X + width / 2, bottomRight.Y + (S.ESPHealth and 15 or 2))
                             if S.SkeletonESP and espAllowed then
                                 local useBones = char:FindFirstChild("UpperTorso") and bonesR15 or bonesR6
+                                if not pool.skeleton then pool.skeleton = {} end
+                                if #pool.skeleton < #useBones then
+                                    for i = #pool.skeleton + 1, #useBones do table.insert(pool.skeleton, newDrawing("Line")) end
+                                end
                                 for i, bone in ipairs(useBones) do
                                     local line = pool.skeleton[i]
                                     if line then
@@ -697,7 +726,11 @@ local function updateESPAndAimbot()
                                 for i = #useBones + 1, #pool.skeleton do
                                     pool.skeleton[i].Visible = false
                                 end
-                            else for _, line in ipairs(pool.skeleton) do line.Visible = false end end
+                            else
+                                if pool.skeleton then
+                                    for _, line in ipairs(pool.skeleton) do line.Visible = false end
+                                end
+                            end
 
                             local losLine = pool.losLine
                             if losAllowed then
@@ -732,9 +765,6 @@ local function updateESPAndAimbot()
             if not success then
                 hideESP(p)
             end
-            if S.OverheadInfo and Utils.createOverhead then
-                pcall(Utils.createOverhead, p)
-            end
         end
     else
         if next(S.ESPPool) ~= nil then
@@ -742,6 +772,14 @@ local function updateESPAndAimbot()
                 VH.Cleanup.destroyAllESP()
             else
                 hideAllESP()
+            end
+        end
+    end
+
+    if S.OverheadInfo and Utils.createOverhead then
+        for _, p in ipairs(activePlayers) do
+            if p ~= localPlayer then
+                pcall(Utils.createOverhead, p)
             end
         end
     end
@@ -1229,7 +1267,7 @@ end))
 task.spawn(function()
     local movelFling = 0.1
     local wasWalkFling = false
-    while true do
+    while State.uiRunning do
         RunService.Heartbeat:Wait()
         if S.WalkFling then
             if not wasWalkFling then

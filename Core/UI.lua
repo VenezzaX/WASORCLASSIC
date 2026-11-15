@@ -1677,6 +1677,7 @@ local function selectTab(tabName)
         end
     end
 end
+UI.selectTab = selectTab
 
 UI.ResetAllToggles = function(self)
     for name, item in pairs(UI.moduleButtons) do

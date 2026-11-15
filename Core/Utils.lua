@@ -741,21 +741,26 @@ Utils.createOverhead = function(p)
         bill.Parent = head
         S.OverheadPool[p] = bill
     else
-        bill.MaxDistance = S.OverheadMaxDistance or 300
-        local bg = bill:FindFirstChild("BG")
-        if bg then
-            local barBg = bg:FindFirstChild("BarBG")
-            local barFill = barBg and barBg:FindFirstChild("BarFill")
-            local hpPct = math.clamp(hum.Health / math.max(1, hum.MaxHealth), 0, 1)
-            if barFill then
-                barFill.Size = UDim2.new(hpPct, 0, 1, 0)
-                barFill.BackgroundColor3 = Color3.fromRGB(math.floor(255 * (1 - hpPct)), math.floor(255 * hpPct), 0)
-            end
-            local subLbl = bg:FindFirstChild("SubLbl")
-            if subLbl then
-                local cam = Services.Camera or (Services.Workspace and Services.Workspace.CurrentCamera)
-                local dist = cam and math.round((head.Position - cam.CFrame.Position).Magnitude) or 0
-                subLbl.Text = string.format("%d HP | %d studs", math.floor(hum.Health), dist)
+        local now = tick()
+        local lastUp = bill:GetAttribute("LastUpdate") or 0
+        if (now - lastUp) >= 0.1 then
+            bill:SetAttribute("LastUpdate", now)
+            bill.MaxDistance = S.OverheadMaxDistance or 300
+            local bg = bill:FindFirstChild("BG")
+            if bg then
+                local barBg = bg:FindFirstChild("BarBG")
+                local barFill = barBg and barBg:FindFirstChild("BarFill")
+                local hpPct = math.clamp(hum.Health / math.max(1, hum.MaxHealth), 0, 1)
+                if barFill then
+                    barFill.Size = UDim2.new(hpPct, 0, 1, 0)
+                    barFill.BackgroundColor3 = Color3.fromRGB(math.floor(255 * (1 - hpPct)), math.floor(255 * hpPct), 0)
+                end
+                local subLbl = bg:FindFirstChild("SubLbl")
+                if subLbl then
+                    local cam = Services.Camera or (Services.Workspace and Services.Workspace.CurrentCamera)
+                    local dist = cam and math.round((head.Position - cam.CFrame.Position).Magnitude) or 0
+                    subLbl.Text = string.format("%d HP | %d studs", math.floor(hum.Health), dist)
+                end
             end
         end
     end
