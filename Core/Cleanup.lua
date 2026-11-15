@@ -385,6 +385,7 @@ Cleanup.cleanupAll = function()
 
     pcall(function() State.S.HeadSitActive = false; State.S.HeadSitTargetPlayer = nil; State.S.AirSwim = false end)
     pcall(function() if VH.WallWalkCleanup then pcall(VH.WallWalkCleanup) end end)
+    pcall(function() if VH.stopAntiFling then pcall(VH.stopAntiFling) end end)
     pcall(function() VH.Utils.toggleMapXray(false); VH.Utils.toggleClearVision(false) end)
     pcall(function() if VH.Utils.toggleNo3DRenderCover then VH.Utils.toggleNo3DRenderCover(false) else Services.RunService:Set3dRenderingEnabled(true) end end)
     pcall(function() Services.Lighting.Ambient = State.originalAmbient; Services.Lighting.OutdoorAmbient = State.originalOutdoor end)

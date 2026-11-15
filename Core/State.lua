@@ -66,7 +66,7 @@ State.S = {
     GravityEnabled = false, CustomGravity = 196.2, ForceWalkSpeed = false, ForceJumpPower = false,
     AntiAFK = false, GhostTeleportToEnd = false,
     GodMode = false, KillAura = false, KillAuraRange = 15, AutoClicker = false, AutoClickerDelay = 2, AutoClickerInterval = 0.1, AutoInteract = false,
-    AutoInteractRadius = 15, ToolMagnet = false, AutoJump = false, SavedWaypointCF = nil, AntiFling = false,
+    AutoInteractRadius = 15, ToolMagnet = false, AutoJump = false, SavedWaypointCF = nil, AntiFling = false, AntiFlingDistance = 35, AntiFlingAbsorb = true,
     DisabledModules = {}, DisabledModuleStyle = "Invisible", DisableModeWarningShown = false, SaveConfigBetweenTeleports = false, WalkFlingSpeed = 32, WallWalk = false, WallWalkKey = Enum.KeyCode.V, WallWalkShowButton = false, MapXrayTransparency = 50, ESPNameFormat = "Both", CameraMaxZoomEnabled = false, UltraInstinctWalkBackward = false, UltraInstinctDetectNPCs = true, UltraInstinctDetectProjectiles = true, UltraInstinctDetectTools = true, ChatHideOnModules = true, ModuleBinds = {}, ClickDeleteModifier = "LeftAlt", SprintKey = Enum.KeyCode.Unknown, AutoClickerKey = Enum.KeyCode.Unknown, KillAuraKey = Enum.KeyCode.Unknown, TriggerbotKey = Enum.KeyCode.Unknown, ClickTeleportKey = Enum.KeyCode.Unknown, ClickDeleteKey = Enum.KeyCode.Unknown, FreecamKey = Enum.KeyCode.Unknown, AirSwimKey = Enum.KeyCode.Unknown, FlyBypassKey = Enum.KeyCode.Unknown, ModuleDisableMode = false,
     SkyboxChangerActive = false, SkyboxMode = "All Same", SkyboxAsset = "", SkyboxFPS = 15,
     SkyboxFt = "", SkyboxBk = "", SkyboxLf = "", SkyboxRt = "", SkyboxUp = "", SkyboxDn = "",
