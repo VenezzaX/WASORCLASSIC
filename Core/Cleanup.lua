@@ -257,13 +257,18 @@ Cleanup.cleanupAll = function()
         for _, parent in ipairs(containers) do
             pcall(function()
                 for _, child in ipairs(parent:GetChildren()) do
-                    if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "NetworkUserTag" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "WASOR_ModelViewerGui" or child.Name == "TranscendingViewportGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "WallWalkToggleUI" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                    if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "NetworkUserTag" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "WASOR_ModelViewerGui" or child.Name == "TranscendingViewportGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "WallWalkToggleUI" or child.Name == "xzypMusicPlayer" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
                         pcall(function() child:Destroy() end)
                     end
                 end
             end)
         end
         if State.clearNetworkTags then pcall(State.clearNetworkTags) end
+        pcall(function()
+            if VH.MusicPlayerCleanup then pcall(VH.MusicPlayerCleanup) end
+            local sound = game:GetService("SoundService"):FindFirstChild("xzypAudio")
+            if sound then sound:Destroy() end
+        end)
     end)
 
     for _, c in ipairs(S.Connections) do pcall(function() c:Disconnect() end) end

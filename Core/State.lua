@@ -85,7 +85,7 @@ State.S = {
     AudioVisualizer = false, AudioVisualizerMode = 1, AudioVisualizerThemeIdx = 1, AudioVisualizerSensitivity = 1.0, LoadingScreenMode = "Normal",
     ViewportESP = false, ViewportESPKey = Enum.KeyCode.P, ViewportESPSkipTeam = false, ViewportESPAmbient = "Natural", ViewportESPLightColor = "White", ViewportESPOpacity = 100,
     UIFont = "SourceSansSemibold", UIScale = 1.0,
-    AntiSit = false, GraphicsReducer = false, AutoRejoin = false, NetworkChat = true, NetworkTags = true, ShowNetworkUsersHUD = true, ShowNetworkHeadTags = true, FreecamSpeed = 40, TracerOrigin = "Bottom",
+    AntiSit = false, GraphicsReducer = false, AutoRejoin = false, MusicPlayerActive = false, NetworkChat = true, NetworkTags = true, ShowNetworkUsersHUD = true, ShowNetworkHeadTags = true, FreecamSpeed = 40, TracerOrigin = "Bottom",
     LagReducePotatoMode = true, LagReduceShadows = true, LagReduceDecals = true, LagReduceParticles = true, LagReduceEffects = true,
     FloatBody = nil, WaterPlat = nil, WaterRaycastParams = nil, TallWalkTrack = nil, TallIdleTrack = nil,
     CustomIdleTrack = nil, TallRunningConn = nil, GodModeConn = nil,

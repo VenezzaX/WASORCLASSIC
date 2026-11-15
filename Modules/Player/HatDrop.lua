@@ -100,6 +100,24 @@ registerModule("Player", "Hat Drop", 320, 50, true, S.HatDropActive, function(v)
     end
     saveConfig()
 end, function(drawer)
+    local warnRow = Instance.new("Frame")
+    warnRow.Name = "HatDropWarningRow"
+    warnRow.Size = UDim2.new(1, 0, 0, 24)
+    warnRow.BackgroundTransparency = 1
+    warnRow.Parent = drawer
+
+    local warnLabel = Instance.new("TextLabel")
+    warnLabel.Size = UDim2.new(1, -8, 1, 0)
+    warnLabel.Position = UDim2.new(0, 4, 0, 0)
+    warnLabel.BackgroundTransparency = 1
+    warnLabel.Font = Enum.Font.GothamMedium
+    warnLabel.TextSize = 9
+    warnLabel.TextColor3 = Color3.fromRGB(240, 200, 50)
+    warnLabel.TextWrapped = true
+    warnLabel.TextXAlignment = Enum.TextXAlignment.Left
+    warnLabel.Text = "⚠️ Warning: Only works with Network Ownership of accessories!"
+    warnLabel.Parent = warnRow
+
     if addButtonOption then
         addButtonOption(drawer, "Drop All Hats Now", function()
             local count = dropAccessories()

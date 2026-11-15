@@ -203,9 +203,18 @@ UI.updateModuleVisual = function(name)
         if isPatched then
             statusStripe.BackgroundColor3 = StudioTheme.red
             label.TextColor3 = StudioTheme.red
+            label.TextTransparency = 0.45
+            btn.BackgroundTransparency = 0.5
+        elseif name:lower() == "hat drop" then
+            statusStripe.BackgroundColor3 = isAct and StudioTheme.green or Color3.fromRGB(240, 200, 50)
+            label.TextColor3 = isAct and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(240, 200, 50)
+            label.TextTransparency = 0
+            btn.BackgroundTransparency = 0
         else
             statusStripe.BackgroundColor3 = isAct and StudioTheme.green or StudioTheme.borderSubtle
             label.TextColor3 = isAct and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted
+            label.TextTransparency = 0
+            btn.BackgroundTransparency = 0
         end
         label.Text = (isSelectMode and "[ACTIVE] " or "") .. name
         if gear then gear.Visible = true end
@@ -1435,11 +1444,22 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     btn.Parent = container
 
     local active = defaultState
+    local isPatched = patchedModules[name:lower()]
+
+    local statusColor = (isToggle and active) and StudioTheme.green or StudioTheme.borderSubtle
+    local textColor = (isToggle and active) and StudioTheme.text or StudioTheme.textMuted
+    if isPatched then
+        statusColor = StudioTheme.red
+        textColor = StudioTheme.red
+    elseif name:lower() == "hat drop" then
+        statusColor = (isToggle and active) and StudioTheme.green or Color3.fromRGB(240, 200, 50)
+        textColor = (isToggle and active) and StudioTheme.text or Color3.fromRGB(240, 200, 50)
+    end
 
     local statusStripe = Instance.new("Frame")
     statusStripe.Size = UDim2.new(0, 3, 1, 0)
     statusStripe.Position = UDim2.new(0, 0, 0, 0)
-    statusStripe.BackgroundColor3 = (isToggle and active) and StudioTheme.green or StudioTheme.borderSubtle
+    statusStripe.BackgroundColor3 = statusColor
     statusStripe.BorderSizePixel = 0
     statusStripe.Parent = btn
 
@@ -1450,7 +1470,11 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     modTextLabel.BackgroundTransparency = 1
     modTextLabel.Font = Enum.Font.SourceSansSemibold
     modTextLabel.TextSize = 12
-    modTextLabel.TextColor3 = (isToggle and active) and StudioTheme.text or StudioTheme.textMuted
+    modTextLabel.TextColor3 = textColor
+    if isPatched then
+        modTextLabel.TextTransparency = 0.45
+        btn.BackgroundTransparency = 0.5
+    end
     modTextLabel.TextXAlignment = Enum.TextXAlignment.Left
     modTextLabel.Text = name
     modTextLabel.Parent = btn
@@ -1467,9 +1491,18 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         if isPatched then
             statusStripe.BackgroundColor3 = StudioTheme.red
             modTextLabel.TextColor3 = StudioTheme.red
+            modTextLabel.TextTransparency = 0.45
+            btn.BackgroundTransparency = 0.5
+        elseif name:lower() == "hat drop" then
+            statusStripe.BackgroundColor3 = isAct and StudioTheme.green or Color3.fromRGB(240, 200, 50)
+            modTextLabel.TextColor3 = isAct and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(240, 200, 50)
+            modTextLabel.TextTransparency = 0
+            btn.BackgroundTransparency = 0
         else
             statusStripe.BackgroundColor3 = isAct and StudioTheme.green or StudioTheme.borderSubtle
             modTextLabel.TextColor3 = isAct and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted
+            modTextLabel.TextTransparency = 0
+            btn.BackgroundTransparency = 0
         end
         task.defer(UI.updateHUDArrayList)
     end
@@ -1502,7 +1535,13 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
                 local w = winWidth or 210
                 local h = winHeight or 220
                 floatingWin, drawer = UI.createFloatingWindow(name .. " Settings", w, h, win.Frame.Position.X.Offset + 215, win.Frame.Position.Y.Offset)
-                if populateOptionsFunc then populateOptionsFunc(drawer) end
+                if isPatched then
+                    local brokenRow = Instance.new("Frame"); brokenRow.Name = "BrokenNotice"; brokenRow.Size = UDim2.new(1, 0, 0, 20); brokenRow.BackgroundTransparency = 1; brokenRow.Parent = drawer
+                    local brokenLabel = Instance.new("TextLabel"); brokenLabel.Size = UDim2.new(1, -8, 1, 0); brokenLabel.Position = UDim2.new(0, 4, 0, 0)
+                    brokenLabel.BackgroundTransparency = 1; brokenLabel.Font = Enum.Font.SourceSansSemibold; brokenLabel.TextSize = 11; brokenLabel.TextColor3 = StudioTheme.red
+                    brokenLabel.TextXAlignment = Enum.TextXAlignment.Left; brokenLabel.Text = "⚠️ Broken: This module is currently patched"; brokenLabel.Parent = brokenRow
+                end
+                if populateOptionsFunc or isPatched then populateOptionsFunc(drawer) end
                 adjustWindowSizeToContent(floatingWin, drawer)
             end
             floatingWin.Visible = not floatingWin.Visible
@@ -1532,14 +1571,21 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
                 pad.PaddingRight = UDim.new(0, 4)
                 pad.Parent = drawer
 
-                if populateOptionsFunc then populateOptionsFunc(drawer) end
+                if isPatched then
+                    local brokenRow = Instance.new("Frame"); brokenRow.Name = "BrokenNotice"; brokenRow.Size = UDim2.new(1, 0, 0, 20); brokenRow.BackgroundTransparency = 1; brokenRow.Parent = drawer
+                    local brokenLabel = Instance.new("TextLabel"); brokenLabel.Size = UDim2.new(1, -8, 1, 0); brokenLabel.Position = UDim2.new(0, 4, 0, 0)
+                    brokenLabel.BackgroundTransparency = 1; brokenLabel.Font = Enum.Font.SourceSansSemibold; brokenLabel.TextSize = 11; brokenLabel.TextColor3 = StudioTheme.red
+                    brokenLabel.TextXAlignment = Enum.TextXAlignment.Left; brokenLabel.Text = "⚠️ Broken: This module is currently patched"; brokenLabel.Parent = brokenRow
+                end
+
+                if populateOptionsFunc or isPatched then populateOptionsFunc(drawer) end
             end
             drawer.Visible = not drawer.Visible
             updateBg()
         end
     end
 
-    if populateOptionsFunc then
+    if populateOptionsFunc or isPatched then
         gear = Instance.new("TextButton")
         gear.Size = UDim2.new(0, 22, 0, 18)
         gear.Position = UDim2.new(1, -24, 0.5, -9)
@@ -1892,7 +1938,7 @@ UI.InitializeUI = function()
     topTitle.TextSize = 12
     topTitle.TextColor3 = StudioTheme.text
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "WASOR 4.5 (" .. executorName .. ")"
+    topTitle.Text = "WASOR 4.6 (" .. executorName .. ")"
     topTitle.Parent = topBar
 
     navBar = Instance.new("Frame")
@@ -2058,7 +2104,7 @@ UI.InitializeUI = function()
     hudWatermark.TextSize = 12
     hudWatermark.TextColor3 = StudioTheme.blue
     hudWatermark.TextXAlignment = Enum.TextXAlignment.Left
-    hudWatermark.Text = "WASOR 4.5"
+    hudWatermark.Text = "WASOR 4.6"
     hudWatermark.Visible = S.HUDWatermark
     hudWatermark.Parent = screenGui
 

@@ -283,7 +283,7 @@ if _G.VoidHub or _G.WASOR_Loaded or _G.WASOR_Loading then
     _G.WASOR_Loading = nil
     _G.WASOR_Loaded = nil
     _G.WASOR_Reloading = nil
-    print("[WASOR 4.5] Existing instance detected. Cleaned up and reloading...")
+    print("[WASOR 4.6] Existing instance detected. Cleaned up and reloading...")
 end
 _G.WASOR_Loading = true
 
@@ -350,7 +350,7 @@ pcall(function()
     for _, parent in ipairs(containers) do
         pcall(function()
             for _, child in ipairs(parent:GetChildren()) do
-                if child.Name == "MeteorRobloxGUI" or child.Name == "WallWalkToggleUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "TranscendingViewportGui" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                if child.Name == "MeteorRobloxGUI" or child.Name == "WallWalkToggleUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "TranscendingViewportGui" or child.Name == "xzypMusicPlayer" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
                     pcall(function() child:Destroy() end)
                 end
             end
@@ -802,7 +802,8 @@ local Modules = {
     "Modules/Misc/SettingsKeybinds",
     "Modules/Misc/HideLoadingScreen",
     "Modules/Misc/NetworkChatHub",
-    "Modules/Misc/SaveGame"
+    "Modules/Misc/SaveGame",
+    "Modules/Misc/MusicPlayer"
 }
 
 local hasFileSystem = (writefile and readfile and isfile and makefolder and isfolder)
