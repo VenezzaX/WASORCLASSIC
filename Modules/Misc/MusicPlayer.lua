@@ -12,6 +12,7 @@ local addButtonOption = UI.addButtonOption
 local saveConfig = VH.Config.saveConfig
 
 local musicPlayerUrl = "https://raw.githubusercontent.com/VenezzaX/xzypmusicplayerfun/refs/heads/main/musicplayer.lua"
+local cachePath = "xzyp/System/musicplayer.lua"
 local isLoading = false
 
 local function syncModuleState(active)
@@ -24,11 +25,7 @@ local function syncModuleState(active)
     saveConfig()
 end
 
-local function findMusicGui()
-    local xp = type(getgenv) == "function" and getgenv().xzypPlayer or nil
-    if xp and xp.Gui and xp.Gui.Parent then
-        return xp.Gui
-    end
+local function getGuiContainers()
     local containers = {}
     pcall(function()
         if type(gethui) == "function" then table.insert(containers, gethui()) end
@@ -39,7 +36,15 @@ local function findMusicGui()
             if pg then table.insert(containers, pg) end
         end
     end)
-    for _, c in ipairs(containers) do
+    return containers
+end
+
+local function findMusicGui()
+    local xp = type(getgenv) == "function" and getgenv().xzypPlayer or nil
+    if xp and xp.Gui and xp.Gui.Parent then
+        return xp.Gui
+    end
+    for _, c in ipairs(getGuiContainers()) do
         local g = c:FindFirstChild("xzypMusicPlayer")
         if g then return g end
     end
@@ -53,6 +58,47 @@ local function getMusicSound()
     end
     local soundSvc = Services.SoundService or game:GetService("SoundService")
     return soundSvc:FindFirstChild("xzypAudio")
+end
+
+local function purgeLegacyFilesAndGuis(includeCurrent)
+    pcall(function()
+        if type(isfile) == "function" and type(delfile) == "function" then
+            local staleFiles = {
+                "MusicPlayer.lua",
+                "musicplayer.lua",
+                "xzyp/MusicPlayer.lua",
+                "xzyp/musicplayer.lua",
+            }
+            for _, f in ipairs(staleFiles) do
+                if isfile(f) then
+                    delfile(f)
+                end
+            end
+        end
+    end)
+
+    local legacyNames = { "Orbitune", "OrbituneWidget", "OrbituneClientPlayer" }
+    for _, c in ipairs(getGuiContainers()) do
+        for _, name in ipairs(legacyNames) do
+            local old = c:FindFirstChild(name)
+            if old then old:Destroy() end
+        end
+        if includeCurrent then
+            local cur = c:FindFirstChild("xzypMusicPlayer")
+            if cur then cur:Destroy() end
+        end
+    end
+
+    local soundSvc = Services.SoundService or game:GetService("SoundService")
+    local oldSound = soundSvc:FindFirstChild("OrbituneAudio")
+    if oldSound then oldSound:Destroy() end
+    if includeCurrent then
+        local curSound = soundSvc:FindFirstChild("xzypAudio")
+        if curSound then
+            curSound:Stop()
+            curSound:Destroy()
+        end
+    end
 end
 
 local function hookPlayerGui(gui)
@@ -74,58 +120,74 @@ local function hookPlayerGui(gui)
 end
 
 local function unloadPlayer()
-    pcall(function()
-        local sound = getMusicSound()
-        if sound then
-            sound:Stop()
-            sound:Destroy()
-        end
-        local gui = findMusicGui()
-        if gui then
-            gui:Destroy()
-        end
-        if type(getgenv) == "function" then
-            getgenv().xzypPlayer = nil
-        end
-    end)
+    purgeLegacyFilesAndGuis(true)
+    if type(getgenv) == "function" then
+        getgenv().xzypPlayer = nil
+    end
     syncModuleState(false)
 end
 
-local function runMusicPlayer()
+local function fetchLatestSource()
+    local bustUrl = musicPlayerUrl .. "?t=" .. tostring(os.time()) .. "_" .. tostring(math.random(1000, 9999))
+    local code = nil
+
+    pcall(function()
+        code = game:HttpGet(bustUrl, true)
+    end)
+
+    if (not code or code == "") then
+        local req = (syn and syn.request) or request or http_request or (http and http.request)
+        if req then
+            pcall(function()
+                local res = req({ Url = bustUrl, Method = "GET" })
+                if res and res.Body then
+                    code = res.Body
+                end
+            end)
+        end
+    end
+
+    if code and code:find("xzypPlayer", 1, true) then
+        pcall(function()
+            if type(isfolder) == "function" and type(makefolder) == "function" then
+                if not isfolder("xzyp") then makefolder("xzyp") end
+                if not isfolder("xzyp/System") then makefolder("xzyp/System") end
+            end
+            if type(writefile) == "function" then
+                writefile(cachePath, code)
+            end
+        end)
+        return code
+    end
+
+    pcall(function()
+        if type(isfile) == "function" and type(readfile) == "function" and isfile(cachePath) then
+            local cached = readfile(cachePath)
+            if cached and cached:find("xzypPlayer", 1, true) then
+                code = cached
+            end
+        end
+    end)
+
+    return code
+end
+
+local function runMusicPlayer(forceReload)
     if isLoading then return end
-    local existing = findMusicGui()
-    if existing then
-        existing.Enabled = true
-        hookPlayerGui(existing)
-        return
+    purgeLegacyFilesAndGuis(forceReload == true)
+
+    if not forceReload then
+        local existing = findMusicGui()
+        if existing then
+            existing.Enabled = true
+            hookPlayerGui(existing)
+            return
+        end
     end
 
     isLoading = true
     task.spawn(function()
-        local code = nil
-        pcall(function()
-            if type(isfile) == "function" and type(readfile) == "function" then
-                local localPaths = {
-                    "MusicPlayer.lua",
-                    "musicplayer.lua",
-                    "xzyp/musicplayer.lua",
-                    "xzyp/System/musicplayer.lua",
-                }
-                for _, p in ipairs(localPaths) do
-                    if isfile(p) then
-                        code = readfile(p)
-                        if code and code ~= "" then break end
-                    end
-                end
-            end
-        end)
-
-        if not code or code == "" then
-            pcall(function()
-                code = game:HttpGet(musicPlayerUrl, true)
-            end)
-        end
-
+        local code = fetchLatestSource()
         if code and code ~= "" and type(loadstring) == "function" then
             local fn, err = loadstring(code)
             if fn then
@@ -148,7 +210,7 @@ local function runMusicPlayer()
             end
         else
             syncModuleState(false)
-            notify("Could not load Music Player source!", Color3.fromRGB(245, 95, 105))
+            notify("Could not fetch updated Music Player!", Color3.fromRGB(245, 95, 105))
         end
 
         isLoading = false
@@ -163,7 +225,7 @@ registerModule("Misc", "Music Player", 720, 50, true, S.MusicPlayerActive, funct
             gui.Enabled = true
             hookPlayerGui(gui)
         else
-            runMusicPlayer()
+            runMusicPlayer(false)
         end
     else
         if gui then
@@ -180,7 +242,7 @@ end, function(drawer)
             syncModuleState(gui.Enabled)
         else
             syncModuleState(true)
-            runMusicPlayer()
+            runMusicPlayer(false)
         end
     end)
 
@@ -191,11 +253,15 @@ end, function(drawer)
         end)
     end)
 
-    addButtonOption(drawer, "Reload Player", function()
-        unloadPlayer()
-        task.wait(0.1)
+    addButtonOption(drawer, "Force Update (GitHub)", function()
+        pcall(function()
+            if type(isfile) == "function" and type(delfile) == "function" and isfile(cachePath) then
+                delfile(cachePath)
+            end
+        end)
         syncModuleState(true)
-        runMusicPlayer()
+        runMusicPlayer(true)
+        notify("Reloaded latest xzyp music player from GitHub!", Color3.fromRGB(64, 214, 114))
     end)
 
     addButtonOption(drawer, "Unload Player", function()
@@ -204,5 +270,5 @@ end, function(drawer)
 end, false)
 
 if S.MusicPlayerActive then
-    runMusicPlayer()
+    runMusicPlayer(false)
 end
