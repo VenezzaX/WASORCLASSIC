@@ -12,7 +12,8 @@ local toggleFloat = Utils.toggleFloat
 local enableGhostMode = Utils.enableGhostMode
 local disableGhostMode = Utils.disableGhostMode
 local applyTallAnimations = Utils.applyTallAnimations
-local toggleClearVision = Utils.toggleClearVision
+local toggleNoFog = Utils.toggleNoFog or Utils.toggleClearVision
+local toggleClearVision = toggleNoFog
 local Lighting = Services.Lighting
 
 local toggleGraphicsReducer = Utils.toggleGraphicsReducer
@@ -137,11 +138,16 @@ local function getNodePosition(char, node)
     return part.Position
 end
 
+if not _G.WASOR_ActiveDrawings then
+    _G.WASOR_ActiveDrawings = {}
+end
+
 local function newDrawing(dtype)
     local d = Drawing.new(dtype)
-    if _G.WASOR_ActiveDrawings then
-        _G.WASOR_ActiveDrawings[d] = true
+    if not _G.WASOR_ActiveDrawings then
+        _G.WASOR_ActiveDrawings = {}
     end
+    _G.WASOR_ActiveDrawings[d] = true
     return d
 end
 
@@ -255,8 +261,12 @@ local function toggleMapXray(v)
     return Utils.toggleMapXray(v)
 end
 
-local function toggleClearVision(v)
+local function toggleNoFog(v)
+    if Utils.toggleNoFog then return Utils.toggleNoFog(v) end
     return Utils.toggleClearVision(v)
+end
+local function toggleClearVision(v)
+    return toggleNoFog(v)
 end
 
 local function toggleGraphicsReducer(v)
@@ -278,8 +288,9 @@ end
 local networkTagsPool = State.networkTagsPool
 
 local function updateESPAndAimbot()
+    if not State.uiRunning then return end
     Camera = Services.Camera or Workspace.CurrentCamera or Workspace:FindFirstChildOfClass("Camera") or Camera
-    if S.ClearVision then Lighting.FogEnd = 100000 end
+    if S.NoFog or S.ClearVision then Lighting.FogStart = 9e9; Lighting.FogEnd = 9e9 end
     if fovCircle then
         fovCircle.Visible = S.AimbotActive and S.AimbotShowFOV
         if fovCircle.Visible and Camera then local vp = Camera.ViewportSize; fovCircle.Position = Vector2.new(vp.X / 2, vp.Y / 2); fovCircle.Radius = S.AimbotFOV end
@@ -354,7 +365,13 @@ local function updateESPAndAimbot()
                 isLocal = true
             end
         end)
-        if not inServer or isLocal then
+        local isDescendant = false
+        pcall(function()
+            if type(p) == "userdata" and p.IsDescendantOf and p:IsDescendantOf(Players) then
+                isDescendant = true
+            end
+        end)
+        if not inServer or isLocal or not isDescendant then
             table.insert(toClean, p)
         end
     end
@@ -422,7 +439,7 @@ local function updateESPAndAimbot()
                 local char = p.Character
                 local hrp = char and (char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
-                local valid = char and hrp and hum and hum.Health > 0
+                local valid = char and hrp and hum and hum.Health > 0 and (hum:GetState() ~= Enum.HumanoidStateType.Dead)
                 if valid then
                     local isTeammate = localPlayer and p.Team and localPlayer.Team and p.Team == localPlayer.Team
                     local isFriend = checkFriendship(p.UserId)
@@ -811,6 +828,7 @@ local lastCameraYaw = nil
 local lastAirVelocity = nil
 
 table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
+    if not State.uiRunning then return end
     pcall(function()
         fpsCount = fpsCount + 1; local curT = tick(); local updated = false
         if curT - lastFpsTick >= 1 then rowHomeFPS:SetValue(tostring(fpsCount)); lastFpsTick = curT; updated = true end
@@ -1237,14 +1255,30 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
 
     pcall(function()
         if S.FlingActive and S.FlingTarget and myHRP then
-            local targetChar = S.FlingTarget.Character
-            local targetHRP = targetChar and (targetChar:FindFirstChild("HumanoidRootPart") or targetChar:FindFirstChild("Torso") or targetChar.PrimaryPart)
-            local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
-            if targetHRP and targetHum and targetHum.Health > 0 then
-                myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 1)
-                myHRP.AssemblyLinearVelocity = Vector3.new(0, 1000, 0); myHRP.AssemblyAngularVelocity = Vector3.new(0, 50000, 0)
+            if not S.FlingTarget:IsDescendantOf(Players) then
+                S.FlingActive = false
+                local mod = moduleButtons and moduleButtons["Fling Player"]
+                if mod and mod.SetActive then mod.SetActive(false) end
+                notify("Fling target left the game!", Color3.fromRGB(218, 38, 38))
             else
-                S.FlingActive = false; local mod = moduleButtons["Fling Player"]; if mod then mod.SetActive(false) end; notify("Fling target lost or dead!", Color3.fromRGB(218, 38, 38))
+                local targetChar = S.FlingTarget.Character
+                local targetHRP = targetChar and (targetChar:FindFirstChild("HumanoidRootPart") or targetChar:FindFirstChild("Torso") or targetChar.PrimaryPart)
+                local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
+                if targetHRP and targetHum and targetHum.Health > 0 then
+                    myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 0.5)
+                    myHRP.AssemblyLinearVelocity = Vector3.new(0, 25000, 0)
+                    myHRP.AssemblyAngularVelocity = Vector3.new(0, 75000, 0)
+                else
+                    if S.FlingContinuous ~= false then
+                        myHRP.AssemblyLinearVelocity = Vector3.zero
+                        myHRP.AssemblyAngularVelocity = Vector3.zero
+                    else
+                        S.FlingActive = false
+                        local mod = moduleButtons and moduleButtons["Fling Player"]
+                        if mod and mod.SetActive then mod.SetActive(false) end
+                        notify("Fling target lost or dead!", Color3.fromRGB(218, 38, 38))
+                    end
+                end
             end
         elseif S.FlingAllActive and myHRP then
             local now = tick()
@@ -1280,7 +1314,7 @@ task.spawn(function()
             local character = LP.Character
             local root = getHRP(character)
 
-            while S.WalkFling and not (character and character.Parent and root and root.Parent) do
+            while State.uiRunning and S.WalkFling and not (character and character.Parent and root and root.Parent) do
                 RunService.Heartbeat:Wait()
                 character = LP.Character
                 root = getHRP(character)
@@ -1324,6 +1358,7 @@ local noclipOrigCanCollide = {}
 local lastNoclipChar = nil
 
 table.insert(S.Connections, RunService.Stepped:Connect(function()
+    if not State.uiRunning then return end
     local char = getChar()
     if char ~= lastNoclipChar then
         noclipOrigCanCollide = {}
@@ -1383,6 +1418,7 @@ local function isModDisabled(...)
 end
 
 table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gpe)
+    if not State.uiRunning then return end
     if S.SilentAim and inp.UserInputType == Enum.UserInputType.MouseButton1 and not UserInputService:GetFocusedTextBox() then
         if not isModDisabled("Silent Aim") then
             local target = getAimbotTarget()
@@ -1572,6 +1608,7 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
 end))
 
 table.insert(S.Connections, UserInputService.InputEnded:Connect(function(inp, gpe)
+    if not State.uiRunning then return end
     if gpe then return end
     if inp.KeyCode == Enum.KeyCode.LeftShift then
         if S.SprintEnabled and not isModDisabled("Sprint Speed Boost", "Sprint") then local hum = getHum(); if hum then hum.WalkSpeed = (S.ForceWalkSpeed and S.WalkSpeed) or (State.gameDefaultSpeed or 16) end end
@@ -1646,16 +1683,30 @@ table.insert(S.Connections, LP.CharacterAdded:Connect(onCharSpawn))
 
 local function hookPlayerCharacter(p)
     if p == LP or (LP and p.UserId and LP.UserId and p.UserId == LP.UserId) then return end
+    local function setupChar(char)
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 2)
+        if hum then
+            table.insert(S.Connections, hum.Died:Connect(function()
+                hideESP(p)
+            end))
+        end
+    end
     pcall(function()
         table.insert(S.Connections, p.CharacterRemoving:Connect(function()
             hideESP(p)
+            destroyESP(p)
             if VH.Utils and VH.Utils.removeOverhead then
                 pcall(VH.Utils.removeOverhead, p)
             end
         end))
-        table.insert(S.Connections, p.CharacterAdded:Connect(function()
+        table.insert(S.Connections, p.CharacterAdded:Connect(function(char)
             hideESP(p)
+            setupChar(char)
         end))
+        if p.Character then
+            setupChar(p.Character)
+        end
     end)
 end
 

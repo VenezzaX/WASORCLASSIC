@@ -1,3 +1,4 @@
+if not _G.WASOR_ActiveDrawings then _G.WASOR_ActiveDrawings = {} end
 if _G.WASOR_Reloading then return end
 if _G.VoidHub or _G.WASOR_Loaded or _G.WASOR_Loading then
     _G.WASOR_Reloading = true
@@ -241,7 +242,7 @@ local Modules = {
     "Modules/Render/LineOfSight",
     "Modules/Render/NetworkUserTags",
     "Modules/Render/MapXRay",
-    "Modules/Render/ClearVision",
+    "Modules/Render/NoFog",
     "Modules/Render/No3DRendering",
     "Modules/Render/LagReducer",
     "Modules/Render/FullBrightMode",

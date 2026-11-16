@@ -10,17 +10,65 @@ local registerModule = UI.registerModule
 
 local saveConfig = VH.Config.saveConfig
 
+local function launchChatHub()
+    local loaded = false
+    if isfile and readfile and loadstring then
+        local candidates = {
+            "Chathub.lua",
+            "WASOR/Chathub.lua",
+            "WASORCLASSIC/Chathub.lua",
+            "chatroom_cache.lua"
+        }
+        for _, path in ipairs(candidates) do
+            if isfile(path) then
+                local code = readfile(path)
+                if code and #code > 100 then
+                    local fn = loadstring(code, path)
+                    if fn then
+                        task.spawn(fn)
+                        loaded = true
+                        break
+                    end
+                end
+            end
+        end
+    end
+    if not loaded then
+        task.spawn(function()
+            local success, remoteCode = pcall(function()
+                return game:HttpGet("https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua", true)
+            end)
+            if success and remoteCode and #remoteCode > 100 then
+                pcall(function()
+                    if writefile then
+                        writefile("chatroom_cache.lua", remoteCode)
+                    end
+                end)
+                local fn = loadstring(remoteCode, "sigma.lua")
+                if fn then
+                    task.spawn(fn)
+                end
+            end
+        end)
+    else
+        task.spawn(function()
+            pcall(function()
+                local remoteCode = game:HttpGet("https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua", true)
+                if remoteCode and #remoteCode > 100 and writefile then
+                    writefile("chatroom_cache.lua", remoteCode)
+                end
+            end)
+        end)
+    end
+end
+
+VH.launchNetworkChatHub = launchChatHub
+
 registerModule("Misc", "Network Chat Hub", 720, 50, true, S.NetworkChat, function(v)
     S.NetworkChat = v
     if v then
         task.spawn(function()
-            pcall(function()
-                if isfile and isfile("Chathub.lua") and readfile and loadstring then
-                    loadstring(readfile("Chathub.lua"))()
-                else
-                    loadstring(game:HttpGet(('https://raw.githubusercontent.com/VenezzaX/detection.lua/refs/heads/main/sigma.lua'),true))()
-                end
-            end)
+            pcall(launchChatHub)
         end)
     else
         if _G.ChatHub_Cleanup then

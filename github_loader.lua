@@ -1,3 +1,4 @@
+if not _G.WASOR_ActiveDrawings then _G.WASOR_ActiveDrawings = {} end
 local function checkDeltaCompatibility()
     local function isDeltaExecutor()
         local getExec = identifyexecutor or getexecutorname
@@ -785,7 +786,7 @@ local Modules = {
     "Modules/Render/LineOfSight",
     "Modules/Render/NetworkUserTags",
     "Modules/Render/MapXRay",
-    "Modules/Render/ClearVision",
+    "Modules/Render/NoFog",
     "Modules/Render/No3DRendering",
     "Modules/Render/LagReducer",
     "Modules/Render/FullBrightMode",

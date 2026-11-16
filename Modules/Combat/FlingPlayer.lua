@@ -41,6 +41,10 @@ end, function(drawer)
         if found then S.FlingTarget = found; notify("Fling target set to: " .. found.DisplayName, Color3.fromRGB(50, 195, 75))
         else S.FlingTarget = nil; notify("Player not found: " .. txt, Color3.fromRGB(218, 38, 38)) end
     end)
+    addToggleOption(drawer, "Continuous Fling", S.FlingContinuous ~= false, function(v)
+        S.FlingContinuous = v
+        saveConfig()
+    end)
     addToggleOption(drawer, "Fling Noclip", S.FlingNoclip ~= false, function(v)
         S.FlingNoclip = v
         saveConfig()

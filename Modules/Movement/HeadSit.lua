@@ -20,6 +20,7 @@ local saveConfig = VH.Config.saveConfig
 
 local headSitSteppedConn = nil
 local headSitRenderConn = nil
+local headSitCharAddedConn = nil
 
 local function setLocalCharCollisions(enable)
     local char = Utils.getChar()
@@ -38,6 +39,17 @@ local function setLocalCharCollisions(enable)
     end
 end
 
+local function applySitStates(hum)
+    if hum then
+        pcall(function()
+            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
+            hum.Sit = true
+        end)
+    end
+end
+
 local function stopHeadSit()
     if headSitSteppedConn then
         headSitSteppedConn:Disconnect()
@@ -46,6 +58,10 @@ local function stopHeadSit()
     if headSitRenderConn then
         headSitRenderConn:Disconnect()
         headSitRenderConn = nil
+    end
+    if headSitCharAddedConn then
+        headSitCharAddedConn:Disconnect()
+        headSitCharAddedConn = nil
     end
 
     setLocalCharCollisions(true)
@@ -78,15 +94,15 @@ local function startHeadSit()
         return
     end
 
-    local myHum = getHum()
-    if myHum then
-        pcall(function()
-            myHum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-            myHum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-            myHum:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
-            myHum.Sit = true
-        end)
-    end
+    applySitStates(getHum())
+
+    headSitCharAddedConn = LP.CharacterAdded:Connect(function(newChar)
+        if not S.HeadSitActive or not State.uiRunning then return end
+        local newHum = newChar:WaitForChild("Humanoid", 5) or newChar:FindFirstChildOfClass("Humanoid")
+        if newHum then
+            applySitStates(newHum)
+        end
+    end)
 
     headSitSteppedConn = RunService.Stepped:Connect(function()
         if not S.HeadSitActive or not State.uiRunning then
@@ -112,24 +128,27 @@ local function startHeadSit()
             return
         end
 
+        if not targetPlayer or not targetPlayer:IsDescendantOf(Players) then
+            stopHeadSit()
+            S.HeadSitActive = false
+            local mod = UI.moduleButtons["Head Sit"]
+            if mod then mod.SetActive(false) end
+            notify("Target left the game! Head Sit ended.", Color3.fromRGB(218, 38, 38))
+            return
+        end
+
         local myHRP = getHRP()
         local curHum = getHum()
-        local tChar = targetPlayer and targetPlayer.Character
+        local tChar = targetPlayer.Character
         local tHead = tChar and (tChar:FindFirstChild("Head") or tChar:FindFirstChild("HumanoidRootPart") or tChar:FindFirstChild("Torso"))
         local tHum = tChar and tChar:FindFirstChildOfClass("Humanoid")
 
-        if myHRP and curHum and tHead and tHum and tHum.Health > 0 and targetPlayer:IsDescendantOf(Players) then
+        if myHRP and curHum and curHum.Health > 0 and tHead and tHum and tHum.Health > 0 then
             curHum.Sit = true
             local height = 1.75 + (S.HeadSitHeightOffset or 0)
             myHRP.CFrame = tHead.CFrame * CFrame.new(0, height, 0.25)
             myHRP.AssemblyLinearVelocity = Vector3.zero
             myHRP.AssemblyAngularVelocity = Vector3.zero
-        else
-            stopHeadSit()
-            S.HeadSitActive = false
-            local mod = UI.moduleButtons["Head Sit"]
-            if mod then mod.SetActive(false) end
-            notify("Target lost or dead! Head Sit ended.", Color3.fromRGB(218, 38, 38))
         end
     end)
 

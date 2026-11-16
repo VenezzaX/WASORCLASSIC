@@ -248,28 +248,55 @@ Utils.toggleMapXray = function(v)
     end
 end
 
-Utils.toggleClearVision = function(v)
+Utils.toggleNoFog = function(v)
     local S = State.S
+    S.NoFog = v
     S.ClearVision = v
     if v then
+        if S.OriginalFogStart == nil then S.OriginalFogStart = Services.Lighting.FogStart end
         if S.OriginalFogEnd == nil then S.OriginalFogEnd = Services.Lighting.FogEnd end
-        Services.Lighting.FogEnd = 100000
-        for _, descendant in ipairs(Services.Lighting:GetDescendants()) do
-            if descendant:IsA("BlurEffect") or descendant:IsA("DepthOfFieldEffect") or descendant:IsA("Atmosphere") or descendant:IsA("ColorCorrectionEffect") then
-                pcall(function()
-                    if S.OriginalLightingEffects[descendant] == nil then S.OriginalLightingEffects[descendant] = descendant.Enabled end
-                    descendant.Enabled = false
-                end)
+        Services.Lighting.FogStart = 9e9
+        Services.Lighting.FogEnd = 9e9
+        if not S.OriginalAtmospheres then S.OriginalAtmospheres = {} end
+        local function clearAtmos(obj)
+            if obj:IsA("Atmosphere") then
+                if S.OriginalAtmospheres[obj] == nil then
+                    S.OriginalAtmospheres[obj] = { Density = obj.Density, Haze = obj.Haze }
+                end
+                pcall(function() obj.Density = 0; obj.Haze = 0 end)
             end
         end
-    else
-        if S.OriginalFogEnd ~= nil then Services.Lighting.FogEnd = S.OriginalFogEnd; S.OriginalFogEnd = nil end
-        for descendant, originalEnabled in pairs(S.OriginalLightingEffects) do
-            pcall(function() if descendant and descendant.Parent then descendant.Enabled = originalEnabled end end)
+        for _, descendant in ipairs(Services.Lighting:GetDescendants()) do
+            clearAtmos(descendant)
         end
-        S.OriginalLightingEffects = {}
+        pcall(function()
+            for _, descendant in ipairs(Services.Workspace:GetDescendants()) do
+                if descendant:IsA("Atmosphere") then clearAtmos(descendant) end
+            end
+        end)
+    else
+        if S.OriginalFogStart ~= nil then
+            Services.Lighting.FogStart = S.OriginalFogStart
+            S.OriginalFogStart = nil
+        end
+        if S.OriginalFogEnd ~= nil then
+            Services.Lighting.FogEnd = S.OriginalFogEnd
+            S.OriginalFogEnd = nil
+        end
+        if S.OriginalAtmospheres then
+            for atmos, props in pairs(S.OriginalAtmospheres) do
+                pcall(function()
+                    if atmos and atmos.Parent then
+                        atmos.Density = props.Density
+                        atmos.Haze = props.Haze
+                    end
+                end)
+            end
+            S.OriginalAtmospheres = {}
+        end
     end
 end
+Utils.toggleClearVision = Utils.toggleNoFog
 
 Utils.isMouseOverHubUI = function()
     local UI = VH.UI

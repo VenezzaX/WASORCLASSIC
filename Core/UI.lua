@@ -2207,7 +2207,17 @@ UI.InitializeUI = function()
     netListScroll.Parent = netListFrame
     local netListLayout = Instance.new("UIListLayout"); netListLayout.Padding = UDim.new(0, 3); netListLayout.Parent = netListScroll
 
+    local lastChatPanelUsersSignature = ""
     local function refreshChatPanelUsers()
+        local pool = State.networkTagsPool or {}
+        local names = {}
+        for uname, _ in pairs(pool) do table.insert(names, uname) end
+        table.sort(names)
+        local sig = table.concat(names, ",")
+        if sig == lastChatPanelUsersSignature and #netListScroll:GetChildren() > 1 then
+            return
+        end
+        lastChatPanelUsersSignature = sig
         for _, ch in ipairs(netListScroll:GetChildren()) do
             if ch:IsA("TextLabel") then ch:Destroy() end
         end
