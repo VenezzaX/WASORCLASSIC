@@ -279,7 +279,8 @@ local Modules = {
     "Modules/Misc/HideLoadingScreen",
     "Modules/Misc/NetworkChatHub",
     "Modules/Misc/SaveGame",
-    "Modules/Misc/MusicPlayer"
+    "Modules/Misc/MusicPlayer",
+    "Modules/Misc/RobloxVersion"
 }
 
 local success, err = pcall(function()

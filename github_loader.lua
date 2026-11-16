@@ -468,6 +468,7 @@ local RightContainer = nil
 local BarFill = nil
 local StatusText = nil
 local PercentText = nil
+local UpdateLabel = nil
 
 if loadingScreenMode ~= "Fully Hidden" then
     local wallpaperAsset = nil
@@ -535,14 +536,14 @@ if loadingScreenMode ~= "Fully Hidden" then
     RightContainer.Name = "RightContainer"
     RightContainer.AnchorPoint = Vector2.new(1, 1)
     RightContainer.Position = UDim2.new(1, -44, 1, -40)
-    RightContainer.Size = UDim2.new(0, 360, 0, 110)
+    RightContainer.Size = UDim2.new(0, 360, 0, 122)
     RightContainer.BackgroundTransparency = 1
     RightContainer.ZIndex = 2147483644
     RightContainer.Parent = MainFrame
 
     local SizeConstraint = Instance.new("UISizeConstraint")
-    SizeConstraint.MaxSize = Vector2.new(420, 120)
-    SizeConstraint.MinSize = Vector2.new(260, 95)
+    SizeConstraint.MaxSize = Vector2.new(420, 135)
+    SizeConstraint.MinSize = Vector2.new(260, 105)
     SizeConstraint.Parent = RightContainer
 
     local TitleLabel = Instance.new("TextLabel")
@@ -669,6 +670,25 @@ if loadingScreenMode ~= "Fully Hidden" then
     local TipCorner = Instance.new("UICorner")
     TipCorner.CornerRadius = UDim.new(1, 0)
     TipCorner.Parent = BarTip
+
+    UpdateLabel = Instance.new("TextLabel")
+    UpdateLabel.Name = "UpdateLabel"
+    UpdateLabel.Size = UDim2.new(1, 0, 0, 16)
+    UpdateLabel.Position = UDim2.new(0, 0, 0, 92)
+    UpdateLabel.BackgroundTransparency = 1
+    UpdateLabel.Font = Enum.Font.GothamMedium
+    UpdateLabel.Text = ""
+    UpdateLabel.TextColor3 = Color3.fromRGB(140, 205, 255)
+    UpdateLabel.TextSize = 11
+    UpdateLabel.TextXAlignment = Enum.TextXAlignment.Right
+    UpdateLabel.ZIndex = 2147483646
+    UpdateLabel.Parent = RightContainer
+
+    local UpdateStroke = Instance.new("UIStroke")
+    UpdateStroke.Color = Color3.fromRGB(0, 0, 0)
+    UpdateStroke.Thickness = 1.2
+    UpdateStroke.Transparency = 0.5
+    UpdateStroke.Parent = UpdateLabel
 
     LoadingScreenGui.Parent = ScreenContainer
 
@@ -803,7 +823,8 @@ local Modules = {
     "Modules/Misc/HideLoadingScreen",
     "Modules/Misc/NetworkChatHub",
     "Modules/Misc/SaveGame",
-    "Modules/Misc/MusicPlayer"
+    "Modules/Misc/MusicPlayer",
+    "Modules/Misc/RobloxVersion"
 }
 
 local hasFileSystem = (writefile and readfile and isfile and makefolder and isfolder)
@@ -907,6 +928,9 @@ if hasFileSystem then
         end
     end
     if not forceUpdate then
+        if StatusText then
+            StatusText.Text = "Checking repository..."
+        end
         latestSHA = getLatestCommitSHA()
         if latestSHA and type(latestSHA) == "string" then
             latestSHA = latestSHA:gsub("%s+", "")
@@ -916,6 +940,19 @@ if hasFileSystem then
         elseif not latestSHA and cachedSHA then
             useCache = true
         end
+    end
+end
+
+local isUpdatingRepo = (not useCache)
+local commitDisplay = (latestSHA and #latestSHA >= 7 and latestSHA:sub(1, 7)) or (latestSHA or "latest")
+
+if isUpdatingRepo then
+    local updateMsg = "Updating to commit " .. commitDisplay
+    if UpdateLabel then
+        UpdateLabel.Text = updateMsg .. "..."
+    end
+    if StatusText then
+        StatusText.Text = updateMsg .. "..."
     end
 end
 
@@ -999,7 +1036,11 @@ local function updateLoaderProgress(name)
         end
     end
     if StatusText then
-        StatusText.Text = name or "Loading..."
+        if isUpdatingRepo then
+            StatusText.Text = name or ("Updating " .. commitDisplay .. "...")
+        else
+            StatusText.Text = name or "Loading..."
+        end
     end
     if PercentText then
         PercentText.Text = math.floor(alpha * 100) .. "%"
@@ -1045,6 +1086,7 @@ end)
 if BarFill then BarFill.Size = UDim2.new(1, 0, 1, 0) end
 if PercentText then PercentText.Text = "100%" end
 if StatusText then StatusText.Text = "Ready!" end
+if UpdateLabel and isUpdatingRepo then UpdateLabel.Text = "Updated to commit " .. commitDisplay .. "!" end
 
 if LoadingScreenGui and LoadingScreenGui.Parent then
     if useCache then
