@@ -1,3 +1,25 @@
+task.spawn(function()
+    pcall(function()
+        local s = Instance.new("Sound")
+        s.Name = "WASOR_StartupSound"
+        s.SoundId = "rbxassetid://92927842693188"
+        s.Volume = 1
+        s.Parent = game:GetService("SoundService") or workspace
+        if not s.IsLoaded then
+            pcall(function() s.Loaded:Wait() end)
+        end
+        s:Play()
+        s.Ended:Connect(function()
+            pcall(function() s:Destroy() end)
+        end)
+        task.delay(15, function()
+            if s and s.Parent then
+                pcall(function() s:Destroy() end)
+            end
+        end)
+    end)
+end)
+
 if not _G.WASOR_ActiveDrawings then _G.WASOR_ActiveDrawings = {} end
 local function checkDeltaCompatibility()
     local function isDeltaExecutor()
@@ -255,9 +277,8 @@ end
 
 checkDeltaCompatibility()
 
-if _G.WASOR_Reloading then return end
-if _G.VoidHub or _G.WASOR_Loaded or _G.WASOR_Loading then
-    _G.WASOR_Reloading = true
+local isReloadingSession = (_G.VoidHub ~= nil) or (_G.WASOR_Loaded == true) or (_G.WASOR_Loading == true) or (_G.WASOR_IsReloading == true)
+if isReloadingSession then
     pcall(function()
         if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
             _G.VoidHub.Cleanup.cleanupAll()
@@ -284,6 +305,7 @@ if _G.VoidHub or _G.WASOR_Loaded or _G.WASOR_Loading then
     _G.WASOR_Loading = nil
     _G.WASOR_Loaded = nil
     _G.WASOR_Reloading = nil
+    _G.WASOR_IsReloading = nil
     print("[WASOR 4.7] Existing instance detected. Cleaned up and reloading...")
 end
 _G.WASOR_Loading = true
@@ -395,7 +417,7 @@ end
 local ScreenContainer = getSafeContainer()
 
 for _, child in ipairs(ScreenContainer:GetChildren()) do
-    if child.Name == "WASOR_Minimal_LoadingScreen" or child.Name == "WASOR_UpdateWarning" then
+    if child.Name == "WASOR_Minimal_LoadingScreen" or (not isReloadingSession and (child.Name == "WASOR_UpdateWarning" or child.Name == "WASOR_ReloadWarning")) then
         pcall(function() child:Destroy() end)
     end
 end
@@ -948,34 +970,60 @@ local isUpdatingRepo = (not useCache)
 local commitDisplay = (latestSHA and #latestSHA >= 7 and latestSHA:sub(1, 7)) or (latestSHA or "latest")
 
 local UpdateWarningGui = nil
-if isUpdatingRepo and (loadingScreenMode == "Fully Hidden" or not LoadingScreenGui) then
-    UpdateWarningGui = Instance.new("ScreenGui")
-    UpdateWarningGui.Name = "WASOR_UpdateWarning"
-    UpdateWarningGui.ResetOnSpawn = false
-    UpdateWarningGui.IgnoreGuiInset = true
-    UpdateWarningGui.DisplayOrder = 2147483647
-    UpdateWarningGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    pcall(function() UpdateWarningGui.ScreenInsets = Enum.ScreenInsets.None end)
+local showWarning = isReloadingSession or (isUpdatingRepo and (loadingScreenMode == "Fully Hidden" or not LoadingScreenGui))
+if showWarning then
+    UpdateWarningGui = ScreenContainer:FindFirstChild("WASOR_ReloadWarning") or ScreenContainer:FindFirstChild("WASOR_UpdateWarning")
+    if not UpdateWarningGui then
+        for _, parent in ipairs(getGuiContainers()) do
+            local old = parent:FindFirstChild("WASOR_ReloadWarning") or parent:FindFirstChild("WASOR_UpdateWarning")
+            if old then UpdateWarningGui = old; break end
+        end
+    end
+    local warnText
+    if isReloadingSession then
+        if isUpdatingRepo then
+            warnText = "W-A-S-O-R Currently reloading to commit : " .. commitDisplay .. " (0%)"
+        else
+            warnText = "W-A-S-O-R Currently reloading... (0%)"
+        end
+    else
+        warnText = "W-A-S-O-R Currently updating to commit : " .. commitDisplay .. " (0%)"
+    end
+    if not UpdateWarningGui then
+        UpdateWarningGui = Instance.new("ScreenGui")
+        UpdateWarningGui.Name = isReloadingSession and "WASOR_ReloadWarning" or "WASOR_UpdateWarning"
+        UpdateWarningGui.ResetOnSpawn = false
+        UpdateWarningGui.IgnoreGuiInset = true
+        UpdateWarningGui.DisplayOrder = 2147483647
+        UpdateWarningGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+        pcall(function() UpdateWarningGui.ScreenInsets = Enum.ScreenInsets.None end)
 
-    local WarnLabel = Instance.new("TextLabel")
-    WarnLabel.Name = "UpdateWarningText"
-    WarnLabel.Size = UDim2.new(1, 0, 0, 50)
-    WarnLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
-    WarnLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-    WarnLabel.BackgroundTransparency = 1
-    WarnLabel.BorderSizePixel = 0
-    WarnLabel.Text = "W-A-S-O-R Currently updating to commit : " .. commitDisplay .. " (0%)"
-    WarnLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    WarnLabel.Font = Enum.Font.GothamBold
-    WarnLabel.TextSize = 18
-    WarnLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    WarnLabel.TextStrokeTransparency = 0.3
-    WarnLabel.Parent = UpdateWarningGui
+        local WarnLabel = Instance.new("TextLabel")
+        WarnLabel.Name = "UpdateWarningText"
+        WarnLabel.Size = UDim2.new(1, 0, 0, 50)
+        WarnLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+        WarnLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+        WarnLabel.BackgroundTransparency = 1
+        WarnLabel.BorderSizePixel = 0
+        WarnLabel.Text = warnText
+        WarnLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        WarnLabel.Font = Enum.Font.GothamBold
+        WarnLabel.TextSize = 18
+        WarnLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        WarnLabel.TextStrokeTransparency = 0.3
+        WarnLabel.Parent = UpdateWarningGui
 
-    UpdateWarningGui.Parent = ScreenContainer
+        UpdateWarningGui.Parent = ScreenContainer
+    else
+        local wl = UpdateWarningGui:FindFirstChild("UpdateWarningText") or UpdateWarningGui:FindFirstChild("ReloadWarningText")
+        if wl then wl.Text = warnText end
+    end
 end
 
-if isUpdatingRepo then
+if isReloadingSession then
+    if UpdateLabel then UpdateLabel.Text = "Reloading WASOR..." end
+    if StatusText then StatusText.Text = "Reloading..." end
+elseif isUpdatingRepo then
     local updateMsg = "Updating to commit " .. commitDisplay
     if UpdateLabel then
         UpdateLabel.Text = updateMsg .. "..."
@@ -1065,7 +1113,9 @@ local function updateLoaderProgress(name)
         end
     end
     if StatusText then
-        if isUpdatingRepo then
+        if isReloadingSession then
+            StatusText.Text = name or "Reloading..."
+        elseif isUpdatingRepo then
             StatusText.Text = name or ("Updating " .. commitDisplay .. "...")
         else
             StatusText.Text = name or "Loading..."
@@ -1076,9 +1126,17 @@ local function updateLoaderProgress(name)
         PercentText.Text = pct .. "%"
     end
     if UpdateWarningGui and UpdateWarningGui.Parent then
-        local wl = UpdateWarningGui:FindFirstChild("UpdateWarningText")
+        local wl = UpdateWarningGui:FindFirstChild("UpdateWarningText") or UpdateWarningGui:FindFirstChild("ReloadWarningText")
         if wl then
-            wl.Text = string.format("W-A-S-O-R Currently updating to commit : %s (%d%%)", commitDisplay, pct)
+            if isReloadingSession then
+                if isUpdatingRepo then
+                    wl.Text = string.format("W-A-S-O-R Currently reloading to commit : %s (%d%%)", commitDisplay, pct)
+                else
+                    wl.Text = string.format("W-A-S-O-R Currently reloading... (%d%%)", pct)
+                end
+            else
+                wl.Text = string.format("W-A-S-O-R Currently updating to commit : %s (%d%%)", commitDisplay, pct)
+            end
         end
     end
 end
@@ -1122,13 +1180,33 @@ end)
 if BarFill then BarFill.Size = UDim2.new(1, 0, 1, 0) end
 if PercentText then PercentText.Text = "100%" end
 if StatusText then StatusText.Text = "Ready!" end
-if UpdateLabel and isUpdatingRepo then UpdateLabel.Text = "Updated to commit " .. commitDisplay .. " (100%)!" end
+if UpdateLabel then
+    if isReloadingSession then
+        if isUpdatingRepo then
+            UpdateLabel.Text = "Reloaded and updated to commit " .. commitDisplay .. " (100%)!"
+        else
+            UpdateLabel.Text = "Reloaded WASOR (100%)!"
+        end
+    elseif isUpdatingRepo then
+        UpdateLabel.Text = "Updated to commit " .. commitDisplay .. " (100%)!"
+    end
+end
 
 if UpdateWarningGui and UpdateWarningGui.Parent then
     pcall(function()
-        local wl = UpdateWarningGui:FindFirstChild("UpdateWarningText")
+        local wl = UpdateWarningGui:FindFirstChild("UpdateWarningText") or UpdateWarningGui:FindFirstChild("ReloadWarningText")
         if wl then
-            wl.Text = "W-A-S-O-R Update finished to commit : " .. commitDisplay .. " (100%)"
+            local finMsg
+            if isReloadingSession then
+                if isUpdatingRepo then
+                    finMsg = "W-A-S-O-R Reload finished to commit : " .. commitDisplay .. " (100%)"
+                else
+                    finMsg = "W-A-S-O-R Reload finished (100%)"
+                end
+            else
+                finMsg = "W-A-S-O-R Update finished to commit : " .. commitDisplay .. " (100%)"
+            end
+            wl.Text = finMsg
             task.wait(1.2)
             local tw = TweenService:Create(wl, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1, TextStrokeTransparency = 1 })
             tw:Play()
@@ -1139,13 +1217,19 @@ if UpdateWarningGui and UpdateWarningGui.Parent then
     UpdateWarningGui = nil
 end
 
-if isUpdatingRepo then
-    pcall(function()
-        if _G.VoidHub and _G.VoidHub.Utils and _G.VoidHub.Utils.notify then
+pcall(function()
+    if _G.VoidHub and _G.VoidHub.Utils and _G.VoidHub.Utils.notify then
+        if isReloadingSession then
+            if isUpdatingRepo then
+                _G.VoidHub.Utils.notify("W-A-S-O-R: Reload and update finished to commit " .. commitDisplay .. " (100%)", Color3.fromRGB(50, 195, 75))
+            else
+                _G.VoidHub.Utils.notify("W-A-S-O-R: Reload finished (100%)", Color3.fromRGB(50, 195, 75))
+            end
+        elseif isUpdatingRepo then
             _G.VoidHub.Utils.notify("W-A-S-O-R: Update finished to commit " .. commitDisplay .. " (100%)", Color3.fromRGB(50, 195, 75))
         end
-    end)
-end
+    end
+end)
 
 if LoadingScreenGui and LoadingScreenGui.Parent then
     if useCache then

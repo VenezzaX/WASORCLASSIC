@@ -2033,23 +2033,70 @@ UI.InitializeUI = function()
 
     local reloadBtn = makeStudioButton(topBar, "Reload", 58, 22, StudioTheme.btnBg, StudioTheme.text)
     reloadBtn.Position = UDim2.new(1, -66, 0, 3)
-    reloadBtn.Activated:Connect(function()
+    local function triggerReload()
         pcall(function()
-            UI.showToast("Reloading WASOR...", StudioTheme.blue)
-            task.wait(0.2)
+            for _, parent in ipairs(getGuiContainers()) do
+                local old = parent:FindFirstChild("WASOR_ReloadWarning")
+                if old then pcall(function() old:Destroy() end) end
+            end
+            local reloadGui = Instance.new("ScreenGui")
+            reloadGui.Name = "WASOR_ReloadWarning"
+            reloadGui.ResetOnSpawn = false
+            reloadGui.IgnoreGuiInset = true
+            reloadGui.DisplayOrder = 2147483647
+            reloadGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+            pcall(function() reloadGui.ScreenInsets = Enum.ScreenInsets.None end)
+
+            local rl = Instance.new("TextLabel")
+            rl.Name = "ReloadWarningText"
+            rl.Size = UDim2.new(1, 0, 0, 50)
+            rl.Position = UDim2.new(0.5, 0, 0.5, 0)
+            rl.AnchorPoint = Vector2.new(0.5, 0.5)
+            rl.BackgroundTransparency = 1
+            rl.BorderSizePixel = 0
+            rl.Text = "W-A-S-O-R Currently reloading... (0%)"
+            rl.TextColor3 = Color3.fromRGB(255, 255, 255)
+            rl.Font = Enum.Font.GothamBold
+            rl.TextSize = 18
+            rl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+            rl.TextStrokeTransparency = 0.3
+            rl.Parent = reloadGui
+
+            local screenParent = getGuiParent()
+            reloadGui.Parent = screenParent
+        end)
+
+        task.spawn(function()
             pcall(function()
                 if delfile then
                     delfile("WASOR_Classic_Cache/commit_sha.txt")
                     delfile("WASOR_Classic_Cache/Core/UI.lua")
                 end
             end)
-            VH.Cleanup.cleanupAll()
-            _G.WASOR_Loading = false
-            _G.WASOR_Loaded = false
-            task.wait(0.1)
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/refs/heads/main/github_loader.lua"))()
+
+            _G.WASOR_IsReloading = true
+
+            pcall(function()
+                if VH.Cleanup and VH.Cleanup.cleanupAll then
+                    VH.Cleanup.cleanupAll()
+                end
+            end)
+
+            task.wait(0.2)
+
+            local success, err = pcall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/refs/heads/main/github_loader.lua"))()
+            end)
+
+            if success then
+                print("[WASOR Classic Reload]: Successfully reloaded from GitHub")
+            else
+                warn("[WASOR Classic Reload]: Failed to reload from GitHub: " .. tostring(err))
+            end
         end)
-    end)
+    end
+
+    reloadBtn.Activated:Connect(triggerReload)
 
     local hudTextLabel = Instance.new("TextLabel")
     hudTextLabel.Size = UDim2.new(0, 150, 1, 0)

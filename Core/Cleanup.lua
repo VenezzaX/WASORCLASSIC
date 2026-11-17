@@ -232,11 +232,17 @@ end
 Cleanup.cleanupAll = function()
     _G.WASOR_Loaded = false
     _G.WASOR_Loading = false
+    _G.WASOR_Reloading = false
     local S = State.S
     State.uiRunning = false
     State.teleportQueued = false
     State.networkTagsRunning = false
     State.networkTagsLoopActive = false
+    State.rejoinHooked = nil
+
+    if VH.UI and VH.UI.ResetAllToggles then
+        pcall(function() VH.UI:ResetAllToggles() end)
+    end
 
     if VH.UI and VH.UI.destroyUI then
         pcall(VH.UI.destroyUI)
@@ -257,7 +263,7 @@ Cleanup.cleanupAll = function()
         for _, parent in ipairs(containers) do
             pcall(function()
                 for _, child in ipairs(parent:GetChildren()) do
-                    if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "NetworkUserTag" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "WASOR_ModelViewerGui" or child.Name == "TranscendingViewportGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "WallWalkToggleUI" or child.Name == "xzypMusicPlayer" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
+                    if child.Name == "MeteorRobloxGUI" or child.Name == "DiscordNetworkHub" or child.Name == "MinimapGui" or child.Name == "VoidCustomNametag" or child.Name == "EulaFrame" or child.Name == "NetworkUserTag" or child.Name == "WASOR_PaperDollHUD" or child.Name == "WASOR_ESPPreviewGui" or child.Name == "WASOR_ModelViewerGui" or child.Name == "TranscendingViewportGui" or child.Name == "MinimalVisualizerGui" or child.Name == "VoidNo3DCoverGui" or child.Name == "WallWalkToggleUI" or child.Name == "xzypMusicPlayer" or child.Name == "WASOR_RobloxVersionOverlay" or child:FindFirstChild("MainUIContainer") or child:FindFirstChild("StudioTopRibbon") then
                         pcall(function() child:Destroy() end)
                     end
                 end

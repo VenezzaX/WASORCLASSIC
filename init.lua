@@ -1,7 +1,6 @@
 if not _G.WASOR_ActiveDrawings then _G.WASOR_ActiveDrawings = {} end
-if _G.WASOR_Reloading then return end
-if _G.VoidHub or _G.WASOR_Loaded or _G.WASOR_Loading then
-    _G.WASOR_Reloading = true
+local isReloadingSession = (_G.VoidHub ~= nil) or (_G.WASOR_Loaded == true) or (_G.WASOR_Loading == true) or (_G.WASOR_IsReloading == true)
+if isReloadingSession then
     pcall(function()
         if _G.VoidHub and type(_G.VoidHub) == "table" and _G.VoidHub.Cleanup and _G.VoidHub.Cleanup.cleanupAll then
             _G.VoidHub.Cleanup.cleanupAll()
@@ -28,6 +27,7 @@ if _G.VoidHub or _G.WASOR_Loaded or _G.WASOR_Loading then
     _G.WASOR_Loading = nil
     _G.WASOR_Loaded = nil
     _G.WASOR_Reloading = nil
+    _G.WASOR_IsReloading = nil
     print("[WASOR 4.7] Existing instance detected. Cleaned up and reloading...")
 end
 _G.WASOR_Loading = true
