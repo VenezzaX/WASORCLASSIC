@@ -2069,7 +2069,6 @@ UI.InitializeUI = function()
         task.spawn(function()
             pcall(function()
                 if delfile then
-                    delfile("WASOR_Classic_Cache/commit_sha.txt")
                     delfile("WASOR_Classic_Cache/Core/UI.lua")
                 end
             end)

@@ -414,6 +414,24 @@ local function getSafeContainer()
     return LocalPlayer:WaitForChild("PlayerGui")
 end
 
+local function getGuiContainers()
+    local containers = {}
+    if gethui then
+        local ok, hui = pcall(gethui)
+        if ok and hui then table.insert(containers, hui) end
+    end
+    if get_hidden_gui then
+        local ok, hg = pcall(get_hidden_gui)
+        if ok and hg then table.insert(containers, hg) end
+    end
+    local ok, coreGui = pcall(function() return game:GetService("CoreGui") end)
+    if ok and coreGui then table.insert(containers, coreGui) end
+    if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") then
+        table.insert(containers, LocalPlayer.PlayerGui)
+    end
+    return containers
+end
+
 local ScreenContainer = getSafeContainer()
 
 for _, child in ipairs(ScreenContainer:GetChildren()) do
@@ -974,10 +992,12 @@ local showWarning = isReloadingSession or (isUpdatingRepo and (loadingScreenMode
 if showWarning then
     UpdateWarningGui = ScreenContainer:FindFirstChild("WASOR_ReloadWarning") or ScreenContainer:FindFirstChild("WASOR_UpdateWarning")
     if not UpdateWarningGui then
-        for _, parent in ipairs(getGuiContainers()) do
-            local old = parent:FindFirstChild("WASOR_ReloadWarning") or parent:FindFirstChild("WASOR_UpdateWarning")
-            if old then UpdateWarningGui = old; break end
-        end
+        pcall(function()
+            for _, parent in ipairs(getGuiContainers()) do
+                local old = parent:FindFirstChild("WASOR_ReloadWarning") or parent:FindFirstChild("WASOR_UpdateWarning")
+                if old then UpdateWarningGui = old; break end
+            end
+        end)
     end
     local warnText
     if isReloadingSession then
@@ -1193,28 +1213,29 @@ if UpdateLabel then
 end
 
 if UpdateWarningGui and UpdateWarningGui.Parent then
-    pcall(function()
-        local wl = UpdateWarningGui:FindFirstChild("UpdateWarningText") or UpdateWarningGui:FindFirstChild("ReloadWarningText")
-        if wl then
-            local finMsg
-            if isReloadingSession then
-                if isUpdatingRepo then
-                    finMsg = "W-A-S-O-R Reload finished to commit : " .. commitDisplay .. " (100%)"
+    task.spawn(function()
+        pcall(function()
+            local wl = UpdateWarningGui:FindFirstChild("UpdateWarningText") or UpdateWarningGui:FindFirstChild("ReloadWarningText")
+            if wl then
+                local finMsg
+                if isReloadingSession then
+                    if isUpdatingRepo then
+                        finMsg = "W-A-S-O-R Reload finished to commit : " .. commitDisplay .. " (100%)"
+                    else
+                        finMsg = "W-A-S-O-R Reload finished (100%)"
+                    end
                 else
-                    finMsg = "W-A-S-O-R Reload finished (100%)"
+                    finMsg = "W-A-S-O-R Update finished to commit : " .. commitDisplay .. " (100%)"
                 end
-            else
-                finMsg = "W-A-S-O-R Update finished to commit : " .. commitDisplay .. " (100%)"
+                wl.Text = finMsg
+                task.wait(1.0)
+                local tw = TweenService:Create(wl, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1, TextStrokeTransparency = 1 })
+                tw:Play()
+                tw.Completed:Wait()
             end
-            wl.Text = finMsg
-            task.wait(1.2)
-            local tw = TweenService:Create(wl, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1, TextStrokeTransparency = 1 })
-            tw:Play()
-            tw.Completed:Wait()
-        end
-        UpdateWarningGui:Destroy()
+            UpdateWarningGui:Destroy()
+        end)
     end)
-    UpdateWarningGui = nil
 end
 
 pcall(function()
@@ -1236,38 +1257,30 @@ if LoadingScreenGui and LoadingScreenGui.Parent then
         pcall(function() LoadingScreenGui:Destroy() end)
         LoadingScreenGui = nil
     else
-        task.wait(0.3)
-        local fadeBg = nil
-        if BgImage and BgImage.Parent then
-            fadeBg = TweenService:Create(BgImage, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                ImageTransparency = 1
-            })
-            fadeBg:Play()
-        end
-
-        if RightContainer and RightContainer.Parent then
-            for _, desc in ipairs(RightContainer:GetDescendants()) do
-                if desc:IsA("TextLabel") then
-                    TweenService:Create(desc, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1 }):Play()
-                elseif desc:IsA("UIStroke") then
-                    TweenService:Create(desc, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 }):Play()
-                elseif desc:IsA("Frame") then
-                    TweenService:Create(desc, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 }):Play()
+        task.spawn(function()
+            pcall(function()
+                if BgImage and BgImage.Parent then
+                    TweenService:Create(BgImage, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { ImageTransparency = 1 }):Play()
                 end
-            end
-        end
-
-        if MainFrame and MainFrame.BackgroundTransparency < 1 then
-            TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 }):Play()
-        end
-
-        if fadeBg then
-            fadeBg.Completed:Wait()
-        else
-            task.wait(0.35)
-        end
-        pcall(function() LoadingScreenGui:Destroy() end)
-        LoadingScreenGui = nil
+                if RightContainer and RightContainer.Parent then
+                    for _, desc in ipairs(RightContainer:GetDescendants()) do
+                        if desc:IsA("TextLabel") then
+                            TweenService:Create(desc, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextTransparency = 1 }):Play()
+                        elseif desc:IsA("UIStroke") then
+                            TweenService:Create(desc, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = 1 }):Play()
+                        elseif desc:IsA("Frame") then
+                            TweenService:Create(desc, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
+                        end
+                    end
+                end
+                if MainFrame and MainFrame.BackgroundTransparency < 1 then
+                    TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
+                end
+                task.wait(0.25)
+                LoadingScreenGui:Destroy()
+                LoadingScreenGui = nil
+            end)
+        end)
     end
 end
 
