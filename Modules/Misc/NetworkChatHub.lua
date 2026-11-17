@@ -11,6 +11,10 @@ local registerModule = UI.registerModule
 local saveConfig = VH.Config.saveConfig
 
 local function launchChatHub()
+    if _G.ChatHub_Loaded and _G.ChatHub_SetVisible then
+        _G.ChatHub_SetVisible(true)
+        return
+    end
     local loaded = false
     if isfile and readfile and loadstring then
         local candidates = {
@@ -67,19 +71,31 @@ VH.launchNetworkChatHub = launchChatHub
 registerModule("Misc", "Network Chat Hub", 720, 50, true, S.NetworkChat, function(v)
     S.NetworkChat = v
     if v then
-        task.spawn(function()
-            pcall(launchChatHub)
-        end)
-    else
-        if _G.ChatHub_Cleanup then
-            pcall(_G.ChatHub_Cleanup)
+        if _G.ChatHub_Loaded and _G.ChatHub_SetVisible then
+            _G.ChatHub_SetVisible(true)
+        else
+            task.spawn(function()
+                pcall(launchChatHub)
+            end)
         end
-        local oldChat = game:GetService("CoreGui"):FindFirstChild("DiscordNetworkHub") or game:GetService("CoreGui"):FindFirstChild("ChatRoom")
-        if oldChat then oldChat:Destroy() end
-        local pg = LP:WaitForChild("PlayerGui", 2)
-        if pg then
-            local oldChatPg = pg:FindFirstChild("DiscordNetworkHub") or pg:FindFirstChild("ChatRoom")
-            if oldChatPg then oldChatPg:Destroy() end
+    else
+        if _G.ChatHub_SetVisible then
+            _G.ChatHub_SetVisible(false)
+        else
+            local CoreGui = game:GetService("CoreGui")
+            local oldChat = CoreGui:FindFirstChild("DiscordNetworkHub") or CoreGui:FindFirstChild("ChatRoom")
+            if oldChat then
+                local mw = oldChat:FindFirstChild("MainWindow")
+                if mw then mw.Visible = false else oldChat:Destroy() end
+            end
+            local pg = LP:WaitForChild("PlayerGui", 2)
+            if pg then
+                local oldChatPg = pg:FindFirstChild("DiscordNetworkHub") or pg:FindFirstChild("ChatRoom")
+                if oldChatPg then
+                    local mw = oldChatPg:FindFirstChild("MainWindow")
+                    if mw then mw.Visible = false else oldChatPg:Destroy() end
+                end
+            end
         end
     end
     saveConfig()

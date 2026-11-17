@@ -253,38 +253,58 @@ Utils.toggleNoFog = function(v)
     S.NoFog = v
     S.ClearVision = v
     if v then
-        if S.OriginalFogStart == nil then S.OriginalFogStart = Services.Lighting.FogStart end
-        if S.OriginalFogEnd == nil then S.OriginalFogEnd = Services.Lighting.FogEnd end
-        Services.Lighting.FogStart = 9e9
-        Services.Lighting.FogEnd = 9e9
+        if State.originalFogStart == nil and Services.Lighting then State.originalFogStart = Services.Lighting.FogStart end
+        if State.originalFogEnd == nil and Services.Lighting then State.originalFogEnd = Services.Lighting.FogEnd end
+        if S.OriginalFogStart == nil then S.OriginalFogStart = State.originalFogStart or (Services.Lighting and Services.Lighting.FogStart) end
+        if S.OriginalFogEnd == nil then S.OriginalFogEnd = State.originalFogEnd or (Services.Lighting and Services.Lighting.FogEnd) end
+        if Services.Lighting then
+            Services.Lighting.FogStart = 9e9
+            Services.Lighting.FogEnd = 9e9
+        end
+        if not State.originalAtmospheres then State.originalAtmospheres = {} end
         if not S.OriginalAtmospheres then S.OriginalAtmospheres = {} end
         local function clearAtmos(obj)
             if obj:IsA("Atmosphere") then
+                if State.originalAtmospheres[obj] == nil then
+                    State.originalAtmospheres[obj] = { Density = obj.Density, Haze = obj.Haze }
+                end
                 if S.OriginalAtmospheres[obj] == nil then
-                    S.OriginalAtmospheres[obj] = { Density = obj.Density, Haze = obj.Haze }
+                    S.OriginalAtmospheres[obj] = State.originalAtmospheres[obj] or { Density = obj.Density, Haze = obj.Haze }
                 end
                 pcall(function() obj.Density = 0; obj.Haze = 0 end)
             end
         end
-        for _, descendant in ipairs(Services.Lighting:GetDescendants()) do
-            clearAtmos(descendant)
+        if Services.Lighting then
+            for _, descendant in ipairs(Services.Lighting:GetDescendants()) do
+                clearAtmos(descendant)
+            end
         end
         pcall(function()
-            for _, descendant in ipairs(Services.Workspace:GetDescendants()) do
-                if descendant:IsA("Atmosphere") then clearAtmos(descendant) end
+            if Services.Workspace then
+                for _, descendant in ipairs(Services.Workspace:GetDescendants()) do
+                    if descendant:IsA("Atmosphere") then clearAtmos(descendant) end
+                end
             end
         end)
     else
-        if S.OriginalFogStart ~= nil then
-            Services.Lighting.FogStart = S.OriginalFogStart
-            S.OriginalFogStart = nil
+        local origEnd = State.originalFogEnd or S.OriginalFogEnd
+        local origStart = State.originalFogStart or S.OriginalFogStart
+        S.OriginalFogStart = nil
+        S.OriginalFogEnd = nil
+
+        if Services.Lighting then
+            if origEnd and origEnd < 100000 and origEnd > 0 then
+                Services.Lighting.FogStart = origStart or 0
+                Services.Lighting.FogEnd = origEnd
+            else
+                Services.Lighting.FogStart = 9e9
+                Services.Lighting.FogEnd = 9e9
+            end
         end
-        if S.OriginalFogEnd ~= nil then
-            Services.Lighting.FogEnd = S.OriginalFogEnd
-            S.OriginalFogEnd = nil
-        end
-        if S.OriginalAtmospheres then
-            for atmos, props in pairs(S.OriginalAtmospheres) do
+
+        local restoredAtmos = State.originalAtmospheres or S.OriginalAtmospheres
+        if restoredAtmos then
+            for atmos, props in pairs(restoredAtmos) do
                 pcall(function()
                     if atmos and atmos.Parent then
                         atmos.Density = props.Density
@@ -292,8 +312,8 @@ Utils.toggleNoFog = function(v)
                     end
                 end)
             end
-            S.OriginalAtmospheres = {}
         end
+        S.OriginalAtmospheres = {}
     end
 end
 Utils.toggleClearVision = Utils.toggleNoFog

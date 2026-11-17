@@ -19,6 +19,18 @@ local Lighting = (VH and VH.Services and VH.Services.Lighting) or game:GetServic
 State.originalAmbient = Lighting and Lighting.Ambient or Color3.fromRGB(128, 128, 128)
 State.originalOutdoor = Lighting and Lighting.OutdoorAmbient or Color3.fromRGB(128, 128, 128)
 State.originalClockTime = Lighting and Lighting.ClockTime or 14
+State.originalFogStart = Lighting and Lighting.FogStart
+State.originalFogEnd = Lighting and Lighting.FogEnd
+State.originalAtmospheres = {}
+pcall(function()
+    if Lighting then
+        for _, descendant in ipairs(Lighting:GetDescendants()) do
+            if descendant:IsA("Atmosphere") then
+                State.originalAtmospheres[descendant] = { Density = descendant.Density, Haze = descendant.Haze }
+            end
+        end
+    end
+end)
 State.uiRunning = true
 State.teleportQueued = false
 State.networkTagsLoopActive = false
