@@ -746,7 +746,9 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defa
     slideBtn.Text = ""
     slideBtn.Parent = slideBg
 
+    local dragging = false
     local function updateSlider(input)
+        if not dragging then return end
         local sizeX = slideBg.AbsoluteSize.X
         if sizeX <= 0 then sizeX = 140 end
         local posX = input.Position.X - slideBg.AbsolutePosition.X
@@ -757,7 +759,6 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defa
         if callback then callback(val) end
     end
 
-    local dragging = false
     slideBtn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
@@ -769,6 +770,12 @@ UI.addSliderOption = function(parent, name, min, max, defaultVal, callback, defa
             dragging = false
         end
     end)
+    local endCon = Services.UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    table.insert(State.S.Connections, endCon)
     local moveCon = Services.UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             updateSlider(input)
@@ -2033,7 +2040,12 @@ UI.InitializeUI = function()
 
     local reloadBtn = makeStudioButton(topBar, "Reload", 58, 22, StudioTheme.btnBg, StudioTheme.text)
     reloadBtn.Position = UDim2.new(1, -66, 0, 3)
+    local isReloadingActive = false
     local function triggerReload()
+        if isReloadingActive or _G.WASOR_IsReloading or _G.WASOR_Loading then return end
+        isReloadingActive = true
+        _G.WASOR_IsReloading = true
+
         pcall(function()
             for _, parent in ipairs(getGuiContainers()) do
                 local old = parent:FindFirstChild("WASOR_ReloadWarning")
@@ -2068,20 +2080,12 @@ UI.InitializeUI = function()
 
         task.spawn(function()
             pcall(function()
-                if delfile then
-                    delfile("WASOR_Classic_Cache/Core/UI.lua")
-                end
-            end)
-
-            _G.WASOR_IsReloading = true
-
-            pcall(function()
                 if VH.Cleanup and VH.Cleanup.cleanupAll then
                     VH.Cleanup.cleanupAll()
                 end
             end)
 
-            task.wait(0.2)
+            task.wait(0.1)
 
             local success, err = pcall(function()
                 loadstring(game:HttpGet("https://raw.githubusercontent.com/VenezzaX/WASORCLASSIC/refs/heads/main/github_loader.lua"))()
@@ -2091,6 +2095,8 @@ UI.InitializeUI = function()
                 print("[WASOR Classic Reload]: Successfully reloaded from GitHub")
             else
                 warn("[WASOR Classic Reload]: Failed to reload from GitHub: " .. tostring(err))
+                _G.WASOR_IsReloading = nil
+                isReloadingActive = false
             end
         end)
     end

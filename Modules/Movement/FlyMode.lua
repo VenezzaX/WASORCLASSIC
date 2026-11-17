@@ -21,7 +21,11 @@ registerModule("Movement", "Fly Mode", 300, 50, true, S.Fly, function(v)
         if S.FlyBypass then
             S.FlyBypass = false
             local mod = moduleButtons and moduleButtons["Fly Bypass"]
-            if mod and mod.SetActive then mod.SetActive(false) end
+            if mod and mod.SetActive then
+                mod.SetActive(false)
+            elseif VH.FlyBypassCleanup then
+                pcall(VH.FlyBypassCleanup)
+            end
         end
         flyOn()
     else

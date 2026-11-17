@@ -57,7 +57,7 @@ end
 
 local function cleanLegacyMovers(hrp)
     if not hrp then return end
-    for _, name in ipairs({ "VoidBypassFly", "VoidBypassBG", "MizuAntiFallBV", "MizuLinearVel", "MizuAlignOri", "MizuFlyAttachment" }) do
+    for _, name in ipairs({ "VoidBypassFly", "VoidBypassBG", "VoidFlyBV", "VoidFlyBG", "MizuAntiFallBV", "MizuLinearVel", "MizuAlignOri", "MizuFlyAttachment" }) do
         local obj = hrp:FindFirstChild(name)
         if obj then pcall(function() obj:Destroy() end) end
     end
@@ -144,6 +144,14 @@ local function setHumanoidFlightStates(hum, active)
         hum.PlatformStand = true
     else
         hum.PlatformStand = false
+        pcall(function()
+            hum:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Running, true)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+            hum:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
+        end)
     end
 end
 
@@ -192,6 +200,10 @@ local function getMoveDirection(hum)
     local lookVec = camCF.LookVector
     local rightVec = camCF.RightVector
 
+    if UserInputService:GetFocusedTextBox() then
+        return Vector3.zero, lookVec
+    end
+
     local moveDir = Vector3.zero
     if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + lookVec end
     if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - lookVec end
@@ -232,15 +244,30 @@ local function stopFlightV2()
     local char, hum, hrp = getCharacterParts()
     if hrp then
         cleanLegacyMovers(hrp)
-        pcall(function()
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
-        end)
     end
     if hum then
         setHumanoidFlightStates(hum, false)
         pcall(function()
-            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+            local isGrounded = false
+            if hrp then
+                local rayParams = RaycastParams.new()
+                rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                if char then rayParams.FilterDescendantsInstances = {char} end
+                local ray = Workspace:Raycast(hrp.Position, Vector3.new(0, -5, 0), rayParams)
+                if ray and ray.Instance then isGrounded = true end
+            end
+            if isGrounded then
+                if hrp then
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                end
+                hum:ChangeState(Enum.HumanoidStateType.Running)
+            else
+                if hrp and hrp.AssemblyLinearVelocity.Magnitude > 100 then
+                    hrp.AssemblyLinearVelocity = Vector3.new(0, -1, 0)
+                end
+                hum:ChangeState(Enum.HumanoidStateType.Freefall)
+            end
         end)
     end
     restoreCollisions()
@@ -341,15 +368,18 @@ local function startFlightV2()
             animConn = nil
         end
         if S.FlyBypass and (S.FlyBypassVersion ~= "V1") then
-            local newHrp = newChar:WaitForChild("HumanoidRootPart", 5) or newChar:WaitForChild("Torso", 5) or newChar.PrimaryPart
-            local newHum = newChar:WaitForChild("Humanoid", 5)
-            if newHrp then
-                virtualPos = newHrp.Position
-            end
-            if newHum then
-                setHumanoidFlightStates(newHum, true)
-                bindAntiFallAnimation(newChar, newHum)
-            end
+            task.spawn(function()
+                local newHrp = newChar:WaitForChild("HumanoidRootPart", 5) or newChar:WaitForChild("Torso", 5) or newChar.PrimaryPart
+                local newHum = newChar:WaitForChild("Humanoid", 5)
+                if not (S.FlyBypass and S.FlyBypassVersion ~= "V1") then return end
+                if newHrp then
+                    virtualPos = newHrp.Position
+                end
+                if newHum then
+                    setHumanoidFlightStates(newHum, true)
+                    bindAntiFallAnimation(newChar, newHum)
+                end
+            end)
         end
     end)
     table.insert(S.Connections, charAddedConn)
@@ -367,6 +397,8 @@ local function cleanupAll()
 end
 
 VH.FlyBypassCleanup = cleanupAll
+VH.stopFlyBypass = cleanupAll
+VH.startFlyBypass = startFlightV2
 if getgenv then
     getgenv()._FlyBypassCleanup = cleanupAll
 else

@@ -49,26 +49,30 @@ end
 Cleanup.hideESP = function(p)
     local S = State.S
     if not S or not S.ESPPool then return end
-    local pool = S.ESPPool[p]
-    if not pool and type(p) == "userdata" then
+    local poolsToHide = {}
+    if S.ESPPool[p] then
+        table.insert(poolsToHide, S.ESPPool[p])
+    end
+    if type(p) == "userdata" then
         for playerObj, entry in pairs(S.ESPPool) do
-            local matches = false
-            pcall(function()
-                if playerObj == p then
-                    matches = true
-                elseif p.UserId and playerObj.UserId and p.UserId == playerObj.UserId then
-                    matches = true
-                elseif p.Name and playerObj.Name and p.Name == playerObj.Name then
-                    matches = true
+            if playerObj ~= p then
+                local matches = false
+                pcall(function()
+                    if playerObj == p then
+                        matches = true
+                    elseif p.UserId and playerObj.UserId and p.UserId == playerObj.UserId then
+                        matches = true
+                    elseif p.Name and playerObj.Name and p.Name == playerObj.Name then
+                        matches = true
+                    end
+                end)
+                if matches then
+                    table.insert(poolsToHide, entry)
                 end
-            end)
-            if matches then
-                pool = entry
-                break
             end
         end
     end
-    if pool then
+    for _, pool in ipairs(poolsToHide) do
         safeHideDrawing(pool.boxOutline)
         safeHideDrawing(pool.boxFill)
         safeHideDrawing(pool.tracer)
@@ -137,28 +141,32 @@ end
 Cleanup.destroyESP = function(p)
     local S = State.S
     if not S or not S.ESPPool then return end
-    local poolKey = p
-    local pool = S.ESPPool[p]
-    if not pool and type(p) == "userdata" then
+    local poolsToDestroy = {}
+    if S.ESPPool[p] then
+        table.insert(poolsToDestroy, {key = p, pool = S.ESPPool[p]})
+    end
+    if type(p) == "userdata" then
         for playerObj, entry in pairs(S.ESPPool) do
-            local matches = false
-            pcall(function()
-                if playerObj == p then
-                    matches = true
-                elseif p.UserId and playerObj.UserId and p.UserId == playerObj.UserId then
-                    matches = true
-                elseif p.Name and playerObj.Name and p.Name == playerObj.Name then
-                    matches = true
+            if playerObj ~= p then
+                local matches = false
+                pcall(function()
+                    if playerObj == p then
+                        matches = true
+                    elseif p.UserId and playerObj.UserId and p.UserId == playerObj.UserId then
+                        matches = true
+                    elseif p.Name and playerObj.Name and p.Name == playerObj.Name then
+                        matches = true
+                    end
+                end)
+                if matches then
+                    table.insert(poolsToDestroy, {key = playerObj, pool = entry})
                 end
-            end)
-            if matches then
-                pool = entry
-                poolKey = playerObj
-                break
             end
         end
     end
-    if pool then
+    for _, item in ipairs(poolsToDestroy) do
+        local pool = item.pool
+        local poolKey = item.key
         pcall(function() Cleanup.hideESP(poolKey) end)
         safeRemoveDrawing(pool.boxOutline)
         safeRemoveDrawing(pool.boxFill)
@@ -182,6 +190,10 @@ Cleanup.destroyESP = function(p)
         if pool.extraLines then
             for _, line in ipairs(pool.extraLines) do safeRemoveDrawing(line) end
         end
+        pool.skeleton = {}
+        pool.corners = {}
+        pool.lines3D = {}
+        pool.extraLines = {}
         S.ESPPool[poolKey] = nil
     end
 
@@ -290,6 +302,7 @@ Cleanup.cleanupAll = function()
     pcall(function() Services.RunService:UnbindFromRenderStep("WallWalkControlStep") end)
     pcall(function() Services.RunService:UnbindFromRenderStep("WallWalkGravityStep") end)
     if State.stopViewportESP then pcall(State.stopViewportESP) end
+    if VH.FlyBypassCleanup then pcall(VH.FlyBypassCleanup) end
 
     if S.GodModeConn then pcall(function() S.GodModeConn:Disconnect() end) S.GodModeConn = nil end
     if S.TallRunningConn then pcall(function() S.TallRunningConn:Disconnect() end) S.TallRunningConn = nil end

@@ -122,9 +122,10 @@ local rigAttachmentNames = {
 }
 
 local function getNodePosition(char, node)
+    if not char or not char.Parent or not char:IsDescendantOf(Workspace) then return nil end
     local partName, attachmentName = node[1], node[2]
     local part = char:FindFirstChild(partName)
-    if not part then return nil end
+    if not part or not part:IsDescendantOf(char) or not part:IsDescendantOf(Workspace) then return nil end
     if attachmentName then
         local attach = part:FindFirstChild(attachmentName)
         if not attach then
@@ -437,9 +438,11 @@ local function updateESPAndAimbot()
             end
             local success, err = pcall(function()
                 local char = p.Character
-                local hrp = char and (char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                local valid = char and hrp and hum and hum.Health > 0 and (hum:GetState() ~= Enum.HumanoidStateType.Dead)
+                local inWs = char and char.Parent and char:IsDescendantOf(Workspace)
+                local hrp = inWs and (char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
+                local hum = inWs and char:FindFirstChildOfClass("Humanoid")
+                local head = inWs and char:FindFirstChild("Head")
+                local valid = inWs and hrp and hum and head and hrp:IsDescendantOf(Workspace) and head:IsDescendantOf(char) and hum:IsDescendantOf(char) and hum.Health > 0 and (hum:GetState() ~= Enum.HumanoidStateType.Dead)
                 if valid then
                     local isTeammate = localPlayer and p.Team and localPlayer.Team and p.Team == localPlayer.Team
                     local isFriend = checkFriendship(p.UserId)
@@ -726,7 +729,7 @@ local function updateESPAndAimbot()
                                         if pos1 and pos2 then
                                             local sp1, on1 = Camera:WorldToViewportPoint(pos1)
                                             local sp2, on2 = Camera:WorldToViewportPoint(pos2)
-                                            if sp1.Z > 0 and sp2.Z > 0 then
+                                            if sp1.Z > 0 and sp2.Z > 0 and (on1 or on2) then
                                                 line.Visible = true
                                                 line.From = Vector2.new(sp1.X, sp1.Y)
                                                 line.To = Vector2.new(sp2.X, sp2.Y)
@@ -914,6 +917,10 @@ table.insert(S.Connections, RunService.Heartbeat:Connect(function(dt)
     elseif not S.FlyBypass and myHRP then
         if myHRP:FindFirstChild("VoidBypassFly") then myHRP.VoidBypassFly:Destroy() end
         if myHRP:FindFirstChild("VoidBypassBG") then myHRP.VoidBypassBG:Destroy() end
+        if not S.Fly then
+            if myHRP:FindFirstChild("VoidFlyBV") then myHRP.VoidFlyBV:Destroy() end
+            if myHRP:FindFirstChild("VoidFlyBG") then myHRP.VoidFlyBG:Destroy() end
+        end
         if myHum and not S.Fly and not S.AirSwim and not S.HeadSitActive then myHum.PlatformStand = false end
     end
 
@@ -1402,10 +1409,20 @@ end))
 
 local function toggleUIVisibility()
     State.uiVisible = not State.uiVisible
-    local container = UI.GetMainContainer()
-    if container then container.Visible = State.uiVisible end
+    local container = UI and UI.GetMainContainer and UI.GetMainContainer()
+    if not container or not container.Parent then
+        local sg = UI and UI.GetScreenGui and UI.GetScreenGui()
+        if sg and sg.Parent then
+            container = sg:FindFirstChild("MainUIContainer")
+        end
+    end
+    if container then
+        container.Visible = State.uiVisible
+    end
     updateHUDArrayList()
-    UI.updateMenuBlur()
+    if UI and UI.updateMenuBlur then
+        pcall(UI.updateMenuBlur)
+    end
 end
 
 local function isModDisabled(...)
@@ -1484,36 +1501,44 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
         end)
     end
 
+    local handledByKey = false
     if k == Enum.KeyCode.LeftShift then
         if S.SprintEnabled and not isModDisabled("Sprint Speed Boost", "Sprint") then local hum = getHum(); if hum then hum.WalkSpeed = S.SprintSpeed end end
     elseif S.FlyKey and S.FlyKey ~= Enum.KeyCode.Unknown and k == S.FlyKey then
+        handledByKey = true
         if not isModDisabled("Fly Mode", "Fly") then
             S.Fly = not S.Fly; if S.Fly then flyOn() else flyOff() end; notify("Fly Mode " .. (S.Fly and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Fly Mode"]; if mod then mod.SetActive(S.Fly) end
         end
     elseif S.NoClipKey and S.NoClipKey ~= Enum.KeyCode.Unknown and k == S.NoClipKey then
+        handledByKey = true
         if not isModDisabled("Noclip", "NoClip") then
             S.NoClip = not S.NoClip; notify("NoClip " .. (S.NoClip and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Noclip"]; if mod then mod.SetActive(S.NoClip) end
         end
     elseif S.BHopKey and S.BHopKey ~= Enum.KeyCode.Unknown and k == S.BHopKey then
+        handledByKey = true
         if not isModDisabled("Auto Bunnyhop", "Bunnyhop") then
             S.BHop = not S.BHop; notify("Bunnyhop " .. (S.BHop and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Auto Bunnyhop"]; if mod then mod.SetActive(S.BHop) end
         end
     elseif S.InfJumpKey and S.InfJumpKey ~= Enum.KeyCode.Unknown and k == S.InfJumpKey then
+        handledByKey = true
         if not isModDisabled("Infinite Jump") then
             S.InfJump = not S.InfJump; notify("Infinite Jump " .. (S.InfJump and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Infinite Jump"]; if mod then mod.SetActive(S.InfJump) end
         end
     elseif S.JumpStrengthKey and S.JumpStrengthKey ~= Enum.KeyCode.Unknown and k == S.JumpStrengthKey then
+        handledByKey = true
         if not isModDisabled("Jump Power") then
             S.ForceJumpPower = not S.ForceJumpPower; local hum = getHum()
             if hum then if S.ForceJumpPower then hum.UseJumpPower = true; hum.JumpPower = S.JumpPower else hum.UseJumpPower = (State.gameDefaultUseJumpPower ~= nil) and State.gameDefaultUseJumpPower or true; hum.JumpPower = State.gameDefaultJumpPower or 50 end end
             notify("Jump Power " .. (S.ForceJumpPower and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Jump Power"]; if mod then mod.SetActive(S.ForceJumpPower) end; saveConfig()
         end
     elseif S.GhostKey and S.GhostKey ~= Enum.KeyCode.Unknown and k == S.GhostKey then
+        handledByKey = true
         if not isModDisabled("Ghost Mode") then
             S.GhostMode = not S.GhostMode; if S.GhostMode then enableGhostMode() else disableGhostMode() end
             local mod = moduleButtons["Ghost Mode"]; if mod then mod.SetActive(S.GhostMode) end
         end
     elseif S.BlinkKey and S.BlinkKey ~= Enum.KeyCode.Unknown and k == S.BlinkKey then
+        handledByKey = true
         if not isModDisabled("Blink Teleport", "Blink") then
             local hrp = getHRP(); local hum = getHum()
             if hrp and hum then
@@ -1529,10 +1554,12 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
             end
         end
     elseif S.AutoClickerKey and S.AutoClickerKey ~= Enum.KeyCode.Unknown and k == S.AutoClickerKey then
+        handledByKey = true
         if not isModDisabled("Auto Clicker") then
             S.AutoClicker = not S.AutoClicker; notify("Auto Clicker " .. (S.AutoClicker and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Auto Clicker"]; if mod then mod.SetActive(S.AutoClicker) end
         end
     elseif S.WalkFlingKey and S.WalkFlingKey ~= Enum.KeyCode.Unknown and k == S.WalkFlingKey then
+        handledByKey = true
         if not isModDisabled("Walk Fling") then
             local mod = moduleButtons["Walk Fling"]
             if mod and mod.SetActive then
@@ -1557,14 +1584,17 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
             notify("Walk Fling " .. (S.WalkFling and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
         end
     elseif S.MinimapKey and S.MinimapKey ~= Enum.KeyCode.Unknown and k == S.MinimapKey then
+        handledByKey = true
         if not isModDisabled("Minimap") then
             S.MinimapActive = not S.MinimapActive; notify("Minimap " .. (S.MinimapActive and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Minimap"]; if mod then mod.SetActive(S.MinimapActive) end
         end
     elseif S.AutoplayBotKey and S.AutoplayBotKey ~= Enum.KeyCode.Unknown and k == S.AutoplayBotKey then
+        handledByKey = true
         if not isModDisabled("Autoplay Bot") then
             S.AutoplayBot = not S.AutoplayBot; notify("Autoplay Bot " .. (S.AutoplayBot and "ON" or "OFF"), Color3.fromRGB(218, 170, 42)); local mod = moduleButtons["Autoplay Bot"]; if mod then mod.SetActive(S.AutoplayBot) end
         end
     elseif S.ViewportESPKey and S.ViewportESPKey ~= Enum.KeyCode.Unknown and k == S.ViewportESPKey then
+        handledByKey = true
         if not isModDisabled("Viewport ESP") then
             S.ViewportESP = not S.ViewportESP
             notify("Viewport ESP " .. (S.ViewportESP and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
@@ -1572,6 +1602,7 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
             if mod and mod.SetActive then mod.SetActive(S.ViewportESP) end
         end
     elseif S.WallWalkKey and S.WallWalkKey ~= Enum.KeyCode.Unknown and k == S.WallWalkKey then
+        handledByKey = true
         if not isModDisabled("Wall Walk") then
             local mod = moduleButtons["Wall Walk"]
             if mod and mod.SetActive then
@@ -1582,18 +1613,28 @@ table.insert(S.Connections, UserInputService.InputBegan:Connect(function(inp, gp
             notify("Wall Walk " .. (S.WallWalk and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
         end
     elseif S.FlyBypassKey and S.FlyBypassKey ~= Enum.KeyCode.Unknown and k == S.FlyBypassKey then
+        handledByKey = true
         if not isModDisabled("Fly Bypass") then
             local mod = moduleButtons["Fly Bypass"]
             if mod and mod.SetActive then
                 mod.SetActive(not S.FlyBypass)
             else
                 S.FlyBypass = not S.FlyBypass
+                if S.FlyBypass then
+                    if S.FlyBypassVersion ~= "V1" and VH.startFlyBypass then
+                        pcall(VH.startFlyBypass)
+                    end
+                else
+                    if VH.FlyBypassCleanup then
+                        pcall(VH.FlyBypassCleanup)
+                    end
+                end
             end
             notify("Fly Bypass " .. (S.FlyBypass and "ON" or "OFF"), Color3.fromRGB(218, 170, 42))
         end
     end
 
-    if S.ModuleBinds and type(S.ModuleBinds) == "table" then
+    if not handledByKey and S.ModuleBinds and type(S.ModuleBinds) == "table" then
         for modName, bindKeyName in pairs(S.ModuleBinds) do
             if bindKeyName and k.Name == bindKeyName then
                 local btn = UI.moduleButtons and UI.moduleButtons[modName]
@@ -1685,12 +1726,15 @@ local function hookPlayerCharacter(p)
     if p == LP or (LP and p.UserId and LP.UserId and p.UserId == LP.UserId) then return end
     local function setupChar(char)
         if not char then return end
-        local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 2)
-        if hum then
-            table.insert(S.Connections, hum.Died:Connect(function()
-                hideESP(p)
-            end))
-        end
+        task.spawn(function()
+            local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 3)
+            if hum then
+                table.insert(S.Connections, hum.Died:Connect(function()
+                    hideESP(p)
+                    destroyESP(p)
+                end))
+            end
+        end)
     end
     pcall(function()
         table.insert(S.Connections, p.CharacterRemoving:Connect(function()
@@ -1702,6 +1746,7 @@ local function hookPlayerCharacter(p)
         end))
         table.insert(S.Connections, p.CharacterAdded:Connect(function(char)
             hideESP(p)
+            destroyESP(p)
             setupChar(char)
         end))
         if p.Character then
@@ -1722,6 +1767,7 @@ end))
 table.insert(S.Connections, Players.PlayerRemoving:Connect(function(p)
     if S.JoinLeaveToasts then notify(p.DisplayName .. " left the server.", Color3.fromRGB(218, 38, 38)) end
     pcall(function()
+        hideESP(p)
         destroyESP(p)
         if VH.Utils and VH.Utils.removeOverhead then
             pcall(VH.Utils.removeOverhead, p)
