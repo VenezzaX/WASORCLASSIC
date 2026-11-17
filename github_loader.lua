@@ -964,7 +964,7 @@ if isUpdatingRepo and (loadingScreenMode == "Fully Hidden" or not LoadingScreenG
     WarnLabel.AnchorPoint = Vector2.new(0.5, 0.5)
     WarnLabel.BackgroundTransparency = 1
     WarnLabel.BorderSizePixel = 0
-    WarnLabel.Text = "W-A-S-O-R Currently updating to commit : " .. commitDisplay
+    WarnLabel.Text = "W-A-S-O-R Currently updating to commit : " .. commitDisplay .. " (0%)"
     WarnLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     WarnLabel.Font = Enum.Font.GothamBold
     WarnLabel.TextSize = 18
@@ -1071,8 +1071,15 @@ local function updateLoaderProgress(name)
             StatusText.Text = name or "Loading..."
         end
     end
+    local pct = math.floor(alpha * 100)
     if PercentText then
-        PercentText.Text = math.floor(alpha * 100) .. "%"
+        PercentText.Text = pct .. "%"
+    end
+    if UpdateWarningGui and UpdateWarningGui.Parent then
+        local wl = UpdateWarningGui:FindFirstChild("UpdateWarningText")
+        if wl then
+            wl.Text = string.format("W-A-S-O-R Currently updating to commit : %s (%d%%)", commitDisplay, pct)
+        end
     end
 end
 
@@ -1115,19 +1122,29 @@ end)
 if BarFill then BarFill.Size = UDim2.new(1, 0, 1, 0) end
 if PercentText then PercentText.Text = "100%" end
 if StatusText then StatusText.Text = "Ready!" end
-if UpdateLabel and isUpdatingRepo then UpdateLabel.Text = "Updated to commit " .. commitDisplay .. "!" end
+if UpdateLabel and isUpdatingRepo then UpdateLabel.Text = "Updated to commit " .. commitDisplay .. " (100%)!" end
 
 if UpdateWarningGui and UpdateWarningGui.Parent then
     pcall(function()
         local wl = UpdateWarningGui:FindFirstChild("UpdateWarningText")
         if wl then
-            local tw = TweenService:Create(wl, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1, TextStrokeTransparency = 1 })
+            wl.Text = "W-A-S-O-R Update finished to commit : " .. commitDisplay .. " (100%)"
+            task.wait(1.2)
+            local tw = TweenService:Create(wl, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1, TextStrokeTransparency = 1 })
             tw:Play()
             tw.Completed:Wait()
         end
         UpdateWarningGui:Destroy()
     end)
     UpdateWarningGui = nil
+end
+
+if isUpdatingRepo then
+    pcall(function()
+        if _G.VoidHub and _G.VoidHub.Utils and _G.VoidHub.Utils.notify then
+            _G.VoidHub.Utils.notify("W-A-S-O-R: Update finished to commit " .. commitDisplay .. " (100%)", Color3.fromRGB(50, 195, 75))
+        end
+    end)
 end
 
 if LoadingScreenGui and LoadingScreenGui.Parent then

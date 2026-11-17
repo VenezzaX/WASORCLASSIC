@@ -599,13 +599,83 @@ Utils.checkFriendship = function(userId)
     friendshipCache[userId] = isFr; return isFr
 end
 
-Utils.teleportToHRP = function(targetHRP)
+Utils.tweenTeleport = function(targetCFrame, speed, callback)
+    local myChar = Services.LP.Character
+    local myHRP = Utils.getHRP()
+    local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
+    if not myHRP or not targetCFrame then return false end
+    if myHum then myHum.Sit = false end
+
+    local TweenService = Services.TweenService or game:GetService("TweenService")
+    local distance = (targetCFrame.Position - myHRP.Position).Magnitude
+    local tpSpeed = math.max(tonumber(speed) or 100, 10)
+    local duration = math.clamp(distance / tpSpeed, 0.1, 15)
+
+    if State.activeTeleportTween then
+        pcall(function() State.activeTeleportTween:Cancel() end)
+        State.activeTeleportTween = nil
+    end
+
+    local origAnchored = myHRP.Anchored
+    myHRP.Anchored = true
+    myHRP.AssemblyLinearVelocity = Vector3.zero
+
+    local noclipConn = nil
+    noclipConn = Services.RunService.Stepped:Connect(function()
+        if not State.activeTeleportTween then
+            if noclipConn then noclipConn:Disconnect() end
+            return
+        end
+        if myChar and myChar.Parent then
+            for _, part in ipairs(myChar:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(myHRP, tweenInfo, { CFrame = targetCFrame })
+    State.activeTeleportTween = tween
+
+    local completedConn
+    completedConn = tween.Completed:Connect(function()
+        if completedConn then completedConn:Disconnect() end
+        if noclipConn then noclipConn:Disconnect() end
+        State.activeTeleportTween = nil
+        pcall(function()
+            if myHRP and myHRP.Parent then
+                myHRP.Anchored = origAnchored
+                myHRP.AssemblyLinearVelocity = Vector3.zero
+            end
+        end)
+        if callback then pcall(callback, true) end
+    end)
+
+    tween:Play()
+    return true
+end
+
+Utils.teleportToCFrame = function(targetCFrame, method, speed, callback)
+    if method == "Tween TP" then
+        return Utils.tweenTeleport(targetCFrame, speed, callback)
+    end
     local myChar = Services.LP.Character; local myHRP = Utils.getHRP(); local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
-    if myHRP and targetHRP then
+    if myHRP and targetCFrame then
         if myHum then myHum.Sit = false end
-        myHRP.CFrame = targetHRP.CFrame + Vector3.new(0, 3, 0); myHRP.AssemblyLinearVelocity = Vector3.zero; return true
+        myHRP.CFrame = targetCFrame
+        myHRP.AssemblyLinearVelocity = Vector3.zero
+        if callback then pcall(callback, true) end
+        return true
     end
     return false
+end
+
+Utils.teleportToHRP = function(targetHRP, method, speed, callback)
+    if not targetHRP then return false end
+    local targetCF = targetHRP.CFrame + Vector3.new(0, 3, 0)
+    return Utils.teleportToCFrame(targetCF, method, speed, callback)
 end
 
 Utils.spectatePlayer = function(target)

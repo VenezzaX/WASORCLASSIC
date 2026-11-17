@@ -24,6 +24,7 @@ State.originalFogEnd = Lighting and Lighting.FogEnd
 State.originalAtmospheres = {}
 State.latestFogState = nil
 State.latestAtmospheres = nil
+State.activeTeleportTween = nil
 pcall(function()
     if Lighting then
         for _, descendant in ipairs(Lighting:GetDescendants()) do
@@ -99,7 +100,7 @@ State.S = {
     AudioVisualizer = false, AudioVisualizerMode = 1, AudioVisualizerThemeIdx = 1, AudioVisualizerSensitivity = 1.0, LoadingScreenMode = "Normal",
     ViewportESP = false, ViewportESPKey = Enum.KeyCode.P, ViewportESPSkipTeam = false, ViewportESPAmbient = "Natural", ViewportESPLightColor = "White", ViewportESPOpacity = 100,
     UIFont = "SourceSansSemibold", UIScale = 1.0,
-    AntiSit = false, GraphicsReducer = false, AutoRejoin = false, MusicPlayerActive = false, RobloxVersion = false, RobloxVersionScaleX = 0, RobloxVersionOffsetX = 18, RobloxVersionScaleY = 1, RobloxVersionOffsetY = -18, NetworkChat = true, NetworkTags = true, ShowNetworkUsersHUD = true, ShowNetworkHeadTags = true, FreecamSpeed = 40, TracerOrigin = "Bottom",
+    AntiSit = false, GraphicsReducer = false, AutoRejoin = false, MusicPlayerActive = false, RobloxVersion = false, RobloxVersionScaleX = 0, RobloxVersionOffsetX = 18, RobloxVersionScaleY = 1, RobloxVersionOffsetY = -18, NetworkChat = true, NetworkTags = true, ShowNetworkUsersHUD = true, ShowNetworkHeadTags = true, FreecamSpeed = 40, SpectateTPMethod = "Normal TP", SpectateTweenSpeed = 100, TracerOrigin = "Bottom",
     LagReducePotatoMode = true, LagReduceShadows = true, LagReduceDecals = true, LagReduceParticles = true, LagReduceEffects = true,
     FloatBody = nil, WaterPlat = nil, WaterRaycastParams = nil, TallWalkTrack = nil, TallIdleTrack = nil,
     CustomIdleTrack = nil, TallRunningConn = nil, GodModeConn = nil,
