@@ -22,6 +22,8 @@ State.originalClockTime = Lighting and Lighting.ClockTime or 14
 State.originalFogStart = Lighting and Lighting.FogStart
 State.originalFogEnd = Lighting and Lighting.FogEnd
 State.originalAtmospheres = {}
+State.latestFogState = nil
+State.latestAtmospheres = nil
 pcall(function()
     if Lighting then
         for _, descendant in ipairs(Lighting:GetDescendants()) do
@@ -101,7 +103,7 @@ State.S = {
     LagReducePotatoMode = true, LagReduceShadows = true, LagReduceDecals = true, LagReduceParticles = true, LagReduceEffects = true,
     FloatBody = nil, WaterPlat = nil, WaterRaycastParams = nil, TallWalkTrack = nil, TallIdleTrack = nil,
     CustomIdleTrack = nil, TallRunningConn = nil, GodModeConn = nil,
-    OriginalPartTransparencies = {}, OriginalLightingEffects = {}, OriginalFogStart = nil, OriginalFogEnd = nil, OriginalAtmospheres = {},
+    OriginalPartTransparencies = {}, OriginalLightingEffects = {}, OriginalFogStart = nil, OriginalFogEnd = nil, LatestFogState = nil, OriginalAtmospheres = {},
     Connections = {}, ChatConnections = {}, ESPPool = {}, OverheadPool = {}, AirWalkPlat = nil,
     LastSafePosition = CFrame.new(0, 50, 0), ChatHistory = {}, FavoriteMaps = {},
     FlyKey = Enum.KeyCode.Unknown, NoClipKey = Enum.KeyCode.Unknown, BHopKey = Enum.KeyCode.Unknown,

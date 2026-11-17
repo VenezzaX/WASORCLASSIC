@@ -395,7 +395,7 @@ end
 local ScreenContainer = getSafeContainer()
 
 for _, child in ipairs(ScreenContainer:GetChildren()) do
-    if child.Name == "WASOR_Minimal_LoadingScreen" then
+    if child.Name == "WASOR_Minimal_LoadingScreen" or child.Name == "WASOR_UpdateWarning" then
         pcall(function() child:Destroy() end)
     end
 end
@@ -947,6 +947,34 @@ end
 local isUpdatingRepo = (not useCache)
 local commitDisplay = (latestSHA and #latestSHA >= 7 and latestSHA:sub(1, 7)) or (latestSHA or "latest")
 
+local UpdateWarningGui = nil
+if isUpdatingRepo and (loadingScreenMode == "Fully Hidden" or not LoadingScreenGui) then
+    UpdateWarningGui = Instance.new("ScreenGui")
+    UpdateWarningGui.Name = "WASOR_UpdateWarning"
+    UpdateWarningGui.ResetOnSpawn = false
+    UpdateWarningGui.IgnoreGuiInset = true
+    UpdateWarningGui.DisplayOrder = 2147483647
+    UpdateWarningGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    pcall(function() UpdateWarningGui.ScreenInsets = Enum.ScreenInsets.None end)
+
+    local WarnLabel = Instance.new("TextLabel")
+    WarnLabel.Name = "UpdateWarningText"
+    WarnLabel.Size = UDim2.new(1, 0, 0, 50)
+    WarnLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+    WarnLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+    WarnLabel.BackgroundTransparency = 1
+    WarnLabel.BorderSizePixel = 0
+    WarnLabel.Text = "W-A-S-O-R Currently updating to commit : " .. commitDisplay
+    WarnLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    WarnLabel.Font = Enum.Font.GothamBold
+    WarnLabel.TextSize = 18
+    WarnLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    WarnLabel.TextStrokeTransparency = 0.3
+    WarnLabel.Parent = UpdateWarningGui
+
+    UpdateWarningGui.Parent = ScreenContainer
+end
+
 if isUpdatingRepo then
     local updateMsg = "Updating to commit " .. commitDisplay
     if UpdateLabel then
@@ -1089,6 +1117,19 @@ if PercentText then PercentText.Text = "100%" end
 if StatusText then StatusText.Text = "Ready!" end
 if UpdateLabel and isUpdatingRepo then UpdateLabel.Text = "Updated to commit " .. commitDisplay .. "!" end
 
+if UpdateWarningGui and UpdateWarningGui.Parent then
+    pcall(function()
+        local wl = UpdateWarningGui:FindFirstChild("UpdateWarningText")
+        if wl then
+            local tw = TweenService:Create(wl, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1, TextStrokeTransparency = 1 })
+            tw:Play()
+            tw.Completed:Wait()
+        end
+        UpdateWarningGui:Destroy()
+    end)
+    UpdateWarningGui = nil
+end
+
 if LoadingScreenGui and LoadingScreenGui.Parent then
     if useCache then
         pcall(function() LoadingScreenGui:Destroy() end)
@@ -1127,6 +1168,11 @@ if LoadingScreenGui and LoadingScreenGui.Parent then
         pcall(function() LoadingScreenGui:Destroy() end)
         LoadingScreenGui = nil
     end
+end
+
+if UpdateWarningGui and UpdateWarningGui.Parent then
+    pcall(function() UpdateWarningGui:Destroy() end)
+    UpdateWarningGui = nil
 end
 
 _G.WASOR_Loading = false

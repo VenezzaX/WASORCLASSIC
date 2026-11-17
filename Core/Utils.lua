@@ -253,24 +253,49 @@ Utils.toggleNoFog = function(v)
     S.NoFog = v
     S.ClearVision = v
     if v then
-        if State.originalFogStart == nil and Services.Lighting then State.originalFogStart = Services.Lighting.FogStart end
-        if State.originalFogEnd == nil and Services.Lighting then State.originalFogEnd = Services.Lighting.FogEnd end
-        if S.OriginalFogStart == nil then S.OriginalFogStart = State.originalFogStart or (Services.Lighting and Services.Lighting.FogStart) end
-        if S.OriginalFogEnd == nil then S.OriginalFogEnd = State.originalFogEnd or (Services.Lighting and Services.Lighting.FogEnd) end
+        if Services.Lighting then
+            if Services.Lighting.FogEnd < 1e9 then
+                State.latestFogState = {
+                    FogStart = Services.Lighting.FogStart,
+                    FogEnd = Services.Lighting.FogEnd,
+                    FogColor = Services.Lighting.FogColor
+                }
+                S.LatestFogState = State.latestFogState
+            end
+        end
+
+        if not State.latestAtmospheres then State.latestAtmospheres = {} end
+        local function recordAtmos(obj)
+            if obj:IsA("Atmosphere") then
+                State.latestAtmospheres[obj] = {
+                    Density = obj.Density,
+                    Haze = obj.Haze,
+                    Color = obj.Color,
+                    Decay = obj.Decay,
+                    Glare = obj.Glare
+                }
+            end
+        end
+        if Services.Lighting then
+            for _, descendant in ipairs(Services.Lighting:GetDescendants()) do
+                recordAtmos(descendant)
+            end
+        end
+        pcall(function()
+            if Services.Workspace then
+                for _, descendant in ipairs(Services.Workspace:GetDescendants()) do
+                    recordAtmos(descendant)
+                end
+            end
+        end)
+
         if Services.Lighting then
             Services.Lighting.FogStart = 9e9
             Services.Lighting.FogEnd = 9e9
         end
-        if not State.originalAtmospheres then State.originalAtmospheres = {} end
-        if not S.OriginalAtmospheres then S.OriginalAtmospheres = {} end
+
         local function clearAtmos(obj)
             if obj:IsA("Atmosphere") then
-                if State.originalAtmospheres[obj] == nil then
-                    State.originalAtmospheres[obj] = { Density = obj.Density, Haze = obj.Haze }
-                end
-                if S.OriginalAtmospheres[obj] == nil then
-                    S.OriginalAtmospheres[obj] = State.originalAtmospheres[obj] or { Density = obj.Density, Haze = obj.Haze }
-                end
                 pcall(function() obj.Density = 0; obj.Haze = 0 end)
             end
         end
@@ -282,17 +307,19 @@ Utils.toggleNoFog = function(v)
         pcall(function()
             if Services.Workspace then
                 for _, descendant in ipairs(Services.Workspace:GetDescendants()) do
-                    if descendant:IsA("Atmosphere") then clearAtmos(descendant) end
+                    clearAtmos(descendant)
                 end
             end
         end)
     else
-        local origEnd = State.originalFogEnd or S.OriginalFogEnd
-        local origStart = State.originalFogStart or S.OriginalFogStart
-        S.OriginalFogStart = nil
-        S.OriginalFogEnd = nil
-
-        if Services.Lighting then
+        local latest = State.latestFogState or S.LatestFogState
+        if latest and Services.Lighting then
+            if latest.FogStart ~= nil then Services.Lighting.FogStart = latest.FogStart end
+            if latest.FogEnd ~= nil then Services.Lighting.FogEnd = latest.FogEnd end
+            if latest.FogColor ~= nil then Services.Lighting.FogColor = latest.FogColor end
+        elseif Services.Lighting then
+            local origEnd = State.originalFogEnd or S.OriginalFogEnd
+            local origStart = State.originalFogStart or S.OriginalFogStart
             if origEnd and origEnd < 100000 and origEnd > 0 then
                 Services.Lighting.FogStart = origStart or 0
                 Services.Lighting.FogEnd = origEnd
@@ -302,17 +329,23 @@ Utils.toggleNoFog = function(v)
             end
         end
 
-        local restoredAtmos = State.originalAtmospheres or S.OriginalAtmospheres
+        local restoredAtmos = State.latestAtmospheres or State.originalAtmospheres or S.OriginalAtmospheres
         if restoredAtmos then
             for atmos, props in pairs(restoredAtmos) do
                 pcall(function()
                     if atmos and atmos.Parent then
                         atmos.Density = props.Density
                         atmos.Haze = props.Haze
+                        if props.Color then atmos.Color = props.Color end
+                        if props.Decay then atmos.Decay = props.Decay end
+                        if props.Glare then atmos.Glare = props.Glare end
                     end
                 end)
             end
         end
+        State.latestFogState = nil
+        S.LatestFogState = nil
+        State.latestAtmospheres = nil
         S.OriginalAtmospheres = {}
     end
 end
