@@ -284,7 +284,7 @@ if _G.VoidHub or _G.WASOR_Loaded or _G.WASOR_Loading then
     _G.WASOR_Loading = nil
     _G.WASOR_Loaded = nil
     _G.WASOR_Reloading = nil
-    print("[WASOR 4.6] Existing instance detected. Cleaned up and reloading...")
+    print("[WASOR 4.7] Existing instance detected. Cleaned up and reloading...")
 end
 _G.WASOR_Loading = true
 

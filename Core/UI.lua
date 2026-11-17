@@ -400,18 +400,15 @@ local function startToastCleanupWatcher()
     end)
 end
 
+local lastHUDArrayListSig = ""
 UI.updateHUDArrayList = function()
     if not hudArrayListFrame then return end
-    for _, child in ipairs(hudArrayListFrame:GetChildren()) do
-        if child:IsA("TextLabel") or child:IsA("Frame") then
-            child:Destroy()
-        end
-    end
     local S = State.S
     local isVisible = S.HUDArrayList
     if not State.uiVisible then isVisible = S.HUDArrayList and S.HUDArrayListOutside end
     if not isVisible then
-        hudArrayListFrame.Visible = false
+        if hudArrayListFrame.Visible then hudArrayListFrame.Visible = false end
+        lastHUDArrayListSig = ""
         return
     end
 
@@ -421,37 +418,52 @@ UI.updateHUDArrayList = function()
             table.insert(activeMods, modName)
         end
     end
-    table.sort(activeMods, function(a, b) return #a > #b end)
 
     if #activeMods == 0 then
-        hudArrayListFrame.Visible = false
-    else
-        hudArrayListFrame.Visible = isVisible
-        for _, modName in ipairs(activeMods) do
-            local row = Instance.new("Frame")
-            row.Size = UDim2.new(1, 0, 0, 18)
-            row.BackgroundColor3 = StudioTheme.windowBg
-            row.BorderSizePixel = 1
-            row.BorderColor3 = StudioTheme.border
-            row.Parent = hudArrayListFrame
+        if hudArrayListFrame.Visible then hudArrayListFrame.Visible = false end
+        lastHUDArrayListSig = ""
+        return
+    end
 
-            local stripe = Instance.new("Frame")
-            stripe.Size = UDim2.new(0, 3, 1, 0)
-            stripe.BackgroundColor3 = StudioTheme.blue
-            stripe.BorderSizePixel = 0
-            stripe.Parent = row
+    table.sort(activeMods, function(a, b) return #a > #b end)
+    local sig = table.concat(activeMods, "\0")
 
-            local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(1, -8, 1, 0)
-            lbl.Position = UDim2.new(0, 6, 0, 0)
-            lbl.BackgroundTransparency = 1
-            lbl.Font = Enum.Font.SourceSansBold
-            lbl.TextSize = 12
-            lbl.TextColor3 = StudioTheme.blue
-            lbl.TextXAlignment = Enum.TextXAlignment.Left
-            lbl.Text = modName
-            lbl.Parent = row
+    if sig == lastHUDArrayListSig then
+        return
+    end
+    lastHUDArrayListSig = sig
+
+    for _, child in ipairs(hudArrayListFrame:GetChildren()) do
+        if child:IsA("TextLabel") or child:IsA("Frame") then
+            child:Destroy()
         end
+    end
+
+    hudArrayListFrame.Visible = true
+    for _, modName in ipairs(activeMods) do
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1, 0, 0, 18)
+        row.BackgroundColor3 = StudioTheme.windowBg
+        row.BorderSizePixel = 1
+        row.BorderColor3 = StudioTheme.border
+        row.Parent = hudArrayListFrame
+
+        local stripe = Instance.new("Frame")
+        stripe.Size = UDim2.new(0, 3, 1, 0)
+        stripe.BackgroundColor3 = StudioTheme.blue
+        stripe.BorderSizePixel = 0
+        stripe.Parent = row
+
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, -8, 1, 0)
+        lbl.Position = UDim2.new(0, 6, 0, 0)
+        lbl.BackgroundTransparency = 1
+        lbl.Font = Enum.Font.SourceSansBold
+        lbl.TextSize = 12
+        lbl.TextColor3 = StudioTheme.blue
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.Text = modName
+        lbl.Parent = row
     end
 end
 
@@ -1938,7 +1950,7 @@ UI.InitializeUI = function()
     topTitle.TextSize = 12
     topTitle.TextColor3 = StudioTheme.text
     topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.Text = "WASOR 4.6 (" .. executorName .. ")"
+    topTitle.Text = "WASOR 4.7 (" .. executorName .. ")"
     topTitle.Parent = topBar
 
     navBar = Instance.new("Frame")
@@ -1989,8 +2001,11 @@ UI.InitializeUI = function()
 
     searchBox = makeStudioTextBox(navBar, "", 115, 22, "Search modules...", false)
 
+    local lastFilterQuery = nil
     local function filterModules(query)
         query = query:lower()
+        if query == lastFilterQuery then return end
+        lastFilterQuery = query
         for _, win in pairs(UI.windows) do
             local hasVisibleModule = false
             for _, child in ipairs(win.List:GetChildren()) do
@@ -2104,7 +2119,7 @@ UI.InitializeUI = function()
     hudWatermark.TextSize = 12
     hudWatermark.TextColor3 = StudioTheme.blue
     hudWatermark.TextXAlignment = Enum.TextXAlignment.Left
-    hudWatermark.Text = "WASOR 4.6"
+    hudWatermark.Text = "WASOR 4.7"
     hudWatermark.Visible = S.HUDWatermark
     hudWatermark.Parent = screenGui
 
