@@ -70,6 +70,7 @@ local navBar = nil
 local settingsPanel = nil
 local settingsContent = nil
 local searchBox = nil
+local toggleAnimToken = 0
 
 local function getGuiContainers()
     local containers = {}
@@ -609,7 +610,7 @@ local function makeResizable(frame, handle)
 end
 
 local function adjustWindowSizeToContent(winFrame, contentFrame)
-    if winFrame == settingsPanel or winFrame == chatPanel or winFrame:GetAttribute("UserResized") == true then return end
+    if winFrame == settingsPanel or winFrame == chatPanel or winFrame == bindsPanel or winFrame:GetAttribute("UserResized") == true or winFrame:GetAttribute("CustomFixedSize") == true then return end
     local totalContentHeight, count = 0, 0
     for _, child in ipairs(contentFrame:GetChildren()) do
         if child:IsA("Frame") and child.Name ~= "resizeHandle" then
@@ -1209,6 +1210,52 @@ UI.addScrollFeedOption = function(parent, height)
 end
 
 local catPositions = { ["Combat"] = 20, ["Player"] = 235, ["Movement"] = 450, ["Render"] = 665, ["World"] = 880, ["Misc"] = 1095, ["Search"] = 1310 }
+
+local function getUIScale()
+    if State.S and State.S.UIScale and type(State.S.UIScale) == "number" and State.S.UIScale > 0 then
+        return State.S.UIScale
+    end
+    local uiScale = screenGui and (screenGui:FindFirstChildOfClass("UIScale") or screenGui:FindFirstChild("VoidUIScale"))
+    if uiScale and uiScale.Scale and uiScale.Scale > 0 then
+        return uiScale.Scale
+    end
+    return 1
+end
+
+local function getWindowContentHeight(targetWin, targetList, headerH, padBottom, defaultPadding)
+    local scale = getUIScale()
+    local totalH = 0
+    local visibleCount = 0
+
+    for _, child in ipairs(targetList:GetChildren()) do
+        if child:IsA("GuiObject") and child.Visible and child.Name:sub(1, 4) == "Mod_" then
+            visibleCount = visibleCount + 1
+            local modBtn = child:FindFirstChildOfClass("TextButton")
+            local baseBtnH = modBtn and modBtn.Size.Y.Offset or (headerH == 24 and 24 or 20)
+            local chH = baseBtnH
+            local d = child:FindFirstChild("drawer")
+            if d and d.Visible then
+                local dH = d.Size.Y.Offset
+                if dH <= 0 and d.AbsoluteSize.Y > 0 then
+                    dH = math.round(d.AbsoluteSize.Y / scale)
+                end
+                chH = baseBtnH + dH
+            end
+            totalH = totalH + chH
+        end
+    end
+
+    local lL = targetList:FindFirstChildOfClass("UIListLayout")
+    local paddingOffset = (lL and lL.Padding.Offset) or defaultPadding or 2
+    if visibleCount > 0 then
+        totalH = totalH + (visibleCount - 1) * paddingOffset + padBottom
+    else
+        totalH = 0
+    end
+
+    return headerH + totalH
+end
+
 UI.getOrCreateWindow = function(catName, defaultX, defaultY)
     if UI.windows[catName] and UI.windows[catName].Frame and UI.windows[catName].Frame.Parent then return UI.windows[catName] end
     local x = catPositions[catName] or defaultX or 20
@@ -1283,17 +1330,46 @@ UI.getOrCreateWindow = function(catName, defaultX, defaultY)
     local collapsed = false
     local function toggleCollapse()
         collapsed = not collapsed
-        list.Visible = not collapsed
-        if collapsed then
-            win.AutomaticSize = Enum.AutomaticSize.None
-            win.Size = UDim2.new(0, 210, 0, 24)
-            collapseBtn.Text = "^"
-        else
-            win.AutomaticSize = Enum.AutomaticSize.Y
-            win.Size = UDim2.new(0, 210, 0, 24)
-            collapseBtn.Text = "v"
-        end
+        collapseBtn.Text = collapsed and "^" or "v"
         if UI.windows[catName] then UI.windows[catName].Collapsed = collapsed end
+        if collapsed then
+            if State.S.UIAnimations ~= false and Services.TweenService then
+                local currentContentH = getWindowContentHeight(win, list, 24, 2, 2)
+                win.Size = UDim2.new(0, 210, 0, currentContentH)
+                win.AutomaticSize = Enum.AutomaticSize.None
+                local tw = Services.TweenService:Create(win, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 210, 0, 24)})
+                tw:Play()
+                tw.Completed:Connect(function()
+                    if collapsed then
+                        list.Visible = false
+                        win.Size = UDim2.new(0, 210, 0, 24)
+                        win.AutomaticSize = Enum.AutomaticSize.None
+                    end
+                end)
+            else
+                list.Visible = false
+                win.AutomaticSize = Enum.AutomaticSize.None
+                win.Size = UDim2.new(0, 210, 0, 24)
+            end
+        else
+            list.Visible = true
+            if State.S.UIAnimations ~= false and Services.TweenService then
+                local targetH = getWindowContentHeight(win, list, 24, 2, 2)
+                win.AutomaticSize = Enum.AutomaticSize.None
+                win.Size = UDim2.new(0, 210, 0, 24)
+                local tw = Services.TweenService:Create(win, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 210, 0, targetH)})
+                tw:Play()
+                tw.Completed:Connect(function()
+                    if not collapsed then
+                        win.Size = UDim2.new(0, 210, 0, 24)
+                        win.AutomaticSize = Enum.AutomaticSize.Y
+                    end
+                end)
+            else
+                win.Size = UDim2.new(0, 210, 0, 24)
+                win.AutomaticSize = Enum.AutomaticSize.Y
+            end
+        end
     end
     header.Activated:Connect(toggleCollapse)
 
@@ -1322,6 +1398,14 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
     win.Visible = false
     win.ZIndex = 15
     win.Parent = mainUIContainer
+    win:SetAttribute("CustomFixedSize", true)
+    win:SetAttribute("BaseWidth", winWidth)
+    win:SetAttribute("BaseHeight", winHeight)
+
+    local animScale = Instance.new("UIScale")
+    animScale.Name = "AnimScale"
+    animScale.Scale = 1
+    animScale.Parent = win
 
     local header = Instance.new("TextButton")
     header.Name = "Header"
@@ -1376,8 +1460,20 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
     closeBtn.MouseEnter:Connect(function() closeBtn.BackgroundColor3 = StudioTheme.red; closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255) end)
     closeBtn.MouseLeave:Connect(function() closeBtn.BackgroundColor3 = StudioTheme.headerBg; closeBtn.TextColor3 = StudioTheme.textMuted end)
     closeBtn.Activated:Connect(function()
-        win.Visible = false
         win:SetAttribute("UserOpen", false)
+        if State.S.UIAnimations ~= false and Services.TweenService and win.Visible then
+            local tw = Services.TweenService:Create(animScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.88})
+            tw:Play()
+            tw.Completed:Connect(function(state)
+                if state == Enum.PlaybackState.Completed and not win:GetAttribute("UserOpen") then
+                    win.Visible = false
+                    animScale.Scale = 1
+                end
+            end)
+        else
+            win.Visible = false
+            animScale.Scale = 1
+        end
     end)
 
     local content = Instance.new("ScrollingFrame")
@@ -1416,15 +1512,29 @@ UI.createFloatingWindow = function(title, width, height, defaultX, defaultY)
 
     collapseBtn.Activated:Connect(function()
         collapsed = not collapsed
-        content.Visible = not collapsed
-        resizeHandle.Visible = not collapsed
         if collapsed then
             baseHeight = win.Size.Y.Offset
-            win.Size = UDim2.new(0, win.Size.X.Offset, 0, 24)
             collapseBtn.Text = "+"
+            if State.S.UIAnimations ~= false and Services.TweenService then
+                local tw = Services.TweenService:Create(win, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, win.Size.X.Offset, 0, 24)})
+                tw:Play()
+                tw.Completed:Connect(function(state)
+                    if state == Enum.PlaybackState.Completed and collapsed then
+                        content.Visible = false; resizeHandle.Visible = false
+                    end
+                end)
+            else
+                content.Visible = false; resizeHandle.Visible = false
+                win.Size = UDim2.new(0, win.Size.X.Offset, 0, 24)
+            end
         else
-            win.Size = UDim2.new(0, win.Size.X.Offset, 0, baseHeight)
+            content.Visible = true; resizeHandle.Visible = true
             collapseBtn.Text = "-"
+            if State.S.UIAnimations ~= false and Services.TweenService then
+                Services.TweenService:Create(win, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, win.Size.X.Offset, 0, baseHeight)}):Play()
+            else
+                win.Size = UDim2.new(0, win.Size.X.Offset, 0, baseHeight)
+            end
         end
     end)
 
@@ -1447,7 +1557,7 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     local container = Instance.new("Frame")
     container.Name = "Mod_" .. name
     container.Size = UDim2.new(1, 0, 0, 24)
-    container.AutomaticSize = Enum.AutomaticSize.Y
+    container.AutomaticSize = Enum.AutomaticSize.None
     container.BackgroundColor3 = StudioTheme.panelBg
     container.BorderSizePixel = 1
     container.BorderColor3 = StudioTheme.border
@@ -1507,21 +1617,28 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
     local function updateVisuals()
         local isAct = isToggle and active
         local isPatched = patchedModules[name:lower()]
+        local targetStatusCol = isAct and StudioTheme.green or StudioTheme.borderSubtle
+        local targetTextCol = isAct and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted
         if isPatched then
-            statusStripe.BackgroundColor3 = StudioTheme.red
-            modTextLabel.TextColor3 = StudioTheme.red
+            targetStatusCol = StudioTheme.red
+            targetTextCol = StudioTheme.red
             modTextLabel.TextTransparency = 0.45
             btn.BackgroundTransparency = 0.5
         elseif name:lower() == "hat drop" then
-            statusStripe.BackgroundColor3 = isAct and StudioTheme.green or Color3.fromRGB(240, 200, 50)
-            modTextLabel.TextColor3 = isAct and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(240, 200, 50)
+            targetStatusCol = isAct and StudioTheme.green or Color3.fromRGB(240, 200, 50)
+            targetTextCol = isAct and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(240, 200, 50)
             modTextLabel.TextTransparency = 0
             btn.BackgroundTransparency = 0
         else
-            statusStripe.BackgroundColor3 = isAct and StudioTheme.green or StudioTheme.borderSubtle
-            modTextLabel.TextColor3 = isAct and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted
             modTextLabel.TextTransparency = 0
             btn.BackgroundTransparency = 0
+        end
+        if State.S.UIAnimations ~= false and Services.TweenService then
+            Services.TweenService:Create(statusStripe, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = targetStatusCol}):Play()
+            Services.TweenService:Create(modTextLabel, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = targetTextCol}):Play()
+        else
+            statusStripe.BackgroundColor3 = targetStatusCol
+            modTextLabel.TextColor3 = targetTextCol
         end
         task.defer(UI.updateHUDArrayList)
     end
@@ -1548,6 +1665,8 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         updateBg()
     end)
 
+    local drawerAnimTween = nil
+    local containerAnimTween = nil
     local function toggleMenu()
         if useSeparateWindow then
             if not floatingWin then
@@ -1561,21 +1680,76 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
                     brokenLabel.TextXAlignment = Enum.TextXAlignment.Left; brokenLabel.Text = "⚠️ Broken: This module is currently patched"; brokenLabel.Parent = brokenRow
                 end
                 if populateOptionsFunc or isPatched then populateOptionsFunc(drawer) end
-                adjustWindowSizeToContent(floatingWin, drawer)
+                floatingWin:GetPropertyChangedSignal("Visible"):Connect(updateBg)
+
+                local totalContentH, count = 0, 0
+                for _, ch in ipairs(drawer:GetChildren()) do
+                    if ch:IsA("GuiObject") and ch.Name ~= "resizeHandle" and not ch:IsA("UIListLayout") and not ch:IsA("UIPadding") and not ch:IsA("UIStroke") then
+                        totalContentH = totalContentH + ch.Size.Y.Offset
+                        count = count + 1
+                    end
+                end
+                if count > 0 then
+                    local lL = drawer:FindFirstChildOfClass("UIListLayout")
+                    local pV = lL and lL.Padding.Offset or 3
+                    local uP = drawer:FindFirstChildOfClass("UIPadding")
+                    local pT = uP and uP.PaddingTop.Offset or 4
+                    local pB = uP and uP.PaddingBottom.Offset or 4
+                    local headerH = (floatingWin:FindFirstChild("Header") and floatingWin.Header.Size.Y.Offset > 0) and floatingWin.Header.Size.Y.Offset or 24
+                    local contentH = pT + pB + totalContentH + math.max(0, count - 1) * pV + 2
+                    local idealH = headerH + contentH
+                    local finalH = math.clamp(idealH, 50, math.min(idealH, h))
+                    floatingWin.Size = UDim2.new(0, w, 0, finalH)
+                    floatingWin:SetAttribute("BaseHeight", finalH)
+                end
             end
-            floatingWin.Visible = not floatingWin.Visible
-            floatingWin:SetAttribute("UserOpen", floatingWin.Visible)
-            updateBg()
+            local animScale = floatingWin:FindFirstChild("AnimScale")
+            local willOpen = not floatingWin.Visible or floatingWin:GetAttribute("UserOpen") == false
+            if willOpen then
+                floatingWin:SetAttribute("UserOpen", true)
+                floatingWin.Visible = true
+                if State.S.UIAnimations ~= false and Services.TweenService and animScale then
+                    animScale.Scale = 0.88
+                    Services.TweenService:Create(animScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1.0}):Play()
+                elseif animScale then
+                    animScale.Scale = 1.0
+                end
+                if gear and State.S.UIAnimations ~= false and Services.TweenService then
+                    Services.TweenService:Create(gear, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 90}):Play()
+                end
+                updateBg()
+            else
+                floatingWin:SetAttribute("UserOpen", false)
+                if gear and State.S.UIAnimations ~= false and Services.TweenService then
+                    Services.TweenService:Create(gear, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 0}):Play()
+                end
+                if State.S.UIAnimations ~= false and Services.TweenService and animScale and floatingWin.Visible then
+                    local tw = Services.TweenService:Create(animScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.88})
+                    tw:Play()
+                    tw.Completed:Connect(function(state)
+                        if state == Enum.PlaybackState.Completed and not floatingWin:GetAttribute("UserOpen") then
+                            floatingWin.Visible = false
+                            animScale.Scale = 1.0
+                            updateBg()
+                        end
+                    end)
+                else
+                    floatingWin.Visible = false
+                    if animScale then animScale.Scale = 1.0 end
+                    updateBg()
+                end
+            end
         else
             if not drawer then
                 drawer = Instance.new("Frame")
                 drawer.Name = "drawer"
                 drawer.Size = UDim2.new(1, 0, 0, 0)
                 drawer.Position = UDim2.new(0, 0, 0, 24)
-                drawer.AutomaticSize = Enum.AutomaticSize.Y
+                drawer.AutomaticSize = Enum.AutomaticSize.None
                 drawer.BackgroundColor3 = StudioTheme.insetBg
                 drawer.BorderSizePixel = 1
                 drawer.BorderColor3 = StudioTheme.border
+                drawer.ClipsDescendants = true
                 drawer.Visible = false
                 drawer.Parent = container
 
@@ -1599,8 +1773,90 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
 
                 if populateOptionsFunc or isPatched then populateOptionsFunc(drawer) end
             end
-            drawer.Visible = not drawer.Visible
-            updateBg()
+
+            if drawerAnimTween then pcall(function() drawerAnimTween:Cancel() end); drawerAnimTween = nil end
+            if containerAnimTween then pcall(function() containerAnimTween:Cancel() end); containerAnimTween = nil end
+
+            local willOpen = not drawer.Visible
+            local scale = getUIScale()
+            if willOpen then
+                local layout = drawer:FindFirstChildOfClass("UIListLayout")
+                local targetH = 0
+                if layout and layout.AbsoluteContentSize.Y > 0 then
+                    targetH = math.round((layout.AbsoluteContentSize.Y + 8) / scale)
+                else
+                    for _, ch in ipairs(drawer:GetChildren()) do
+                        if ch:IsA("GuiObject") and not ch:IsA("UIListLayout") and not ch:IsA("UIPadding") and not ch:IsA("UIStroke") then
+                            targetH = targetH + ch.Size.Y.Offset + 2
+                        end
+                    end
+                    targetH = targetH + 8
+                end
+                if targetH < 20 then targetH = 36 end
+
+                drawer.Visible = true
+                if gear and State.S.UIAnimations ~= false and Services.TweenService then
+                    Services.TweenService:Create(gear, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 90}):Play()
+                end
+                if State.S.UIAnimations ~= false and Services.TweenService then
+                    drawer.Size = UDim2.new(1, 0, 0, 0)
+                    container.Size = UDim2.new(1, 0, 0, 24)
+                    drawer.AutomaticSize = Enum.AutomaticSize.None
+                    container.AutomaticSize = Enum.AutomaticSize.None
+                    local tInfo = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+                    drawerAnimTween = Services.TweenService:Create(drawer, tInfo, {Size = UDim2.new(1, 0, 0, targetH)})
+                    containerAnimTween = Services.TweenService:Create(container, tInfo, {Size = UDim2.new(1, 0, 0, 24 + targetH)})
+                    drawerAnimTween:Play()
+                    containerAnimTween:Play()
+                    drawerAnimTween.Completed:Connect(function()
+                        if drawer.Visible then
+                            drawer.Size = UDim2.new(1, 0, 0, 0)
+                            drawer.AutomaticSize = Enum.AutomaticSize.Y
+                            container.Size = UDim2.new(1, 0, 0, 24)
+                            container.AutomaticSize = Enum.AutomaticSize.Y
+                        end
+                    end)
+                else
+                    drawer.Size = UDim2.new(1, 0, 0, 0)
+                    drawer.AutomaticSize = Enum.AutomaticSize.Y
+                    container.Size = UDim2.new(1, 0, 0, 24)
+                    container.AutomaticSize = Enum.AutomaticSize.Y
+                end
+                updateBg()
+            else
+                if gear and State.S.UIAnimations ~= false and Services.TweenService then
+                    Services.TweenService:Create(gear, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 0}):Play()
+                end
+                if State.S.UIAnimations ~= false and Services.TweenService then
+                    local curH = math.round((drawer.AbsoluteSize.Y > 0 and drawer.AbsoluteSize.Y or (drawer.Size.Y.Offset * scale)) / scale)
+                    if curH <= 0 then curH = 30 end
+                    drawer.Size = UDim2.new(1, 0, 0, curH)
+                    container.Size = UDim2.new(1, 0, 0, 24 + curH)
+                    drawer.AutomaticSize = Enum.AutomaticSize.None
+                    container.AutomaticSize = Enum.AutomaticSize.None
+                    local tInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+                    drawerAnimTween = Services.TweenService:Create(drawer, tInfo, {Size = UDim2.new(1, 0, 0, 0)})
+                    containerAnimTween = Services.TweenService:Create(container, tInfo, {Size = UDim2.new(1, 0, 0, 24)})
+                    drawerAnimTween:Play()
+                    containerAnimTween:Play()
+                    local function finishClose()
+                        drawer.Visible = false
+                        drawer.Size = UDim2.new(1, 0, 0, 0)
+                        drawer.AutomaticSize = Enum.AutomaticSize.None
+                        container.Size = UDim2.new(1, 0, 0, 24)
+                        container.AutomaticSize = Enum.AutomaticSize.None
+                        updateBg()
+                    end
+                    drawerAnimTween.Completed:Connect(finishClose)
+                else
+                    drawer.Visible = false
+                    drawer.Size = UDim2.new(1, 0, 0, 0)
+                    drawer.AutomaticSize = Enum.AutomaticSize.None
+                    container.Size = UDim2.new(1, 0, 0, 24)
+                    container.AutomaticSize = Enum.AutomaticSize.None
+                    updateBg()
+                end
+            end
         end
     end
 
@@ -1622,6 +1878,8 @@ UI.registerModule = function(catName, name, defaultX, defaultY, isToggle, defaul
         gear.Activated:Connect(toggleMenu)
         UI.moduleGears[name] = gear
     end
+
+    btn.MouseButton2Click:Connect(toggleMenu)
 
     btn.Activated:Connect(function()
         if State.S.ModuleDisableMode then
@@ -1705,11 +1963,48 @@ local function selectTab(tabName)
                     local style = State.S.DisabledModuleStyle or "Greyish"
                     local hiddenByDisable = (isDisabled and style == "Invisible" and not isSelectMode)
                     local matches = (query == "") or (modName:lower():find(query, 1, true) ~= nil)
-                    child.Visible = matches and not hiddenByDisable
-                    if child.Visible then hasVisibleModule = true end
+                    local showMod = matches and not hiddenByDisable
+                    child.Visible = showMod
+                    if not showMod then
+                        child.AutomaticSize = Enum.AutomaticSize.None
+                        child.Size = UDim2.new(1, 0, 0, 0)
+                    else
+                        local d = child:FindFirstChild("drawer")
+                        if d and d.Visible then
+                            d.Size = UDim2.new(1, 0, 0, 0)
+                            d.AutomaticSize = Enum.AutomaticSize.Y
+                            child.Size = UDim2.new(1, 0, 0, 24)
+                            child.AutomaticSize = Enum.AutomaticSize.Y
+                        else
+                            if d then
+                                d.Visible = false
+                                d.Size = UDim2.new(1, 0, 0, 0)
+                                d.AutomaticSize = Enum.AutomaticSize.None
+                            end
+                            child.AutomaticSize = Enum.AutomaticSize.None
+                            child.Size = UDim2.new(1, 0, 0, 24)
+                        end
+                    end
+                    if showMod then hasVisibleModule = true end
                 end
             end
-            win.Frame.Visible = (query == "" or hasVisibleModule)
+            local shouldShow = (query == "" or hasVisibleModule)
+            local wasVisible = win.Frame.Visible
+            win.Frame.Visible = shouldShow
+            if not win.Collapsed then
+                win.Frame.Size = UDim2.new(0, 210, 0, 24)
+                win.Frame.AutomaticSize = Enum.AutomaticSize.Y
+            else
+                win.Frame.AutomaticSize = Enum.AutomaticSize.None
+                win.Frame.Size = UDim2.new(0, 210, 0, 24)
+            end
+            if shouldShow and not wasVisible and State.S.UIAnimations ~= false and Services.TweenService then
+                local basePos = win.Frame.Position
+                win.Frame.Position = UDim2.new(basePos.X.Scale, basePos.X.Offset, basePos.Y.Scale, basePos.Y.Offset + 12)
+                Services.TweenService:Create(win.Frame, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Position = basePos
+                }):Play()
+            end
         end
         for _, win in ipairs(UI.floatingWindows) do
             if win:GetAttribute("UserOpen") == true then win.Visible = true end
@@ -1720,16 +2015,14 @@ local function selectTab(tabName)
         if chatPanel then chatPanel.Visible = false end
         if settingsPanel then
             settingsPanel.Visible = true
-            adjustWindowSizeToContent(settingsPanel, settingsContent)
+            settingsPanel.Position = UDim2.new(0.5, -settingsPanel.Size.X.Offset/2, 0.5, -settingsPanel.Size.Y.Offset/2 + 15)
         end
     elseif tabName == "(Chat)" or tabName == "Chat" then
         for _, win in pairs(UI.windows) do win.Frame.Visible = false end
         for _, win in ipairs(UI.floatingWindows) do win.Visible = false end
         if chatPanel then
             chatPanel.Visible = true
-            if not chatPanel:GetAttribute("UserResized") then
-                adjustWindowSizeToContent(chatPanel, chatContent)
-            end
+            chatPanel.Position = UDim2.new(0.5, -chatPanel.Size.X.Offset/2, 0.5, -chatPanel.Size.Y.Offset/2 + 15)
             if UI.refreshChatPanelUsers then pcall(UI.refreshChatPanelUsers) end
         end
     elseif tabName == "Binds" then
@@ -1738,13 +2031,14 @@ local function selectTab(tabName)
         if chatPanel then chatPanel.Visible = false end
         if bindsPanel then
             bindsPanel.Visible = true
-            adjustWindowSizeToContent(bindsPanel, bindsContent)
+            bindsPanel.Position = UDim2.new(0.5, -bindsPanel.Size.X.Offset/2, 0.5, -bindsPanel.Size.Y.Offset/2 + 15)
         end
     end
 end
 UI.selectTab = selectTab
 
 UI.ResetAllToggles = function(self)
+    toggleAnimToken = toggleAnimToken + 1
     for name, item in pairs(UI.moduleButtons) do
         if item.IsActive and item.IsActive() then
             item.SetActive(false)
@@ -1753,15 +2047,26 @@ UI.ResetAllToggles = function(self)
 end
 
 local function createPanel(title, width, height)
+    local cam = Services.Camera or workspace.CurrentCamera
+    local vp = (cam and cam.ViewportSize) or Vector2.new(1280, 720)
+    local maxAllowedW = math.max(480, vp.X - 40)
+    local maxAllowedH = math.max(340, vp.Y - 70)
+    local targetW = math.clamp(math.floor(vp.X * 0.82), math.min(width, maxAllowedW), 960)
+    local targetH = math.clamp(math.floor(vp.Y * 0.78), math.min(height, maxAllowedH), 660)
+    width = targetW
+    height = targetH
     local win = Instance.new("Frame")
     win.Size = UDim2.new(0, width, 0, height)
-    win.Position = UDim2.new(0.5, -width/2, 0.5, -height/2)
+    win.Position = UDim2.new(0.5, -width/2, 0.5, -height/2 + 15)
     win.BackgroundColor3 = StudioTheme.windowBg
     win.BorderSizePixel = 1
     win.BorderColor3 = StudioTheme.border
     win.ClipsDescendants = true
     win.Visible = false
     win.Parent = mainUIContainer
+    win:SetAttribute("CustomFixedSize", true)
+    win:SetAttribute("BaseWidth", width)
+    win:SetAttribute("BaseHeight", height)
 
     local header = Instance.new("Frame")
     header.Name = "Header"
@@ -1961,8 +2266,8 @@ UI.InitializeUI = function()
     topTitle.Parent = topBar
 
     navBar = Instance.new("Frame")
-    navBar.Size = UDim2.new(0, 560, 1, 0)
-    navBar.Position = UDim2.new(0.5, -280, 0, 0)
+    navBar.Size = UDim2.new(0, 680, 1, 0)
+    navBar.Position = UDim2.new(0.5, -340, 0, 0)
     navBar.BackgroundTransparency = 1
     navBar.Parent = topBar
 
@@ -1970,17 +2275,20 @@ UI.InitializeUI = function()
     navLayout.FillDirection = Enum.FillDirection.Horizontal
     navLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     navLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    navLayout.SortOrder = Enum.SortOrder.LayoutOrder
     navLayout.Padding = UDim.new(0, 5)
     navLayout.Parent = navBar
 
     local tabs = {"Modules", "Settings", "(Chat)", "Binds"}
-    for _, tabName in ipairs(tabs) do
+    for idx, tabName in ipairs(tabs) do
         local btn = makeStudioButton(navBar, tabName, 66, 22, (tabName == activeTab) and StudioTheme.blue or StudioTheme.btnBg, (tabName == activeTab) and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted)
+        btn.LayoutOrder = idx
         btn.Activated:Connect(function() selectTab(tabName) end)
         UI.tabButtons[tabName] = btn
     end
 
     local disableModeBtn = makeStudioButton(navBar, "Disable Mode: OFF", 110, 22, StudioTheme.btnBg, StudioTheme.textMuted, Enum.Font.SourceSansSemibold, 11)
+    disableModeBtn.LayoutOrder = 5
     local function updateDisableModeBtn()
         local on = (State.S.ModuleDisableMode == true)
         disableModeBtn.Text = on and "Disable Mode: ON" or "Disable Mode: OFF"
@@ -2007,6 +2315,23 @@ UI.InitializeUI = function()
     updateDisableModeBtn()
 
     searchBox = makeStudioTextBox(navBar, "", 115, 22, "Search modules...", false)
+    searchBox.LayoutOrder = 6
+
+    local animToggleBtn = makeStudioButton(navBar, (State.S.UIAnimations ~= false) and "Anims: ON" or "Anims: OFF", 85, 22, (State.S.UIAnimations ~= false) and StudioTheme.blue or StudioTheme.btnBg, (State.S.UIAnimations ~= false) and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted, Enum.Font.SourceSansSemibold, 11)
+    animToggleBtn.LayoutOrder = 7
+    local function updateAnimToggleBtn()
+        local on = (State.S.UIAnimations ~= false)
+        animToggleBtn.Text = on and "Anims: ON" or "Anims: OFF"
+        animToggleBtn.BackgroundColor3 = on and StudioTheme.blue or StudioTheme.btnBg
+        animToggleBtn.TextColor3 = on and Color3.fromRGB(255, 255, 255) or StudioTheme.textMuted
+    end
+    UI.updateAnimToggleBtn = updateAnimToggleBtn
+    animToggleBtn.Activated:Connect(function()
+        State.S.UIAnimations = not (State.S.UIAnimations ~= false)
+        updateAnimToggleBtn()
+        VH.Config.saveConfig()
+        UI.showToast(State.S.UIAnimations and "UI Animations: Enabled" or "UI Animations: Disabled", StudioTheme.blue)
+    end)
 
     local lastFilterQuery = nil
     local function filterModules(query)
@@ -2023,8 +2348,20 @@ UI.InitializeUI = function()
                     local style = State.S.DisabledModuleStyle or "Greyish"
                     local hiddenByDisable = (isDisabled and style == "Invisible" and not isSelectMode)
                     local matches = (query == "") or (modName:lower():find(query, 1, true) ~= nil)
-                    child.Visible = matches and not hiddenByDisable
-                    if child.Visible then hasVisibleModule = true end
+                    local showMod = matches and not hiddenByDisable
+                    child.Visible = showMod
+                    if not showMod then
+                        child.Size = UDim2.new(1, 0, 0, 0)
+                    else
+                        local d = child:FindFirstChild("drawer")
+                        if d and d.Visible then
+                            child.AutomaticSize = Enum.AutomaticSize.Y
+                        else
+                            child.AutomaticSize = Enum.AutomaticSize.None
+                            child.Size = UDim2.new(1, 0, 0, 24)
+                        end
+                    end
+                    if showMod then hasVisibleModule = true end
                 end
             end
             win.Frame.Visible = (activeTab == "Modules") and (query == "" or hasVisibleModule)
@@ -2199,12 +2536,12 @@ UI.InitializeUI = function()
     hudServerAge.Visible = S.HUDServerAge
     hudServerAge.Parent = screenGui
 
-    settingsPanel, settingsContent = createPanel("Client Settings - Preferences", 540, 360)
+    settingsPanel, settingsContent = createPanel("Client Settings - Preferences", 880, 560)
     settingsContent.Visible = false
 
-    chatPanel, chatContent = createPanel("(Chat) & Network Users", 540, 360)
-    chatPanel:SetAttribute("MinResizeW", 280)
-    chatPanel:SetAttribute("MinResizeH", 180)
+    chatPanel, chatContent = createPanel("(Chat) & Network Users", 860, 540)
+    chatPanel:SetAttribute("MinResizeW", 340)
+    chatPanel:SetAttribute("MinResizeH", 240)
     chatContent.Visible = true
 
     UI.addSectionHeader(chatContent, "Network Chat Hub")
@@ -2256,7 +2593,7 @@ UI.InitializeUI = function()
     end)
 
     local netListFrame = Instance.new("Frame")
-    netListFrame.Size = UDim2.new(1, 0, 0, 140)
+    netListFrame.Size = UDim2.new(1, 0, 0, 220)
     netListFrame.BackgroundColor3 = StudioTheme.insetBg
     netListFrame.BorderSizePixel = 1
     netListFrame.BorderColor3 = StudioTheme.border
@@ -2318,7 +2655,7 @@ UI.InitializeUI = function()
     UI.refreshChatPanelUsers = refreshChatPanelUsers
     refreshChatPanelUsers()
 
-    bindsPanel, bindsContent = createPanel("Keybind Manager", 540, 400)
+    bindsPanel, bindsContent = createPanel("Keybind Manager", 880, 560)
     bindsContent.Visible = true
 
     UI.addSectionHeader(bindsContent, "Quick Config Actions")
@@ -2373,7 +2710,7 @@ UI.InitializeUI = function()
     end
 
     local sidebar = Instance.new("Frame")
-    sidebar.Size = UDim2.new(0, 140, 1, -24)
+    sidebar.Size = UDim2.new(0, 175, 1, -24)
     sidebar.Position = UDim2.new(0, 0, 0, 24)
     sidebar.BackgroundColor3 = StudioTheme.panelAlt
     sidebar.BorderSizePixel = 1
@@ -2391,8 +2728,8 @@ UI.InitializeUI = function()
     sidebarPadding.Parent = sidebar
 
     local mainContent = Instance.new("Frame")
-    mainContent.Size = UDim2.new(1, -140, 1, -24)
-    mainContent.Position = UDim2.new(0, 140, 0, 24)
+    mainContent.Size = UDim2.new(1, -175, 1, -24)
+    mainContent.Position = UDim2.new(0, 175, 0, 24)
     mainContent.BackgroundTransparency = 1
     mainContent.Parent = settingsPanel
 
@@ -2438,14 +2775,43 @@ UI.InitializeUI = function()
 
     local function selectSettingsTab(tabName)
         for name, page in pairs(tabPages) do
-            page.Visible = (name == tabName)
+            if name == tabName then
+                page.Visible = true
+                if State.S.UIAnimations ~= false and Services.TweenService then
+                    page.Position = UDim2.new(0, 14, 0, 0)
+                    page.BackgroundTransparency = 0.4
+                    Services.TweenService:Create(page, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Position = UDim2.new(0, 0, 0, 0),
+                        BackgroundTransparency = 0
+                    }):Play()
+                else
+                    page.Position = UDim2.new(0, 0, 0, 0)
+                    page.BackgroundTransparency = 0
+                end
+            else
+                page.Visible = false
+            end
         end
         for _, btn in ipairs(sidebar:GetChildren()) do
             if btn:IsA("TextButton") then
                 if btn.Text == "  " .. tabName then
-                    setButtonState(btn, StudioTheme.blue, Color3.fromRGB(255, 255, 255))
+                    if State.S.UIAnimations ~= false and Services.TweenService then
+                        Services.TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundColor3 = StudioTheme.blue,
+                            TextColor3 = Color3.fromRGB(255, 255, 255)
+                        }):Play()
+                    else
+                        setButtonState(btn, StudioTheme.blue, Color3.fromRGB(255, 255, 255))
+                    end
                 else
-                    setButtonState(btn, StudioTheme.btnBg, StudioTheme.textMuted)
+                    if State.S.UIAnimations ~= false and Services.TweenService then
+                        Services.TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundColor3 = StudioTheme.btnBg,
+                            TextColor3 = StudioTheme.textMuted
+                        }):Play()
+                    else
+                        setButtonState(btn, StudioTheme.btnBg, StudioTheme.textMuted)
+                    end
                 end
             end
         end
@@ -2810,9 +3176,234 @@ UI.updateNetworkUsersHUD = function(activeInServer)
     end
 end
 
+UI.animateToggleUI = function(targetVisible, onComplete)
+    if not mainUIContainer or not mainUIContainer.Parent then return end
+
+    local animsEnabled = (State and State.S and State.S.UIAnimations ~= false) and (Services.TweenService ~= nil)
+    toggleAnimToken = toggleAnimToken + 1
+    local currentToken = toggleAnimToken
+
+    local headerDefaultH = 24
+    local padBottom = 2
+    local defaultPadding = 2
+    local topBarH = (topBar and topBar.Size.Y.Offset > 0) and topBar.Size.Y.Offset or 28
+    local topBarHiddenPos = UDim2.new(0, 0, 0, -(topBarH + 2))
+    local topBarShownPos = UDim2.new(0, 0, 0, 0)
+    local allPanels = {settingsPanel, chatPanel, bindsPanel}
+
+    if not targetVisible then
+        if not animsEnabled then
+            mainUIContainer.Visible = false
+            if onComplete then onComplete() end
+            return
+        end
+
+        if topBar and topBar.Parent then
+            Services.TweenService:Create(topBar, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = topBarHiddenPos}):Play()
+        end
+
+        if UI.windows then
+            for catName, wData in pairs(UI.windows) do
+                local win = wData.Frame
+                local list = wData.List
+                local headerH = (wData.Header and wData.Header.Size.Y.Offset > 0) and wData.Header.Size.Y.Offset or headerDefaultH
+                if win and win.Parent and win.Visible then
+                    win:SetAttribute("WasVisibleBeforeHide", true)
+                    if not wData.Collapsed then
+                        local currentContentH = getWindowContentHeight(win, list, headerH, padBottom, defaultPadding)
+                        win.Size = UDim2.new(0, win.Size.X.Offset, 0, currentContentH)
+                    end
+                    win.AutomaticSize = Enum.AutomaticSize.None
+                    local tw = Services.TweenService:Create(win, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, win.Size.X.Offset, 0, 0)})
+                    tw:Play()
+                elseif win and win.Parent then
+                    win:SetAttribute("WasVisibleBeforeHide", false)
+                end
+            end
+        end
+
+        for _, panel in ipairs(allPanels) do
+            if panel and panel.Parent and panel.Visible then
+                panel:SetAttribute("WasVisibleBeforeHide", true)
+                local savedH = panel:GetAttribute("SavedHeight") or panel:GetAttribute("BaseHeight") or panel.Size.Y.Offset
+                panel:SetAttribute("SavedHeight", savedH)
+                local tw = Services.TweenService:Create(panel, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, panel.Size.X.Offset, 0, 0)})
+                tw:Play()
+            elseif panel and panel.Parent then
+                panel:SetAttribute("WasVisibleBeforeHide", false)
+            end
+        end
+
+        if UI.floatingWindows then
+            for _, win in ipairs(UI.floatingWindows) do
+                if win and win.Parent and win.Visible then
+                    win:SetAttribute("WasVisibleBeforeHide", true)
+                    local savedH = win:GetAttribute("SavedHeight") or win:GetAttribute("BaseHeight") or win.Size.Y.Offset
+                    win:SetAttribute("SavedHeight", savedH)
+                    local tw = Services.TweenService:Create(win, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, win.Size.X.Offset, 0, 0)})
+                    tw:Play()
+                elseif win and win.Parent then
+                    win:SetAttribute("WasVisibleBeforeHide", false)
+                end
+            end
+        end
+
+        task.delay(0.18, function()
+            if toggleAnimToken ~= currentToken then return end
+            if not State.uiVisible then
+                mainUIContainer.Visible = false
+                if topBar and topBar.Parent then
+                    topBar.Position = topBarShownPos
+                end
+                if UI.windows then
+                    for catName, wData in pairs(UI.windows) do
+                        local win = wData.Frame
+                        local headerH = (wData.Header and wData.Header.Size.Y.Offset > 0) and wData.Header.Size.Y.Offset or headerDefaultH
+                        if win and win.Parent then
+                            if wData.Collapsed then
+                                win.Size = UDim2.new(0, win.Size.X.Offset, 0, headerH)
+                                win.AutomaticSize = Enum.AutomaticSize.None
+                            else
+                                win.Size = UDim2.new(0, win.Size.X.Offset, 0, headerH)
+                                win.AutomaticSize = Enum.AutomaticSize.Y
+                            end
+                        end
+                    end
+                end
+                for _, panel in ipairs(allPanels) do
+                    if panel and panel.Parent and panel:GetAttribute("WasVisibleBeforeHide") then
+                        local savedH = panel:GetAttribute("SavedHeight") or panel:GetAttribute("BaseHeight") or panel.Size.Y.Offset
+                        panel.Size = UDim2.new(0, panel.Size.X.Offset, 0, savedH)
+                    end
+                end
+                if UI.floatingWindows then
+                    for _, win in ipairs(UI.floatingWindows) do
+                        if win and win.Parent and win:GetAttribute("WasVisibleBeforeHide") then
+                            local savedH = win:GetAttribute("SavedHeight") or win:GetAttribute("BaseHeight") or win.Size.Y.Offset
+                            win.Size = UDim2.new(0, win.Size.X.Offset, 0, savedH)
+                        end
+                    end
+                end
+                if onComplete then onComplete() end
+            end
+        end)
+    else
+        if not animsEnabled then
+            if topBar and topBar.Parent then
+                topBar.Position = topBarShownPos
+            end
+            if UI.windows then
+                for catName, wData in pairs(UI.windows) do
+                    local win = wData.Frame
+                    local list = wData.List
+                    local headerH = (wData.Header and wData.Header.Size.Y.Offset > 0) and wData.Header.Size.Y.Offset or headerDefaultH
+                    if win and win.Parent then
+                        local wasVis = win:GetAttribute("WasVisibleBeforeHide")
+                        if wasVis == nil then wasVis = (activeTab == "Modules") end
+                        win.Visible = wasVis
+                        if wData.Collapsed then
+                            if list then list.Visible = false end
+                            win.Size = UDim2.new(0, win.Size.X.Offset, 0, headerH)
+                            win.AutomaticSize = Enum.AutomaticSize.None
+                        else
+                            if list then list.Visible = true end
+                            win.Size = UDim2.new(0, win.Size.X.Offset, 0, headerH)
+                            win.AutomaticSize = Enum.AutomaticSize.Y
+                        end
+                    end
+                end
+            end
+            for _, panel in ipairs(allPanels) do
+                if panel and panel.Parent and panel:GetAttribute("WasVisibleBeforeHide") then
+                    local savedH = panel:GetAttribute("SavedHeight") or panel:GetAttribute("BaseHeight") or panel.Size.Y.Offset
+                    panel.Size = UDim2.new(0, panel.Size.X.Offset, 0, savedH)
+                    panel.Visible = true
+                end
+            end
+            if UI.floatingWindows then
+                for _, win in ipairs(UI.floatingWindows) do
+                    if win and win.Parent and win:GetAttribute("WasVisibleBeforeHide") then
+                        local savedH = win:GetAttribute("SavedHeight") or win:GetAttribute("BaseHeight") or win.Size.Y.Offset
+                        win.Size = UDim2.new(0, win.Size.X.Offset, 0, savedH)
+                        win.Visible = true
+                    end
+                end
+            end
+            mainUIContainer.Visible = true
+            if onComplete then onComplete() end
+            return
+        end
+
+        mainUIContainer.Visible = true
+
+        if topBar and topBar.Parent then
+            topBar.Position = topBarHiddenPos
+            Services.TweenService:Create(topBar, TweenInfo.new(0.20, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = topBarShownPos}):Play()
+        end
+
+        if UI.windows then
+            for catName, wData in pairs(UI.windows) do
+                local win = wData.Frame
+                local list = wData.List
+                local headerH = (wData.Header and wData.Header.Size.Y.Offset > 0) and wData.Header.Size.Y.Offset or headerDefaultH
+                if win and win.Parent then
+                    local wasVis = win:GetAttribute("WasVisibleBeforeHide")
+                    if wasVis == nil then wasVis = (activeTab == "Modules") end
+                    if wasVis then
+                        win.Visible = true
+                        win.AutomaticSize = Enum.AutomaticSize.None
+                        win.Size = UDim2.new(0, win.Size.X.Offset, 0, 0)
+                        if wData.Collapsed then
+                            if list then list.Visible = false end
+                            Services.TweenService:Create(win, TweenInfo.new(0.20, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, win.Size.X.Offset, 0, headerH)}):Play()
+                        else
+                            if list then list.Visible = true end
+                            local targetH = getWindowContentHeight(win, list, headerH, padBottom, defaultPadding)
+                            local tw = Services.TweenService:Create(win, TweenInfo.new(0.20, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, win.Size.X.Offset, 0, targetH)})
+                            tw:Play()
+                            tw.Completed:Connect(function(state)
+                                if toggleAnimToken ~= currentToken then return end
+                                if state == Enum.PlaybackState.Completed and not wData.Collapsed and State.uiVisible then
+                                    win.Size = UDim2.new(0, win.Size.X.Offset, 0, headerH)
+                                    win.AutomaticSize = Enum.AutomaticSize.Y
+                                end
+                            end)
+                        end
+                    else
+                        win.Visible = false
+                    end
+                end
+            end
+        end
+
+        for _, panel in ipairs(allPanels) do
+            if panel and panel.Parent and panel:GetAttribute("WasVisibleBeforeHide") then
+                panel.Visible = true
+                local savedH = panel:GetAttribute("SavedHeight") or panel:GetAttribute("BaseHeight") or panel.Size.Y.Offset
+                panel.Size = UDim2.new(0, panel.Size.X.Offset, 0, 0)
+                Services.TweenService:Create(panel, TweenInfo.new(0.20, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, panel.Size.X.Offset, 0, savedH)}):Play()
+            end
+        end
+
+        if UI.floatingWindows then
+            for _, win in ipairs(UI.floatingWindows) do
+                if win and win.Parent and win:GetAttribute("WasVisibleBeforeHide") then
+                    win.Visible = true
+                    local savedH = win:GetAttribute("SavedHeight") or win:GetAttribute("BaseHeight") or win.Size.Y.Offset
+                    win.Size = UDim2.new(0, win.Size.X.Offset, 0, 0)
+                    Services.TweenService:Create(win, TweenInfo.new(0.20, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, win.Size.X.Offset, 0, savedH)}):Play()
+                end
+            end
+        end
+
+        if onComplete then onComplete() end
+    end
+end
+
 UI.GetScreenGui = function() return screenGui end
 UI.GetMainContainer = function() return mainUIContainer end
 UI.destroyUI = function()
+    toggleAnimToken = toggleAnimToken + 1
     pcall(function()
         if screenGui and screenGui.Parent then
             screenGui:Destroy()

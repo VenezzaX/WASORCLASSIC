@@ -1409,15 +1409,21 @@ end))
 
 local function toggleUIVisibility()
     State.uiVisible = not State.uiVisible
-    local container = UI and UI.GetMainContainer and UI.GetMainContainer()
-    if not container or not container.Parent then
-        local sg = UI and UI.GetScreenGui and UI.GetScreenGui()
-        if sg and sg.Parent then
-            container = sg:FindFirstChild("MainUIContainer")
+    if UI and UI.animateToggleUI then
+        UI.animateToggleUI(State.uiVisible)
+    else
+        local container = UI and UI.GetMainContainer and UI.GetMainContainer()
+        if not container or not container.Parent then
+            local sg = UI and UI.GetScreenGui and UI.GetScreenGui()
+            if sg and sg.Parent then
+                container = sg:FindFirstChild("MainUIContainer")
+            end
         end
-    end
-    if container then
-        container.Visible = State.uiVisible
+        if container then
+            container.Visible = State.uiVisible
+            local animScale = container:FindFirstChild("AnimScale")
+            if animScale then animScale.Scale = 1.0 end
+        end
     end
     updateHUDArrayList()
     if UI and UI.updateMenuBlur then

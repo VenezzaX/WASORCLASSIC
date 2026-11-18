@@ -75,7 +75,7 @@ State.S = {
     FlingTarget = nil, FlingActive = false, FlingAllActive = false, WalkFling = false, FlingNoclip = true,
     FollowTarget = nil, FollowActive = false,
     InstantPrompts = false, AntiVoid = false, AntiVoidY = -500,
-    ToastEnabled = true, ToastChatEnabled = false, AutoReinject = true,
+    ToastEnabled = true, ToastChatEnabled = false, AutoReinject = true, UIAnimations = true,
     AutoplayBot = false, AutoplayShoot = true, AutoplayReload = true, AutoplayRange = 150, AutoplayReloadInterval = 10, AutoplayTargetMode = "Closest", AutoplayTeamCheck = true, AutoplayFriendCheck = true, AutoplayPartRandomizer = "Head",
     Float = false, WaterWalk = false, TallAnim = false, Spin = false, SpinSpeed = 15,
     GravityEnabled = false, CustomGravity = 196.2, ForceWalkSpeed = false, ForceJumpPower = false,

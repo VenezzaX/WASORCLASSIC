@@ -18,6 +18,9 @@ local function launchChatHub()
     local loaded = false
     if isfile and readfile and loadstring then
         local candidates = {
+            "CompatibleScripts/Chathub.lua",
+            "WASOR/CompatibleScripts/Chathub.lua",
+            "WASORCLASSIC/CompatibleScripts/Chathub.lua",
             "Chathub.lua",
             "WASOR/Chathub.lua",
             "WASORCLASSIC/Chathub.lua",

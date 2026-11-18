@@ -131,24 +131,28 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
         end
     end)
 
-    local listContainer = addCustomFrameOption(drawer, 130)
+    local listContainer = addCustomFrameOption(drawer, 190)
     local box = Instance.new("TextBox")
-    box.Size = UDim2.new(1, -8, 0, 20)
+    box.Size = UDim2.new(1, -8, 0, 24)
     box.Position = UDim2.new(0, 4, 0, 2)
     box.BackgroundColor3 = StudioTheme.insetBg
     box.BorderSizePixel = 1
     box.BorderColor3 = StudioTheme.border
     box.Font = Enum.Font.SourceSans
-    box.TextSize = 11
+    box.TextSize = 12
     box.TextColor3 = StudioTheme.text
-    box.PlaceholderText = "Filter player list..."
+    box.PlaceholderText = "Search player name or @username..."
+    box.PlaceholderColor3 = StudioTheme.textDim
     box.Text = ""
     box.ClearTextOnFocus = false
     box.Parent = listContainer
+    local boxPad = Instance.new("UIPadding", box)
+    boxPad.PaddingLeft = UDim.new(0, 6)
+    boxPad.PaddingRight = UDim.new(0, 6)
 
     local scroll = Instance.new("ScrollingFrame")
-    scroll.Size = UDim2.new(1, -8, 1, -26)
-    scroll.Position = UDim2.new(0, 4, 0, 24)
+    scroll.Size = UDim2.new(1, -8, 1, -30)
+    scroll.Position = UDim2.new(0, 4, 0, 28)
     scroll.BackgroundTransparency = 1
     scroll.BorderSizePixel = 0
     scroll.ScrollBarThickness = 3
@@ -157,7 +161,7 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
     scroll.Parent = listContainer
 
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 2)
+    layout.Padding = UDim.new(0, 3)
     layout.Parent = scroll
 
     local function renderPlayers()
@@ -166,33 +170,46 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LP then
                 local formatted = p.DisplayName .. " (@" .. p.Name .. ")"
-                if filter == "" or formatted:lower():find(filter) then
+                if filter == "" or formatted:lower():find(filter, 1, true) then
                     local card = Instance.new("Frame")
-                    card.Size = UDim2.new(1, -2, 0, 24)
+                    card.Size = UDim2.new(1, -2, 0, 28)
                     card.BackgroundColor3 = StudioTheme.panelBg
                     card.BorderSizePixel = 1
                     card.BorderColor3 = StudioTheme.border
                     card.Parent = scroll
 
                     local nameL = Instance.new("TextLabel")
-                    nameL.Size = UDim2.new(1, -78, 1, 0)
-                    nameL.Position = UDim2.new(0, 6, 0, 0)
+                    nameL.Size = UDim2.new(1, -114, 0, 14)
+                    nameL.Position = UDim2.new(0, 6, 0, 1)
                     nameL.BackgroundTransparency = 1
                     nameL.Font = Enum.Font.SourceSansBold
-                    nameL.TextSize = 11
+                    nameL.TextSize = 12
                     nameL.TextColor3 = StudioTheme.text
                     nameL.TextXAlignment = Enum.TextXAlignment.Left
+                    nameL.TextTruncate = Enum.TextTruncate.AtEnd
                     nameL.Text = p.DisplayName
                     nameL.Parent = card
 
+                    local userL = Instance.new("TextLabel")
+                    userL.Size = UDim2.new(1, -114, 0, 12)
+                    userL.Position = UDim2.new(0, 6, 0, 15)
+                    userL.BackgroundTransparency = 1
+                    userL.Font = Enum.Font.SourceSans
+                    userL.TextSize = 10
+                    userL.TextColor3 = StudioTheme.textMuted
+                    userL.TextXAlignment = Enum.TextXAlignment.Left
+                    userL.TextTruncate = Enum.TextTruncate.AtEnd
+                    userL.Text = "@" .. p.Name
+                    userL.Parent = card
+
                     local tp = Instance.new("TextButton")
-                    tp.Size = UDim2.new(0, 30, 0, 16)
-                    tp.Position = UDim2.new(1, -76, 0.5, -8)
+                    tp.Size = UDim2.new(0, 34, 0, 20)
+                    tp.Position = UDim2.new(1, -94, 0.5, -10)
                     tp.BackgroundColor3 = StudioTheme.green
                     tp.BorderSizePixel = 1
                     tp.BorderColor3 = StudioTheme.border
                     tp.Font = Enum.Font.SourceSansBold
-                    tp.TextSize = 10
+                    tp.TextSize = 11
                     tp.TextColor3 = Color3.fromRGB(255, 255, 255)
                     tp.Text = "TP"
                     tp.Parent = card
@@ -211,13 +228,13 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
 
                     local isViewing = (currentSpectateTarget == p)
                     local view = Instance.new("TextButton")
-                    view.Size = UDim2.new(0, 42, 0, 16)
-                    view.Position = UDim2.new(1, -44, 0.5, -8)
+                    view.Size = UDim2.new(0, 52, 0, 20)
+                    view.Position = UDim2.new(1, -56, 0.5, -10)
                     view.BackgroundColor3 = isViewing and StudioTheme.red or StudioTheme.btnBg
                     view.BorderSizePixel = 1
                     view.BorderColor3 = StudioTheme.border
                     view.Font = Enum.Font.SourceSansBold
-                    view.TextSize = 10
+                    view.TextSize = 11
                     view.TextColor3 = Color3.fromRGB(255, 255, 255)
                     view.Text = isViewing and "UNVIEW" or "VIEW"
                     view.Parent = card
@@ -251,4 +268,4 @@ registerModule("Player", "Spectate & Freecam", 160, 50, false, false, nil, funct
     table.insert(S.Connections, addedCon)
     table.insert(S.Connections, removedCon)
     renderPlayers()
-end, true, 260, 360)
+end, true, 340, 480)

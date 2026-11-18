@@ -274,6 +274,7 @@ local Modules = {
     "Modules/Misc/OnlineFriends",
     "Modules/Misc/ChatLogger",
     "Modules/Misc/ExternalScriptsHub",
+    "Modules/Misc/Fun",
     "Modules/Misc/UNCcomplianceAudits",
     "Modules/Misc/ConsoleLogViewer",
     "Modules/Misc/SettingsKeybinds",
